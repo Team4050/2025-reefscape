@@ -9,10 +9,8 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.Autos;
 import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Elevator;
-import frc.robot.subsystems.ExampleSubsystem;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -22,9 +20,8 @@ import frc.robot.subsystems.ExampleSubsystem;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
   private final Elevator elevatorSubsystem = new Elevator();
-  private final Claw clawSubsystem = new Claw();
+  //private final Claw clawSubsystem = new Claw();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final CommandXboxController m_driverController =
@@ -46,7 +43,7 @@ public class RobotContainer {
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
-              elevatorSubsystem.setAdditive(m_driverController.getLeftY());
+              elevatorSubsystem.set(m_driverController.getRightY());
             },
             elevatorSubsystem));
   }
@@ -64,19 +61,19 @@ public class RobotContainer {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
-    m_driverController
+    /*m_driverController
         .b()
         .onTrue(
             new RunCommand(
                 () -> {
                   clawSubsystem.set(1);
-                }));
+                }));*/
     m_driverController
         .b()
         .onFalse(
             new RunCommand(
                 () -> {
-                  clawSubsystem.set(0);
+                  //clawSubsystem.set(0);
                 }));
   }
 
@@ -87,6 +84,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return Autos.exampleAuto(m_exampleSubsystem);
+    return null;
   }
 }
