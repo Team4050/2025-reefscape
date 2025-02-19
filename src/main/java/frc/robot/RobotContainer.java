@@ -4,12 +4,14 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.Claw;
+import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
 
 /**
@@ -20,6 +22,7 @@ import frc.robot.subsystems.Elevator;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
+  private final Drivetrain drivetrainSubsystem = new Drivetrain();
   private final Elevator elevatorSubsystem = new Elevator();
   //private final Claw clawSubsystem = new Claw();
 
@@ -46,6 +49,10 @@ public class RobotContainer {
               elevatorSubsystem.set(m_driverController.getRightY());
             },
             elevatorSubsystem));
+  }
+
+  public void init() {
+    drivetrainSubsystem.stop();
   }
 
   /**
@@ -75,6 +82,12 @@ public class RobotContainer {
                 () -> {
                   //clawSubsystem.set(0);
                 }));
+  }
+
+  private void configureDashboard() {
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
   }
 
   /**

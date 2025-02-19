@@ -9,6 +9,7 @@ import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -17,14 +18,13 @@ import frc.robot.Constants;
 public class Elevator extends SubsystemBase {
   private SparkMax leftMotor;
   private SparkMax rightMotor;
-  //private SparkMax elevatorWrist;
+  //private SparkMax elevatorWrist; //Not in CAN yet
   private SparkClosedLoopController leftMotorController;
   private SparkClosedLoopController rightMotorController;
   private AbsoluteEncoder encoderLeft;
   private AbsoluteEncoder encoderRight;
   private RelativeEncoder wristEncoder;
-  private PIDController pidLeft;
-  private PIDController pidRight;
+  private PIDController pidElevator;
   private PIDController pidWrist;
 
   private double elevatorTarget = 0;
@@ -40,26 +40,40 @@ public class Elevator extends SubsystemBase {
     SparkMaxConfig rightConfig = new SparkMaxConfig();
     SparkMaxConfig wristConfig = new SparkMaxConfig();
 
-    leftConfig.closedLoop.pid(1, 0, 0);
-    leftConfig.closedLoop.velocityFF(0);
-    leftConfig.closedLoop.feedbackSensor(FeedbackSensor.kAbsoluteEncoder);
+    leftConfig.smartCurrentLimit(40);
+    leftConfig.idleMode(IdleMode.kBrake);
+    leftConfig.inverted(true); // Test: does this counteract inverting the right motor?
+    leftConfig.closedLoop.outputRange(-0.1, 0.1); // 0.1 for testing
+    leftConfig.closedLoop.iMaxAccum(1);
+    leftConfig.closedLoop.pidf(1, 0, 0, 0);
+    leftConfig.closedLoop.iZone(0);
+    leftConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder); // use PrimaryEncoder instead of AbsoluteEncoder?
+    leftConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.elevatorGearboxReduction);
+    leftConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.elevatorGearboxReduction);
 
     // Inverts motor and encoder
+    rightConfig.smartCurrentLimit(40);
+    rightConfig.idleMode(IdleMode.kBrake);
     rightConfig.follow(Constants.Elevator.elevatorLeft, true);
+    rightConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.elevatorGearboxReduction);
+    rightConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.elevatorGearboxReduction);
+
 
     // Wrist config
     leftMotor.configure(
-        leftConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+        leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     rightMotor.configure(
-        rightConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+        rightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     //elevatorWrist.configure(
      //   wristConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
     encoderLeft = leftMotor.getAbsoluteEncoder();
     encoderRight = rightMotor.getAbsoluteEncoder();
     //wristEncoder = elevatorWrist.getAlternateEncoder();
+    pidElevator = new PIDController(0.1, 0, 0);
     pidWrist = new PIDController(0.1, 0, 0);
 
     leftMotorController = leftMotor.getClosedLoopController();
+    rightMotorController = rightMotor.getClosedLoopController();
   }
 
   /**
@@ -86,9 +100,9 @@ public class Elevator extends SubsystemBase {
 
   public void set(double position) {
     System.out.println(position);
-    leftMotor.set(position);
-    //elevatorTarget = position;
-    //leftMotorController.setReference(elevatorTarget, ControlType.kPosition);
+    //leftMotor.set(position);
+    elevatorTarget = position;
+    leftMotorController.setReference(elevatorTarget, ControlType.kPosition);
   }
 
   public void setAdditive(double additive) {
@@ -111,10 +125,15 @@ public class Elevator extends SubsystemBase {
     return wristEncoder.getPosition();
   }
 
+  private int loop = 0;
   @Override
   public void periodic() {
-    //elevatorWrist.set(pidWrist.calculate(wristEncoder.getPosition()));
-    System.out.println("Output current:" + leftMotor.getOutputCurrent());
-    System.out.println("Encoder:" + encoderLeft.getPosition());
+    // leftMotor.set(pidElevator.calculate(encoderLeft.getPosition())); // Use for alternate control
+    // elevatorWrist.set(pidWrist.calculate(wristEncoder.getPosition()));
+    loop++;
+    if (loop > 10) {
+      Constants.log("Output current:" + leftMotor.getOutputCurrent());
+      Constants.log("Encoder:" + encoderLeft.getPosition());
+    }
   }
 }

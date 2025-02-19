@@ -30,11 +30,16 @@ public final class Constants {
     public static final int elevatorLeft = 5;
     public static final int elevatorRight = 6;
     public static final int elevatorWrist = 7;
+    public static final int elevatorGearboxReduction = 1 / 25;
     public static final int wristEncoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final int wristGearboxReduction = 21; // 7:1 * 3:1 gearbox
   }
 
   public static class Claw {
     public static final int clawMotor = 8;
+  }
+
+  public static void log(Object o) {
+    System.out.println(o);
   }
 }
