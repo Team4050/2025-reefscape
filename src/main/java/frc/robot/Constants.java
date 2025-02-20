@@ -33,6 +33,8 @@ public final class Constants {
     public static final int elevatorGearboxReduction = 1 / 25;
     public static final int wristEncoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final int wristGearboxReduction = 21; // 7:1 * 3:1 gearbox
+    public static final double elevatorGearboxRotationsToHeightMM = 140.178;
+    public static final double elevatorFFVoltage = 0.4128;
   }
 
   public static class Claw {

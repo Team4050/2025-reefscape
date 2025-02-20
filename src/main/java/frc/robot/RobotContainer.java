@@ -22,7 +22,7 @@ import frc.robot.subsystems.Elevator;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final Drivetrain drivetrainSubsystem = new Drivetrain();
+  //private final Drivetrain drivetrainSubsystem = new Drivetrain();
   private final Elevator elevatorSubsystem = new Elevator();
   //private final Claw clawSubsystem = new Claw();
 
@@ -46,13 +46,14 @@ public class RobotContainer {
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
-              elevatorSubsystem.set(m_driverController.getRightY());
+              elevatorSubsystem.setAdditive(m_driverController.getRightY());
             },
             elevatorSubsystem));
   }
 
   public void init() {
-    drivetrainSubsystem.stop();
+    Constants.log("Enabling...");
+    //drivetrainSubsystem.stop();
   }
 
   /**
@@ -85,9 +86,9 @@ public class RobotContainer {
   }
 
   private void configureDashboard() {
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
+    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
+    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
+    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
   }
 
   /**

@@ -5,12 +5,15 @@ import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
+import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
+import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -21,11 +24,12 @@ public class Elevator extends SubsystemBase {
   //private SparkMax elevatorWrist; //Not in CAN yet
   private SparkClosedLoopController leftMotorController;
   private SparkClosedLoopController rightMotorController;
-  private AbsoluteEncoder encoderLeft;
-  private AbsoluteEncoder encoderRight;
+  private RelativeEncoder leftEncoder;
+  private RelativeEncoder rightEncoder;
   private RelativeEncoder wristEncoder;
-  private PIDController pidElevator;
-  private PIDController pidWrist;
+  private PIDController elevatorPID;
+  private ElevatorFeedforward elevatorFeedforward;
+  private PIDController wristPID;
 
   private double elevatorTarget = 0;
   private double wristTarget = 0;
@@ -42,19 +46,24 @@ public class Elevator extends SubsystemBase {
 
     leftConfig.smartCurrentLimit(40);
     leftConfig.idleMode(IdleMode.kBrake);
-    leftConfig.inverted(true); // Test: does this counteract inverting the right motor?
-    leftConfig.closedLoop.outputRange(-0.1, 0.1); // 0.1 for testing
+    leftConfig.follow(Constants.Elevator.elevatorLeft, true);
+    /*leftConfig.closedLoop.outputRange(-0.1, 0.1); // 0.1 for testing
     leftConfig.closedLoop.iMaxAccum(1);
     leftConfig.closedLoop.pidf(1, 0, 0, 0);
     leftConfig.closedLoop.iZone(0);
-    leftConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder); // use PrimaryEncoder instead of AbsoluteEncoder?
+    leftConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder); // AbsoluteEncoder is not connected to SparkMAX */
     leftConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.elevatorGearboxReduction);
     leftConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.elevatorGearboxReduction);
 
     // Inverts motor and encoder
     rightConfig.smartCurrentLimit(40);
     rightConfig.idleMode(IdleMode.kBrake);
-    rightConfig.follow(Constants.Elevator.elevatorLeft, true);
+    //rightConfig.follow(Constants.Elevator.elevatorLeft, true);
+    rightConfig.closedLoop.outputRange(-0.1, 0.1); // 0.1 for testing
+    rightConfig.closedLoop.iMaxAccum(1);
+    rightConfig.closedLoop.pidf(0.1, 0, 0, 0);
+    rightConfig.closedLoop.iZone(0);
+    rightConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder); // AbsoluteEncoder is not connected to SparkMAX
     rightConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.elevatorGearboxReduction);
     rightConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.elevatorGearboxReduction);
 
@@ -66,11 +75,12 @@ public class Elevator extends SubsystemBase {
         rightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     //elevatorWrist.configure(
      //   wristConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-    encoderLeft = leftMotor.getAbsoluteEncoder();
-    encoderRight = rightMotor.getAbsoluteEncoder();
+    leftEncoder = leftMotor.getEncoder();
+    rightEncoder = rightMotor.getEncoder();
     //wristEncoder = elevatorWrist.getAlternateEncoder();
-    pidElevator = new PIDController(0.1, 0, 0);
-    pidWrist = new PIDController(0.1, 0, 0);
+    elevatorPID = new PIDController(0.1, 0, 0);
+    elevatorFeedforward = new ElevatorFeedforward(0, 0.4128, 0, 0); //See https://docs.wpilib.org/en/stable/docs/software/advanced-controls/controllers/feedforward.html and my math
+    wristPID = new PIDController(0.1, 0, 0);
 
     leftMotorController = leftMotor.getClosedLoopController();
     rightMotorController = rightMotor.getClosedLoopController();
@@ -99,10 +109,10 @@ public class Elevator extends SubsystemBase {
   }
 
   public void set(double position) {
-    System.out.println(position);
-    //leftMotor.set(position);
+    Constants.log("Elevator target position:" + position);
+    //leftMotor.set(position); //
     elevatorTarget = position;
-    leftMotorController.setReference(elevatorTarget, ControlType.kPosition);
+    rightMotorController.setReference(elevatorTarget, ControlType.kPosition, ClosedLoopSlot.kSlot0, Constants.Elevator.elevatorFFVoltage);
   }
 
   public void setAdditive(double additive) {
@@ -113,12 +123,12 @@ public class Elevator extends SubsystemBase {
 
   public void setWrist(double position) {
     wristTarget = position;
-    pidWrist.setSetpoint(wristTarget);
+    wristPID.setSetpoint(wristTarget);
   }
 
   public void setWristAdditive(double additive) {
-    wristTarget = pidWrist.getSetpoint() + additive;
-    pidWrist.setSetpoint(wristTarget);
+    wristTarget = wristPID.getSetpoint() + additive;
+    wristPID.setSetpoint(wristTarget);
   }
 
   public double getWrist() {
@@ -128,12 +138,14 @@ public class Elevator extends SubsystemBase {
   private int loop = 0;
   @Override
   public void periodic() {
+    elevatorFeedforward.calculate(leftEncoder.getVelocity());
     // leftMotor.set(pidElevator.calculate(encoderLeft.getPosition())); // Use for alternate control
     // elevatorWrist.set(pidWrist.calculate(wristEncoder.getPosition()));
     loop++;
-    if (loop > 10) {
+    if (loop > 25) { //Log twice per second
+      Constants.log("Calculated FF:" + elevatorFeedforward.calculate(leftEncoder.getVelocity()));
       Constants.log("Output current:" + leftMotor.getOutputCurrent());
-      Constants.log("Encoder:" + encoderLeft.getPosition());
+      Constants.log("Encoder:" + leftEncoder.getPosition());
     }
   }
 }
