@@ -4,15 +4,14 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.subsystems.Claw;
-import frc.robot.subsystems.Drivetrain;
+import frc.robot.hazard.HazardXbox;
 import frc.robot.subsystems.Elevator;
+import frc.robot.subsystems.Vision;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -22,20 +21,21 @@ import frc.robot.subsystems.Elevator;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  //private final Drivetrain drivetrainSubsystem = new Drivetrain();
-  private final Elevator elevatorSubsystem = new Elevator();
-  //private final Claw clawSubsystem = new Claw();
+  // private final Drivetrain drivetrainSubsystem = new Drivetrain();
+  //private final Elevator elevatorSubsystem = new Elevator();
+  private final Vision visionSubsystem = new Vision();
+  // private final Claw clawSubsystem = new Claw();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
-  private final CommandXboxController m_driverController =
-      new CommandXboxController(OperatorConstants.kDriverControllerPort);
+  private final HazardXbox m_driverController =
+      new HazardXbox(OperatorConstants.kDriverControllerPort);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the trigger bindings
     configureBindings();
 
-    m_driverController
+    /*m_driverController
         .a()
         .onTrue(
             new RunCommand(
@@ -48,12 +48,14 @@ public class RobotContainer {
             () -> {
               elevatorSubsystem.setAdditive(m_driverController.getRightY());
             },
-            elevatorSubsystem));
+            elevatorSubsystem));*/
+
+    visionSubsystem.setDefaultCommand(new RunCommand(() -> {}, visionSubsystem));
   }
 
   public void init() {
     Constants.log("Enabling...");
-    //drivetrainSubsystem.stop();
+    // drivetrainSubsystem.stop();
   }
 
   /**
@@ -70,25 +72,25 @@ public class RobotContainer {
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
     /*m_driverController
-        .b()
-        .onTrue(
-            new RunCommand(
-                () -> {
-                  clawSubsystem.set(1);
-                }));*/
+    .b()
+    .onTrue(
+        new RunCommand(
+            () -> {
+              clawSubsystem.set(1);
+            }));*/
     m_driverController
         .b()
         .onFalse(
             new RunCommand(
                 () -> {
-                  //clawSubsystem.set(0);
+                  // clawSubsystem.set(0);
                 }));
   }
 
   private void configureDashboard() {
-    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
-    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
-    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
+    // SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
+    // SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
+    // SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
   }
 
   /**

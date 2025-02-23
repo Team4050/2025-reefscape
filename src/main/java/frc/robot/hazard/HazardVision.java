@@ -24,6 +24,7 @@
 
 package frc.robot.hazard;
 
+import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -67,7 +68,7 @@ public class HazardVision {
       return Optional.empty();
     }
     poseEstimator.setReferencePose(prevEstimatedRobotPose);
-    Optional<EstimatedRobotPose> latest = null;
+    Optional<EstimatedRobotPose> latest = Optional.empty();
     for (PhotonPipelineResult r : chassis.getAllUnreadResults()) {
       latest = poseEstimator.update(r);
     }
