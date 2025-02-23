@@ -1,14 +1,11 @@
 package frc.robot.subsystems;
 
-import java.util.Optional;
-
-import org.photonvision.EstimatedRobotPose;
-
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.hazard.HazardVision;
-import frc.robot.hazard.HazardXbox;
+import java.util.Optional;
+import org.photonvision.EstimatedRobotPose;
 
 public class Vision extends SubsystemBase {
   HazardVision photonVision;
@@ -19,9 +16,11 @@ public class Vision extends SubsystemBase {
   }
 
   int loop = 0;
+
   @Override
   public void periodic() {
-    Optional<EstimatedRobotPose> optional = photonVision.getEstimatedGlobalPose(pose);
+    photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
+    Optional<EstimatedRobotPose> optional = photonVision.getEstimatedGlobalPose();
     if (optional.isPresent()) {
       pose = optional.get().estimatedPose;
     }

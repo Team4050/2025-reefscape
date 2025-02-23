@@ -24,12 +24,13 @@
 
 package frc.robot.hazard;
 
-import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.wpilibj.RobotController;
+
 import java.util.Optional;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -46,11 +47,11 @@ public class HazardVision {
   public HazardVision() {
     chassis = new PhotonCamera("Limelight");
 
-    AprilTagFieldLayout fieldLayout = AprilTagFields.k2024Crescendo.loadAprilTagLayoutField();
+    AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
     poseEstimator =
         new PhotonPoseEstimator(
             fieldLayout,
-            PoseStrategy.AVERAGE_BEST_TARGETS,
+            PoseStrategy.CLOSEST_TO_LAST_POSE,
             new Transform3d(0, 0, 0, new Rotation3d()));
     /*catch (UncheckedIOException e) {
       DriverStation.reportError("Failed to load AprilTagFieldLayout", e.getStackTrace());
@@ -63,15 +64,26 @@ public class HazardVision {
    * @return an EstimatedRobotPose with an estimated pose, the timestamp, and targets used to create
    *     the estimate
    */
-  public Optional<EstimatedRobotPose> getEstimatedGlobalPose(Pose3d prevEstimatedRobotPose) {
+  public Optional<EstimatedRobotPose> getEstimatedGlobalPose() {
     if (poseEstimator == null) {
       return Optional.empty();
     }
-    poseEstimator.setReferencePose(prevEstimatedRobotPose);
     Optional<EstimatedRobotPose> latest = Optional.empty();
     for (PhotonPipelineResult r : chassis.getAllUnreadResults()) {
       latest = poseEstimator.update(r);
     }
     return latest;
+  }
+
+  public void setLastPose(Pose3d pose) {
+    poseEstimator.setLastPose(pose);
+  }
+
+  /***
+   * Add real-time heading data to the pose estimator
+   * @param heading
+   */
+  public void addHeadingData(Rotation3d heading) {
+    poseEstimator.addHeadingData((double)RobotController.getFPGATime(), heading);
   }
 }

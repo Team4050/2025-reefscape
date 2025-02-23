@@ -3,15 +3,12 @@ package frc.robot.subsystems;
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.AngleUnit;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
@@ -32,7 +29,6 @@ public class Drivetrain extends SubsystemBase {
   private TalonFXConfiguration leftSideConfig;
   private TalonFXConfiguration rightSideConfig;
   private MecanumDriveKinematics kinematics;
-  private ADIS16470_IMU imu;
 
   public Drivetrain() {
     FL = new TalonFX(Constants.Drivetrain.FL);
@@ -55,7 +51,8 @@ public class Drivetrain extends SubsystemBase {
 
     rightSideConfig = new TalonFXConfiguration();
     rightSideConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    rightSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput; // Increase in proportion to confidence in driver skill
+    rightSideConfig.MotorOutput.PeakForwardDutyCycle =
+        maxOutput; // Increase in proportion to confidence in driver skill
     rightSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
     rightSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 800;
     rightSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -800;
@@ -79,10 +76,6 @@ public class Drivetrain extends SubsystemBase {
             new Translation2d(0.5588, -0.5588),
             new Translation2d(-0.5588, 0.5588),
             new Translation2d(-0.5588, -0.5588));
-
-    imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
-    imu.configCalTime(ADIS16470_IMU.CalibrationTime._4s);
-    imu.calibrate();
   }
 
   private double moduleMetersPerSecondToKrakenRPM(double mps) {
@@ -101,11 +94,12 @@ public class Drivetrain extends SubsystemBase {
   public double[] getEncoders() {
     // ChassisSpeeds s = kinematics.toChassisSpeeds(new
     // MecanumDriveWheelSpeeds(FL.().getValueAsDouble(), 0, 0, 0))
-    double[] d = { 
-      FLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians), 
+    double[] d = {
+      FLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
       FRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
       RLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
-      RRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians) };
+      RRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians)
+    };
     return d;
   }
 

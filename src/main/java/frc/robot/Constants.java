@@ -4,6 +4,12 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.wpilibj.ADIS16470_IMU;
+import edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime;
+import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
  * constants. This class should not be used for any other purpose. All constants should be declared
@@ -43,5 +49,17 @@ public final class Constants {
 
   public static void log(Object o) {
     System.out.println(o);
+  }
+
+  public static class Sensors {
+      public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
+      public static Rotation3d getImuRotation3d() {
+        return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
+      }
+
+      public static void calibrate() {
+        imu.configCalTime(CalibrationTime._4s);
+        imu.calibrate();
+      }
   }
 }
