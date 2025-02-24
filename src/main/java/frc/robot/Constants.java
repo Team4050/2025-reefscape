@@ -45,6 +45,7 @@ public final class Constants {
 
   public static class Claw {
     public static final int clawMotor = 8;
+    public static final double clawGearboxReduction = 1f / 10f;
   }
 
   public static void log(Object o) {
@@ -52,14 +53,15 @@ public final class Constants {
   }
 
   public static class Sensors {
-      public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
-      public static Rotation3d getImuRotation3d() {
-        return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
-      }
+    public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
 
-      public static void calibrate() {
-        imu.configCalTime(CalibrationTime._4s);
-        imu.calibrate();
-      }
+    public static Rotation3d getImuRotation3d() {
+      return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
+    }
+
+    public static void calibrate() {
+      imu.configCalTime(CalibrationTime._4s);
+      imu.calibrate();
+    }
   }
 }

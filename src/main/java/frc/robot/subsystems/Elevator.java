@@ -20,9 +20,10 @@ import frc.robot.Constants;
 public class Elevator extends SubsystemBase {
   private SparkMax leftMotor;
   private SparkMax rightMotor;
-  // private SparkMax elevatorWrist; //Not in CAN yet
+  private SparkMax elevatorWrist; // Not in CAN yet
   private SparkClosedLoopController leftMotorController;
   private SparkClosedLoopController rightMotorController;
+  private SparkClosedLoopController wristMotorController;
   private RelativeEncoder leftEncoder;
   private RelativeEncoder rightEncoder;
   private RelativeEncoder wristEncoder;
@@ -74,6 +75,11 @@ public class Elevator extends SubsystemBase {
     rightConfig.absoluteEncoder.velocityConversionFactor(
         Constants.Elevator.elevatorGearboxReduction);
 
+    wristConfig.inverted(true);
+    wristConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
+    wristConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.wristGearboxReduction);
+    wristConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.wristGearboxReduction);
+
     // Wrist config
     leftMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     rightMotor.configure(
@@ -90,6 +96,7 @@ public class Elevator extends SubsystemBase {
 
     leftMotorController = leftMotor.getClosedLoopController();
     rightMotorController = rightMotor.getClosedLoopController();
+    wristMotorController = elevatorWrist.getClosedLoopController();
   }
 
   /**
@@ -98,8 +105,9 @@ public class Elevator extends SubsystemBase {
    * @param h
    * @return
    */
-  public float elevatorHeightToEncoder(float h) {
-    return h;
+  public double elevatorHeightMMToEncoder(double h) {
+    return (h / Constants.Elevator.elevatorGearboxRotationsToHeightMM)
+        / Constants.Elevator.elevatorGearboxReduction;
   }
 
   /**
@@ -127,6 +135,13 @@ public class Elevator extends SubsystemBase {
         Constants.Elevator.elevatorFFVoltage);
   }
 
+  public void setElevatorHeight(double heightMM) {
+    set(
+        heightMM
+            / (Constants.Elevator.elevatorGearboxRotationsToHeightMM
+                * Constants.Elevator.elevatorGearboxReduction));
+  }
+
   public void setAdditive(double additive) {
     elevatorTarget += additive;
     set(elevatorTarget);
@@ -140,6 +155,19 @@ public class Elevator extends SubsystemBase {
   public void setWristAdditive(double additive) {
     wristTarget = wristPID.getSetpoint() + additive;
     wristPID.setSetpoint(wristTarget);
+  }
+
+  /***
+   * Tell the end pivot of the claw to go to a target height and extension in MM
+   * @param heightMM
+   * @param extensionMM
+   */
+  public void goToPosition(double heightMM, double extensionMM) {
+    double r = Math.acos(extensionMM / 300);
+    double elevatorH = heightMM - Math.sin(r) * 300;
+
+    wristMotorController.setReference(r, ControlType.kMAXMotionPositionControl);
+    setElevatorHeight(elevatorH);
   }
 
   public double getWrist() {

@@ -30,7 +30,6 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.wpilibj.RobotController;
-
 import java.util.Optional;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -47,7 +46,8 @@ public class HazardVision {
   public HazardVision() {
     chassis = new PhotonCamera("Limelight");
 
-    AprilTagFieldLayout fieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+    AprilTagFieldLayout fieldLayout =
+        AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
     poseEstimator =
         new PhotonPoseEstimator(
             fieldLayout,
@@ -84,6 +84,6 @@ public class HazardVision {
    * @param heading
    */
   public void addHeadingData(Rotation3d heading) {
-    poseEstimator.addHeadingData((double)RobotController.getFPGATime(), heading);
+    poseEstimator.addHeadingData((double) RobotController.getFPGATime(), heading);
   }
 }
