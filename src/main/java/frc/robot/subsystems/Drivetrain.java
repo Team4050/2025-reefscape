@@ -77,16 +77,13 @@ public class Drivetrain extends SubsystemBase {
   }
 
   private double moduleMetersPerSecondToKrakenRPM(double mps) {
-    return Math.toDegrees(
-            (mps / Constants.Drivetrain.wheelRadiusMeters)
-                * Constants.Drivetrain.moduleGearReduction)
-        * 60;
+    double rads = mps * Constants.Drivetrain.moduleGearReduction / Constants.Drivetrain.wheelRadiusMeters;
+    return rads * 60 / (2 * Math.PI);
   }
 
   private double krakenRPMToMetersPerSecond(double rpm) {
-    return (Math.toRadians(rpm) / 60)
-        * Constants.Drivetrain.wheelRadiusMeters
-        / Constants.Drivetrain.moduleGearReduction;
+    double rads = rpm * 2 * Math.PI / 60;
+    return rads * Constants.Drivetrain.wheelRadiusMeters / Constants.Drivetrain.moduleGearReduction;
   }
 
   public double[] getEncoders() {
@@ -101,17 +98,23 @@ public class Drivetrain extends SubsystemBase {
     return d;
   }
 
-  public void set(double xSpeed, double ySpeed, double theta) {
+  /***
+   * Set the chassis speed relative to the current robot orientation
+   * @param fwdSpeed
+   * @param strafeSpeed
+   * @param angularSpeed
+   */
+  public void set(double fwdSpeed, double strafeSpeed, double angularSpeed) {
     MecanumDriveWheelSpeeds speeds =
-        kinematics.toWheelSpeeds(new ChassisSpeeds(xSpeed, ySpeed, theta));
+        kinematics.toWheelSpeeds(new ChassisSpeeds(fwdSpeed, strafeSpeed, angularSpeed));
     set(speeds);
   }
 
   public void set(MecanumDriveWheelSpeeds wheelSpeeds) {
-    FL.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.frontLeftMetersPerSecond));
-    FR.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.frontRightMetersPerSecond));
-    RL.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.rearLeftMetersPerSecond));
-    RR.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.rearRightMetersPerSecond));
+    FL.set((wheelSpeeds.frontLeftMetersPerSecond));
+    FR.set((wheelSpeeds.frontRightMetersPerSecond));
+    RL.set((wheelSpeeds.rearLeftMetersPerSecond));
+    RR.set((wheelSpeeds.rearRightMetersPerSecond));
   }
 
   public void play() {

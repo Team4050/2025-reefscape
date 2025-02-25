@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.hazard.HazardXbox;
+import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Vision;
 
 /**
@@ -20,7 +21,7 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  // private final Drivetrain drivetrainSubsystem = new Drivetrain();
+  private final Drivetrain drivetrainSubsystem = new Drivetrain();
   // private final Elevator elevatorSubsystem = new Elevator();
   private final Vision visionSubsystem = new Vision();
   // private final Claw clawSubsystem = new Claw();
@@ -50,6 +51,10 @@ public class RobotContainer {
               elevatorSubsystem.setAdditive(m_driverController.getRightY());
             },
             elevatorSubsystem));*/
+    drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
+      drivetrainSubsystem.set(-m_driverController.getLeftY(), m_driverController.getLeftX(), -m_driverController.getRightX());
+    }));
+    
 
     visionSubsystem.setDefaultCommand(new RunCommand(() -> {}, visionSubsystem));
   }
