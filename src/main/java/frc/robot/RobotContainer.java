@@ -4,13 +4,21 @@
 
 package frc.robot;
 
+import edu.wpi.first.networktables.DoubleArrayPublisher;
+import edu.wpi.first.networktables.DoubleArrayTopic;
+import edu.wpi.first.networktables.DoubleEntry;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.DoubleTopic;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.PubSubOption;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.hazard.HazardXbox;
-import frc.robot.subsystems.Elevator;
+import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Vision;
 
 /**
@@ -21,19 +29,42 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  // private final Drivetrain drivetrainSubsystem = new Drivetrain();
-  //private final Elevator elevatorSubsystem = new Elevator();
-  private final Vision visionSubsystem = new Vision();
+  private final Drivetrain drivetrainSubsystem = new Drivetrain();
+  // private final Elevator elevatorSubsystem = new Elevator();
   // private final Claw clawSubsystem = new Claw();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final HazardXbox m_driverController =
       new HazardXbox(OperatorConstants.kDriverControllerPort);
 
+  private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
+
+  private final DoublePublisher imuPlotting;
+  private DoubleTopic imuTopic;
+
+  private final DoublePublisher gyroPlotting;
+  private DoubleTopic gyroTopic;
+
+  private final DoubleArrayPublisher imuDataPublisher;
+  private DoubleArrayTopic imuData;
+
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the trigger bindings
     configureBindings();
+    configureDashboard();
+
+    imuPlotting = imuTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    imuPlotting.setDefault(0);
+
+    gyroPlotting = gyroTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    gyroPlotting.setDefault(0);
+
+    imuDataPublisher = imuData.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    double[] def = {0, 0};
+    imuDataPublisher.setDefault(def);
+
+    Constants.Sensors.calibrate();
 
     /*m_driverController
         .a()
@@ -49,13 +80,18 @@ public class RobotContainer {
               elevatorSubsystem.setAdditive(m_driverController.getRightY());
             },
             elevatorSubsystem));*/
-
-    visionSubsystem.setDefaultCommand(new RunCommand(() -> {}, visionSubsystem));
+    drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
+      drivetrainSubsystem.set(-m_driverController.getLeftY(), m_driverController.getLeftX(), -m_driverController.getRightX());
+    }));
   }
 
   public void init() {
     Constants.log("Enabling...");
     // drivetrainSubsystem.stop();
+  }
+
+  public void periodic() {
+    imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
   }
 
   /**
@@ -88,9 +124,11 @@ public class RobotContainer {
   }
 
   private void configureDashboard() {
-    // SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
-    // SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
-    // SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
+    imuTopic = new DoubleTopic(netTables.getTopic("IMU Yaw Accel Rads"));
+    gyroTopic = new DoubleTopic(netTables.getTopic("IMU Gyro Rads"));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
   }
 
   /**

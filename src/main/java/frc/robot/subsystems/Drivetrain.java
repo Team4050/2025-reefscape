@@ -3,18 +3,19 @@ package frc.robot.subsystems;
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
-import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.units.AngleUnit;
+import edu.wpi.first.networktables.DoubleArrayPublisher;
+import edu.wpi.first.networktables.DoubleArrayTopic;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.Publisher;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -32,7 +33,10 @@ public class Drivetrain extends SubsystemBase {
   private TalonFXConfiguration leftSideConfig;
   private TalonFXConfiguration rightSideConfig;
   private MecanumDriveKinematics kinematics;
-  private ADIS16470_IMU imu;
+
+  private DoubleArrayPublisher appliedCurrent;
+  private DoubleArrayTopic appliedCurrentTopic;
+  private DoubleArrayPublisher velocity;
 
   public Drivetrain() {
     FL = new TalonFX(Constants.Drivetrain.FL);
@@ -55,7 +59,8 @@ public class Drivetrain extends SubsystemBase {
 
     rightSideConfig = new TalonFXConfiguration();
     rightSideConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    rightSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput; // Increase in proportion to confidence in driver skill
+    rightSideConfig.MotorOutput.PeakForwardDutyCycle =
+        maxOutput; // Increase in proportion to confidence in driver skill
     rightSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
     rightSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 800;
     rightSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -800;
@@ -80,46 +85,48 @@ public class Drivetrain extends SubsystemBase {
             new Translation2d(-0.5588, 0.5588),
             new Translation2d(-0.5588, -0.5588));
 
-    imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
-    imu.configCalTime(ADIS16470_IMU.CalibrationTime._4s);
-    imu.calibrate();
+    appliedCurrentTopic = NetworkTableInstance.getDefault().getDoubleArrayTopic("Applied current");
   }
 
   private double moduleMetersPerSecondToKrakenRPM(double mps) {
-    return Math.toDegrees(
-            (mps / Constants.Drivetrain.wheelRadiusMeters)
-                * Constants.Drivetrain.moduleGearReduction)
-        * 60;
+    double rads = mps * Constants.Drivetrain.moduleGearReduction / Constants.Drivetrain.wheelRadiusMeters;
+    return rads * 60 / (2 * Math.PI);
   }
 
   private double krakenRPMToMetersPerSecond(double rpm) {
-    return (Math.toRadians(rpm) / 60)
-        * Constants.Drivetrain.wheelRadiusMeters
-        / Constants.Drivetrain.moduleGearReduction;
+    double rads = rpm * 2 * Math.PI / 60;
+    return rads * Constants.Drivetrain.wheelRadiusMeters / Constants.Drivetrain.moduleGearReduction;
   }
 
   public double[] getEncoders() {
     // ChassisSpeeds s = kinematics.toChassisSpeeds(new
     // MecanumDriveWheelSpeeds(FL.().getValueAsDouble(), 0, 0, 0))
-    double[] d = { 
-      FLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians), 
+    double[] d = {
+      FLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
       FRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
       RLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
-      RRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians) };
+      RRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians)
+    };
     return d;
   }
 
-  public void set(double xSpeed, double ySpeed, double theta) {
+  /***
+   * Set the chassis speed relative to the current robot orientation
+   * @param fwdSpeed
+   * @param strafeSpeed
+   * @param angularSpeed
+   */
+  public void set(double fwdSpeed, double strafeSpeed, double angularSpeed) {
     MecanumDriveWheelSpeeds speeds =
-        kinematics.toWheelSpeeds(new ChassisSpeeds(xSpeed, ySpeed, theta));
+        kinematics.toWheelSpeeds(new ChassisSpeeds(fwdSpeed, strafeSpeed, angularSpeed));
     set(speeds);
   }
 
   public void set(MecanumDriveWheelSpeeds wheelSpeeds) {
-    FL.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.frontLeftMetersPerSecond));
-    FR.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.frontRightMetersPerSecond));
-    RL.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.rearLeftMetersPerSecond));
-    RR.set(moduleMetersPerSecondToKrakenRPM(wheelSpeeds.rearRightMetersPerSecond));
+    FL.set((wheelSpeeds.frontLeftMetersPerSecond));
+    FR.set((wheelSpeeds.frontRightMetersPerSecond));
+    RL.set((wheelSpeeds.rearLeftMetersPerSecond));
+    RR.set((wheelSpeeds.rearRightMetersPerSecond));
   }
 
   public void play() {
