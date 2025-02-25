@@ -10,7 +10,7 @@ import frc.robot.Constants;
 import frc.robot.hazard.HazardVision;
 import frc.robot.hazard.HazardXbox;
 
-public class Vision extends SubsystemBase {
+public class Vision {
   HazardVision photonVision;
   Pose3d pose = new Pose3d();
 
@@ -19,16 +19,15 @@ public class Vision extends SubsystemBase {
   }
 
   int loop = 0;
-  @Override
   public void periodic() {
     Optional<EstimatedRobotPose> optional = photonVision.getEstimatedGlobalPose(pose);
     if (optional.isPresent()) {
       pose = optional.get().estimatedPose;
     }
-    Constants.log(pose);
+    //Constants.log(pose);
     loop++;
     if (loop > 25) {
-      Constants.log(pose);
+      Constants.log(pose.getRotation().getZ());
       loop = 0;
     }
   }

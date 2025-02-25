@@ -6,7 +6,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 
 public class HazardXbox extends CommandXboxController {
 
-  private float deadzone = 0.05f;
+  private float deadzone = 0.08f;
   private XboxController hid;
 
   /**
