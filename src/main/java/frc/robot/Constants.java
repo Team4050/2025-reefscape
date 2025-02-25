@@ -9,6 +9,7 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+import frc.robot.subsystems.Vision;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -54,6 +55,7 @@ public final class Constants {
 
   public static class Sensors {
     public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
+    public static Vision vision = new Vision();
 
     public static Rotation3d getImuRotation3d() {
       return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
@@ -62,6 +64,7 @@ public final class Constants {
     public static void calibrate() {
       imu.configCalTime(CalibrationTime._4s);
       imu.calibrate();
+      vision.periodic();
     }
   }
 }

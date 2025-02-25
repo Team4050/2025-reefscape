@@ -9,6 +9,12 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
+import edu.wpi.first.networktables.DoubleArrayPublisher;
+import edu.wpi.first.networktables.DoubleArrayTopic;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.Publisher;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -27,6 +33,10 @@ public class Drivetrain extends SubsystemBase {
   private TalonFXConfiguration leftSideConfig;
   private TalonFXConfiguration rightSideConfig;
   private MecanumDriveKinematics kinematics;
+
+  private DoubleArrayPublisher appliedCurrent;
+  private DoubleArrayTopic appliedCurrentTopic;
+  private DoubleArrayPublisher velocity;
 
   public Drivetrain() {
     FL = new TalonFX(Constants.Drivetrain.FL);
@@ -74,6 +84,8 @@ public class Drivetrain extends SubsystemBase {
             new Translation2d(0.5588, -0.5588),
             new Translation2d(-0.5588, 0.5588),
             new Translation2d(-0.5588, -0.5588));
+
+    appliedCurrentTopic = NetworkTableInstance.getDefault().getDoubleArrayTopic("Applied current");
   }
 
   private double moduleMetersPerSecondToKrakenRPM(double mps) {

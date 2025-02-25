@@ -7,7 +7,7 @@ import frc.robot.hazard.HazardVision;
 import java.util.Optional;
 import org.photonvision.EstimatedRobotPose;
 
-public class Vision extends SubsystemBase {
+public class Vision {
   HazardVision photonVision;
   Pose3d pose = new Pose3d();
 
@@ -17,7 +17,6 @@ public class Vision extends SubsystemBase {
 
   int loop = 0;
 
-  @Override
   public void periodic() {
     photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
     Optional<EstimatedRobotPose> optional = photonVision.getEstimatedGlobalPose();
