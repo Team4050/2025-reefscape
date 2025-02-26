@@ -14,10 +14,10 @@ import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
+//import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.hazard.HazardXbox;
+import frc.robot.hazard.Joystick;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Vision;
 
@@ -34,8 +34,8 @@ public class RobotContainer {
   // private final Claw clawSubsystem = new Claw();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
-  private final HazardXbox m_driverController =
-      new HazardXbox(OperatorConstants.kDriverControllerPort);
+  private final CommandJoystick m_driverController =
+      new CommandJoystick(OperatorConstants.kDriverControllerPort);
 
   private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
 
@@ -100,7 +100,7 @@ public class RobotContainer {
    * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor with an arbitrary
    * predicate, or via the named factories in {@link
    * edu.wpi.first.wpilibj2.command.button.CommandGenericHID}'s subclasses for {@link
-   * CommandXboxController Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
+   * CommandJoystick Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
    * PS4} controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
    * joysticks}.
    */
