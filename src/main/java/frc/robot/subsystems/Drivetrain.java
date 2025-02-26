@@ -13,42 +13,47 @@ import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoubleArrayTopic;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.Publisher;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class Drivetrain extends SubsystemBase {
   // TODO: check if kraken encoders are integrated or remote
+  // ******************************************************** Hardware ******************************************************** //
   private Orchestra music;
   private TalonFX FL;
   private TalonFX FR;
   private TalonFX RL;
   private TalonFX RR;
-  private StatusSignal<AngularVelocity> FLVel;
-  private StatusSignal<AngularVelocity> FRVel;
-  private StatusSignal<AngularVelocity> RLVel;
-  private StatusSignal<AngularVelocity> RRVel;
   private TalonFXConfiguration leftSideConfig;
   private TalonFXConfiguration rightSideConfig;
+
+  // ******************************************************** Sensors ******************************************************** //
+  private StatusSignal<AngularVelocity>[] motorVelocities;
+  private StatusSignal<Current>[] motorAppliedCurrent;
+
+  // ******************************************************** Math & Control ******************************************************** //
   private MecanumDriveKinematics kinematics;
 
+  // ******************************************************** Networktables ******************************************************** //
+  private boolean useNetworkTables;
+  private NetworkTable drivetrainTable;
   private DoubleArrayPublisher appliedCurrent;
-  private DoubleArrayTopic appliedCurrentTopic;
   private DoubleArrayPublisher velocity;
 
-  public Drivetrain() {
+  @SuppressWarnings("unchecked")
+  public Drivetrain(boolean useNetworkTables) {
+    this.useNetworkTables = useNetworkTables;
     FL = new TalonFX(Constants.Drivetrain.FL);
     FR = new TalonFX(Constants.Drivetrain.FR);
     RL = new TalonFX(Constants.Drivetrain.RL);
     RR = new TalonFX(Constants.Drivetrain.RR);
-    FLVel = FL.getVelocity();
-    FRVel = FR.getVelocity();
-    RLVel = RL.getVelocity();
-    RRVel = RR.getVelocity();
     double maxOutput = 0.3; // Increase in proportion to confidence in driver skill
     leftSideConfig = new TalonFXConfiguration();
     leftSideConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -66,6 +71,7 @@ public class Drivetrain extends SubsystemBase {
     rightSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -800;
     rightSideConfig.Audio.AllowMusicDurDisable = true;
 
+    music = new Orchestra();
     music.addInstrument(FL, 0);
     music.addInstrument(FR, 1);
     music.addInstrument(RL, 2);
@@ -78,14 +84,30 @@ public class Drivetrain extends SubsystemBase {
     FR.getConfigurator().apply(rightSideConfig);
     RR.getConfigurator().apply(rightSideConfig);
 
+    motorVelocities = new StatusSignal[4];
+    motorVelocities[0] = FL.getVelocity();
+    motorVelocities[1] = FL.getVelocity();
+    motorVelocities[2] = FL.getVelocity();
+    motorVelocities[3] = FL.getVelocity();
+
+    motorAppliedCurrent = new StatusSignal[4];
+    motorAppliedCurrent[0] = FL.getStatorCurrent();
+    motorAppliedCurrent[1] = FR.getStatorCurrent();
+    motorAppliedCurrent[2] = RL.getStatorCurrent();
+    motorAppliedCurrent[3] = RR.getStatorCurrent();
+
+    if (useNetworkTables) {
+      drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
+      appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | amperes").publish();
+      velocity = drivetrainTable.getDoubleArrayTopic("Wheel encoder velocities | rad/s").publish();
+    }
+
     kinematics =
         new MecanumDriveKinematics(
             new Translation2d(0.5588, 0.5588),
             new Translation2d(0.5588, -0.5588),
             new Translation2d(-0.5588, 0.5588),
             new Translation2d(-0.5588, -0.5588));
-
-    appliedCurrentTopic = NetworkTableInstance.getDefault().getDoubleArrayTopic("Applied current");
   }
 
   private double moduleMetersPerSecondToKrakenRPM(double mps) {
@@ -102,10 +124,20 @@ public class Drivetrain extends SubsystemBase {
     // ChassisSpeeds s = kinematics.toChassisSpeeds(new
     // MecanumDriveWheelSpeeds(FL.().getValueAsDouble(), 0, 0, 0))
     double[] d = {
-      FLVel.refresh().getValue().in(Units.RadiansPerSecond),
-      FRVel.refresh().getValue().in(Units.RadiansPerSecond),
-      RLVel.refresh().getValue().in(Units.RadiansPerSecond),
-      RRVel.refresh().getValue().in(Units.RadiansPerSecond)
+      motorVelocities[0].refresh().getValue().in(Units.RadiansPerSecond),
+      motorVelocities[1].refresh().getValue().in(Units.RadiansPerSecond),
+      motorVelocities[2].refresh().getValue().in(Units.RadiansPerSecond),
+      motorVelocities[3].refresh().getValue().in(Units.RadiansPerSecond)
+    };
+    return d;
+  }
+
+  public double[] getAppliedCurrents() {
+    double[] d = {
+      motorAppliedCurrent[0].refresh().getValue().in(Units.Amps),
+      motorAppliedCurrent[1].refresh().getValue().in(Units.Amps),
+      motorAppliedCurrent[2].refresh().getValue().in(Units.Amps),
+      motorAppliedCurrent[3].refresh().getValue().in(Units.Amps)
     };
     return d;
   }
@@ -141,9 +173,16 @@ public class Drivetrain extends SubsystemBase {
     music.stop();
   }
 
+  public void init() {
+
+  }
+
   @Override
   public void periodic() {
-    appliedCurrent.set(getEncoders());
+    if (useNetworkTables) {
+      appliedCurrent.set(getAppliedCurrents());
+      velocity.set(getEncoders());  
+    }
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
     super.periodic();

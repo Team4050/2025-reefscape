@@ -17,7 +17,9 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.commands.Autos;
 import frc.robot.hazard.HazardXbox;
+import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
 import frc.robot.subsystems.Vision;
@@ -30,13 +32,15 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  //private final Drivetrain drivetrainSubsystem = new Drivetrain();
-  private final Elevator elevatorSubsystem = new Elevator();
-  // private final Claw clawSubsystem = new Claw();
+  private final Drivetrain drivetrainSubsystem = new Drivetrain(false);
+  private final Elevator elevatorSubsystem = new Elevator(false);
+  private final Claw clawSubsystem = new Claw();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final HazardXbox m_driverController =
       new HazardXbox(OperatorConstants.kDriverControllerPort);
+  private final HazardXbox m_secondaryController = 
+      new HazardXbox(OperatorConstants.kSecondaryControllerPort);
 
   private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
 
@@ -63,16 +67,16 @@ public class RobotContainer {
                 () -> {
                   elevatorSubsystem.set(1000);
                 }));*/
-
+    clawSubsystem.setDefaultCommand(new RunCommand(() -> {clawSubsystem.set(-m_secondaryController.getRightY());}, clawSubsystem));
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
               elevatorSubsystem.setAdditive(m_driverController.getRightY());
             },
             elevatorSubsystem));
-    /*drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
+    drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
         drivetrainSubsystem.set(-m_driverController.getLeftY(), m_driverController.getLeftX(), -m_driverController.getRightX());
-    }));*/
+    }, drivetrainSubsystem));
   }
 
   public void init() {
@@ -127,9 +131,9 @@ public class RobotContainer {
     imuDataPublisher.setDefault(def);
     imuTopic = new DoubleTopic(netTables.getTopic("IMU Yaw Accel Rads"));
     gyroTopic = new DoubleTopic(netTables.getTopic("IMU Gyro Rads"));
-    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
-    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
-    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
+    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
   }
 
   /**
@@ -139,6 +143,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return null;
+    return Autos.timedMovementTest(drivetrainSubsystem);
   }
 }
