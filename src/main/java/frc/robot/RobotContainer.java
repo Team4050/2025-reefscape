@@ -14,10 +14,10 @@ import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.RunCommand;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import edu.wpi.first.wpilibj2.command.button.Trigger;
+import edu.wpi.first.wpilibj2.command.button.CommandJoystick;
+//import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.hazard.HazardXbox;
+import frc.robot.hazard.HazardJoystick;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Vision;
 
@@ -33,9 +33,19 @@ public class RobotContainer {
   // private final Elevator elevatorSubsystem = new Elevator();
   // private final Claw clawSubsystem = new Claw();
 
-  // Replace with CommandPS4Controller or CommandJoystick if needed
-  private final HazardXbox m_driverController =
-      new HazardXbox(OperatorConstants.kDriverControllerPort);
+  private final HazardJoystick m_driverController =
+      new HazardJoystick(OperatorConstants.kDriverControllerPort);
+
+  private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
+
+  private final DoublePublisher imuPlotting;
+  private DoubleTopic imuTopic;
+
+  private final DoublePublisher gyroPlotting;
+  private DoubleTopic gyroTopic;
+
+  private final DoubleArrayPublisher imuDataPublisher;
+  private DoubleArrayTopic imuData;
 
   private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
 
@@ -81,7 +91,7 @@ public class RobotContainer {
             },
             elevatorSubsystem));*/
     drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
-      drivetrainSubsystem.set(-m_driverController.getLeftY(), m_driverController.getLeftX(), -m_driverController.getRightX());
+      drivetrainSubsystem.set(-m_driverController.getY(), m_driverController.getX(), -m_driverController.getZ());
     }));
   }
 
@@ -100,29 +110,11 @@ public class RobotContainer {
    * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor with an arbitrary
    * predicate, or via the named factories in {@link
    * edu.wpi.first.wpilibj2.command.button.CommandGenericHID}'s subclasses for {@link
-   * CommandXboxController Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
+   * CommandJoystick Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller
    * PS4} controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight
    * joysticks}.
    */
-  private void configureBindings() {
-    // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-    // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
-    // cancelling on release.
-    /*m_driverController
-    .b()
-    .onTrue(
-        new RunCommand(
-            () -> {
-              clawSubsystem.set(1);
-            }));*/
-    m_driverController
-        .b()
-        .onFalse(
-            new RunCommand(
-                () -> {
-                  // clawSubsystem.set(0);
-                }));
-  }
+  private void configureBindings() {}
 
   private void configureDashboard() {
     imuTopic = new DoubleTopic(netTables.getTopic("IMU Yaw Accel Rads"));
