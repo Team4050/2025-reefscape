@@ -49,14 +49,13 @@ public class Drivetrain extends SubsystemBase {
     FRVel = FR.getVelocity();
     RLVel = RL.getVelocity();
     RRVel = RR.getVelocity();
-    double maxOutput = 0.05; // Increase in proportion to confidence in driver skill
+    double maxOutput = 0.3; // Increase in proportion to confidence in driver skill
     leftSideConfig = new TalonFXConfiguration();
     leftSideConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     leftSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput;
     leftSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
     leftSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 800;
     leftSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -800;
-    leftSideConfig.DifferentialConstants.PeakDifferentialDutyCycle = 1;
     leftSideConfig.Audio.AllowMusicDurDisable = true;
 
     rightSideConfig = new TalonFXConfiguration();

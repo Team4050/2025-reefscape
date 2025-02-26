@@ -18,7 +18,7 @@ public class Vision {
   int loop = 0;
 
   public void periodic() {
-    photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
+    //photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
     Optional<EstimatedRobotPose> optional = photonVision.getEstimatedGlobalPose();
     if (optional.isPresent()) {
       pose = optional.get().estimatedPose;

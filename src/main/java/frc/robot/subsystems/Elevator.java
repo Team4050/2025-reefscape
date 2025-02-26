@@ -20,13 +20,13 @@ import frc.robot.Constants;
 public class Elevator extends SubsystemBase {
   private SparkMax leftMotor;
   private SparkMax rightMotor;
-  private SparkMax elevatorWrist; // Not in CAN yet
+  //private SparkMax elevatorWrist; // Not in CAN yet
   private SparkClosedLoopController leftMotorController;
   private SparkClosedLoopController rightMotorController;
-  private SparkClosedLoopController wristMotorController;
+  //private SparkClosedLoopController wristMotorController;
   private RelativeEncoder leftEncoder;
   private RelativeEncoder rightEncoder;
-  private RelativeEncoder wristEncoder;
+  //private RelativeEncoder wristEncoder;
   private PIDController elevatorPID;
   private ElevatorFeedforward elevatorFeedforward;
   private PIDController wristPID;
@@ -96,7 +96,7 @@ public class Elevator extends SubsystemBase {
 
     leftMotorController = leftMotor.getClosedLoopController();
     rightMotorController = rightMotor.getClosedLoopController();
-    wristMotorController = elevatorWrist.getClosedLoopController();
+    //wristMotorController = elevatorWrist.getClosedLoopController();
   }
 
   /**
@@ -125,12 +125,13 @@ public class Elevator extends SubsystemBase {
   public void set(double position) {
     // Constants.log("Elevator target position:" + position);
     // leftMotor.set(position); //
+    Constants.log(position);
     elevatorTarget = position;
     if (elevatorTarget > 0) elevatorTarget = 0;
     if (elevatorTarget < -104) elevatorTarget = -104;
     rightMotorController.setReference(
         elevatorTarget,
-        ControlType.kMAXMotionPositionControl,
+        ControlType.kPosition,
         ClosedLoopSlot.kSlot0,
         Constants.Elevator.elevatorFFVoltage);
   }
@@ -166,12 +167,13 @@ public class Elevator extends SubsystemBase {
     double clawRotation = Math.acos(extensionMM / 300);
     double elevatorH = heightMM - Math.sin(clawRotation) * 300;
 
-    wristMotorController.setReference(clawRotation * Constants.Elevator.wristGearboxReduction, ControlType.kMAXMotionPositionControl);
+    //wristMotorController.setReference(clawRotation * Constants.Elevator.wristGearboxReduction, ControlType.kMAXMotionPositionControl);
     setElevatorHeight(elevatorH);
   }
 
   public double getWrist() {
-    return wristEncoder.getPosition();
+    return 0;
+    //return wristEncoder.getPosition();
   }
 
   private int loop = 0;

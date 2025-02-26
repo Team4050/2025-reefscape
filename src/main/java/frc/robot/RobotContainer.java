@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.hazard.HazardXbox;
 import frc.robot.subsystems.Drivetrain;
+import frc.robot.subsystems.Elevator;
 import frc.robot.subsystems.Vision;
 
 /**
@@ -29,8 +30,8 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final Drivetrain drivetrainSubsystem = new Drivetrain();
-  // private final Elevator elevatorSubsystem = new Elevator();
+  //private final Drivetrain drivetrainSubsystem = new Drivetrain();
+  private final Elevator elevatorSubsystem = new Elevator();
   // private final Claw clawSubsystem = new Claw();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
@@ -39,30 +40,19 @@ public class RobotContainer {
 
   private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
 
-  private final DoublePublisher imuPlotting;
+  private DoublePublisher imuPlotting;
   private DoubleTopic imuTopic;
 
-  private final DoublePublisher gyroPlotting;
+  private DoublePublisher gyroPlotting;
   private DoubleTopic gyroTopic;
 
-  private final DoubleArrayPublisher imuDataPublisher;
+  private DoubleArrayPublisher imuDataPublisher;
   private DoubleArrayTopic imuData;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the trigger bindings
     configureBindings();
-    configureDashboard();
-
-    imuPlotting = imuTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
-    imuPlotting.setDefault(0);
-
-    gyroPlotting = gyroTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
-    gyroPlotting.setDefault(0);
-
-    imuDataPublisher = imuData.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
-    double[] def = {0, 0};
-    imuDataPublisher.setDefault(def);
 
     Constants.Sensors.calibrate();
 
@@ -72,27 +62,28 @@ public class RobotContainer {
             new RunCommand(
                 () -> {
                   elevatorSubsystem.set(1000);
-                }));
+                }));*/
 
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
               elevatorSubsystem.setAdditive(m_driverController.getRightY());
             },
-            elevatorSubsystem));*/
-    drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
-      drivetrainSubsystem.set(-m_driverController.getLeftY(), m_driverController.getLeftX(), -m_driverController.getRightX());
-    }));
+            elevatorSubsystem));
+    /*drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
+        drivetrainSubsystem.set(-m_driverController.getLeftY(), m_driverController.getLeftX(), -m_driverController.getRightX());
+    }));*/
   }
 
   public void init() {
     Constants.log("Enabling...");
-    SmartDashboard.putString("test", "drivetrainSubsystem");
-    // drivetrainSubsystem.stop();
+  
+    configureDashboard();
+    //drivetrainSubsystem.stop();
   }
 
   public void periodic() {
-    imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
+    //imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
   }
 
   /**
@@ -108,28 +99,37 @@ public class RobotContainer {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
-    /*m_driverController
+    m_driverController
     .b()
     .onTrue(
         new RunCommand(
             () -> {
-              clawSubsystem.set(1);
-            }));*/
+              elevatorSubsystem.set(-104);
+            }));
     m_driverController
-        .b()
-        .onFalse(
+        .a()
+        .onTrue(
             new RunCommand(
                 () -> {
-                  // clawSubsystem.set(0);
+                  elevatorSubsystem.set(0);
                 }));
   }
 
   private void configureDashboard() {
+    imuPlotting = imuTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    imuPlotting.setDefault(0);
+
+    gyroPlotting = gyroTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    gyroPlotting.setDefault(0);
+
+    imuDataPublisher = imuData.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    double[] def = {0, 0};
+    imuDataPublisher.setDefault(def);
     imuTopic = new DoubleTopic(netTables.getTopic("IMU Yaw Accel Rads"));
     gyroTopic = new DoubleTopic(netTables.getTopic("IMU Gyro Rads"));
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
+    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
+    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
+    //SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
   }
 
   /**
