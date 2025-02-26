@@ -87,6 +87,7 @@ public class RobotContainer {
 
   public void init() {
     Constants.log("Enabling...");
+    SmartDashboard.putString("test", "drivetrainSubsystem");
     // drivetrainSubsystem.stop();
   }
 

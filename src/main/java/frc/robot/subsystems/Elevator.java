@@ -163,10 +163,10 @@ public class Elevator extends SubsystemBase {
    * @param extensionMM
    */
   public void goToPosition(double heightMM, double extensionMM) {
-    double r = Math.acos(extensionMM / 300);
-    double elevatorH = heightMM - Math.sin(r) * 300;
+    double clawRotation = Math.acos(extensionMM / 300);
+    double elevatorH = heightMM - Math.sin(clawRotation) * 300;
 
-    wristMotorController.setReference(r, ControlType.kMAXMotionPositionControl);
+    wristMotorController.setReference(clawRotation * Constants.Elevator.wristGearboxReduction, ControlType.kMAXMotionPositionControl);
     setElevatorHeight(elevatorH);
   }
 

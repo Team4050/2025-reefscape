@@ -15,7 +15,9 @@ import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.Publisher;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -26,10 +28,10 @@ public class Drivetrain extends SubsystemBase {
   private TalonFX FR;
   private TalonFX RL;
   private TalonFX RR;
-  private StatusSignal<Angle> FLPos;
-  private StatusSignal<Angle> FRPos;
-  private StatusSignal<Angle> RLPos;
-  private StatusSignal<Angle> RRPos;
+  private StatusSignal<AngularVelocity> FLVel;
+  private StatusSignal<AngularVelocity> FRVel;
+  private StatusSignal<AngularVelocity> RLVel;
+  private StatusSignal<AngularVelocity> RRVel;
   private TalonFXConfiguration leftSideConfig;
   private TalonFXConfiguration rightSideConfig;
   private MecanumDriveKinematics kinematics;
@@ -43,10 +45,10 @@ public class Drivetrain extends SubsystemBase {
     FR = new TalonFX(Constants.Drivetrain.FR);
     RL = new TalonFX(Constants.Drivetrain.RL);
     RR = new TalonFX(Constants.Drivetrain.RR);
-    FLPos = FL.getPosition();
-    FRPos = FR.getPosition();
-    RLPos = RL.getPosition();
-    RRPos = RR.getPosition();
+    FLVel = FL.getVelocity();
+    FRVel = FR.getVelocity();
+    RLVel = RL.getVelocity();
+    RRVel = RR.getVelocity();
     double maxOutput = 0.05; // Increase in proportion to confidence in driver skill
     leftSideConfig = new TalonFXConfiguration();
     leftSideConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -59,8 +61,7 @@ public class Drivetrain extends SubsystemBase {
 
     rightSideConfig = new TalonFXConfiguration();
     rightSideConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    rightSideConfig.MotorOutput.PeakForwardDutyCycle =
-        maxOutput; // Increase in proportion to confidence in driver skill
+    rightSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput; // Increase in proportion to confidence in driver skill
     rightSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
     rightSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 800;
     rightSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -800;
@@ -102,10 +103,10 @@ public class Drivetrain extends SubsystemBase {
     // ChassisSpeeds s = kinematics.toChassisSpeeds(new
     // MecanumDriveWheelSpeeds(FL.().getValueAsDouble(), 0, 0, 0))
     double[] d = {
-      FLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
-      FRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
-      RLPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians),
-      RRPos.refresh().getValue().abs(edu.wpi.first.units.Units.Radians)
+      FLVel.refresh().getValue().in(Units.RadiansPerSecond),
+      FRVel.refresh().getValue().in(Units.RadiansPerSecond),
+      RLVel.refresh().getValue().in(Units.RadiansPerSecond),
+      RRVel.refresh().getValue().in(Units.RadiansPerSecond)
     };
     return d;
   }
@@ -143,6 +144,7 @@ public class Drivetrain extends SubsystemBase {
 
   @Override
   public void periodic() {
+    appliedCurrent.set(getEncoders());
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
     super.periodic();
