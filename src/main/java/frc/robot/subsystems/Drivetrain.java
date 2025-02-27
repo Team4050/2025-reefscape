@@ -1,14 +1,24 @@
 package frc.robot.subsystems;
 
+import org.ejml.simple.SimpleMatrix;
+
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.VecBuilder;
+import edu.wpi.first.math.controller.LinearPlantInversionFeedforward;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
+import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.math.numbers.N4;
+import edu.wpi.first.math.numbers.N5;
+import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoubleArrayTopic;
 import edu.wpi.first.networktables.DoublePublisher;
@@ -40,6 +50,8 @@ public class Drivetrain extends SubsystemBase {
 
   // ******************************************************** Math & Control ******************************************************** //
   private MecanumDriveKinematics kinematics;
+  private LinearSystem mecanumSystem;
+  private LinearPlantInversionFeedforward mecanumFF;
 
   // ******************************************************** Networktables ******************************************************** //
   private boolean useNetworkTables;
@@ -54,6 +66,7 @@ public class Drivetrain extends SubsystemBase {
     FR = new TalonFX(Constants.Drivetrain.FR);
     RL = new TalonFX(Constants.Drivetrain.RL);
     RR = new TalonFX(Constants.Drivetrain.RR);
+
     double maxOutput = 0.3; // Increase in proportion to confidence in driver skill
     leftSideConfig = new TalonFXConfiguration();
     leftSideConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -108,6 +121,45 @@ public class Drivetrain extends SubsystemBase {
             new Translation2d(0.5588, -0.5588),
             new Translation2d(-0.5588, 0.5588),
             new Translation2d(-0.5588, -0.5588));
+
+    double rootHalf = Math.sqrt(2) / 2;
+    double d = 0.39513;
+    double[] dA = {
+      -0.001, 0, 0,
+      0, -0.001, 0,
+      0, 0, -0.001
+    };
+    double[] dB = {
+      rootHalf, rootHalf, rootHalf, rootHalf,
+      -rootHalf, rootHalf, rootHalf, -rootHalf,
+      d, -d, d, -d
+    };
+    double[] dC = {
+      rootHalf, -rootHalf, d,
+      rootHalf,  rootHalf, -d,
+      rootHalf, rootHalf, d,
+      rootHalf, -rootHalf, -d,
+      0, 0, 1
+    };
+    double[] dD = {
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+      d, -d, d, -d
+    };
+    Matrix<N3, N3> A = new Matrix<N3, N3>(N3.instance, N3.instance, dA);
+    Matrix<N3, N4> B = new Matrix<N3, N4>(N3.instance, N4.instance, dB);
+    Matrix<N5, N3> C = new Matrix<N5, N3>(N5.instance, N3.instance, dC);
+    Matrix<N5, N4> D = new Matrix<N5, N4>(N5.instance, N4.instance, dD);
+    mecanumSystem = new LinearSystem<N3, N4, N5>(A, B, C, D);
+
+    //mecanumFF = new LinearPlantInversionFeedforward<N3, N4, N5>(mecanumSystem, 0.02);
+    //Matrix FF = mecanumFF.calculate(VecBuilder.fill(2, 2, 0), VecBuilder.fill(2, 2, 0));
+
+    Matrix xN = mecanumSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 1);
+    Constants.log("New X:" + xN.toString());
+    //Constants.log("FF:" + FF.toString());
   }
 
   private double moduleMetersPerSecondToKrakenRPM(double mps) {
@@ -154,11 +206,24 @@ public class Drivetrain extends SubsystemBase {
     set(speeds);
   }
 
+  /***
+   * Directly set the wheel speeds
+   * @param wheelSpeeds
+   */
   public void set(MecanumDriveWheelSpeeds wheelSpeeds) {
     FL.set((wheelSpeeds.frontLeftMetersPerSecond));
     FR.set((wheelSpeeds.frontRightMetersPerSecond));
     RL.set((wheelSpeeds.rearLeftMetersPerSecond));
     RR.set((wheelSpeeds.rearRightMetersPerSecond));
+  }
+
+  /***
+   * Set the speed of the chassis in field-relative m/s
+   * @param fieldRelativeSpeeds
+   * @return
+   */
+  public void set(ChassisSpeeds fieldRelativeSpeeds) {
+    kinematics.toWheelSpeeds(fieldRelativeSpeeds);
   }
 
   public void play() {
