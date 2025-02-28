@@ -63,10 +63,12 @@ public class Elevator extends SubsystemBase {
     // rightConfig.follow(Constants.Elevator.elevatorLeft, true);
     rightConfig.closedLoop.outputRange(-1, 1); // 0.1 for testing
     rightConfig.closedLoop.iMaxAccum(1);
-    rightConfig.closedLoop.pidf(0.7, 0, 0.05, 0); // 0.1 0 0.1 0 works
+    rightConfig.closedLoop.pid(0.5, 0, 0.02); // 0.1 0 0.1 0 works
     rightConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
-    rightConfig.closedLoop.maxMotion.maxAcceleration(0, ClosedLoopSlot.kSlot0);
-    rightConfig.closedLoop.maxMotion.maxVelocity(0, ClosedLoopSlot.kSlot0);
+    rightConfig.closedLoop.maxMotion.allowedClosedLoopError(1);
+    rightConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
+    rightConfig.closedLoop.maxMotion.maxAcceleration(800, ClosedLoopSlot.kSlot0);
+    rightConfig.closedLoop.maxMotion.maxVelocity(25000, ClosedLoopSlot.kSlot0);
     // rightConfig.closedLoop.iZone(0);
     rightConfig.closedLoop.feedbackSensor(
         FeedbackSensor.kPrimaryEncoder); // AbsoluteEncoder is not connected to SparkMAX
@@ -127,13 +129,11 @@ public class Elevator extends SubsystemBase {
     // leftMotor.set(position); //
     Constants.log(position);
     elevatorTarget = position;
-    if (elevatorTarget > 0) elevatorTarget = 0;
+    if (elevatorTarget > -2) elevatorTarget = -2;
     if (elevatorTarget < -104) elevatorTarget = -104;
     rightMotorController.setReference(
         elevatorTarget,
-        ControlType.kPosition,
-        ClosedLoopSlot.kSlot0,
-        Constants.Elevator.elevatorFFVoltage);
+        ControlType.kMAXMotionPositionControl);
   }
 
   public void setElevatorHeight(double heightMM) {
