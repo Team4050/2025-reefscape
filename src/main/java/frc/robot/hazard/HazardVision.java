@@ -86,4 +86,8 @@ public class HazardVision {
   public void addHeadingData(Rotation3d heading) {
     poseEstimator.addHeadingData((double) RobotController.getFPGATime(), heading);
   }
+
+  public void setPipeline(int pipeline) {
+    chassis.setPipelineIndex(pipeline);
+  }
 }

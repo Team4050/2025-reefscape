@@ -148,6 +148,9 @@ public class Drivetrain extends SubsystemBase {
     //mecanumChassisRelativeSystem = new LinearSystem<N3, N4, N5>(A, B, C, D);
 
 
+    // xhat = Ax + Bu
+    // yhat = Cx + Du
+    // u =  
 
     double[] dA2 = { //States x states
       0, 0, 0,
