@@ -142,7 +142,7 @@ public class Elevator extends SubsystemBase {
   public void set(double position) {
     // Constants.log("Elevator target position:" + position);
     // leftMotor.set(position); //
-    Constants.log(position);
+    // Constants.log(position);
     elevatorTarget = position;
     if (elevatorTarget > 0) elevatorTarget = 0;
     if (elevatorTarget < -104) elevatorTarget = -104;
@@ -208,7 +208,7 @@ public class Elevator extends SubsystemBase {
 
     // leftMotor.set(pidElevator.calculate(encoderLeft.getPosition())); // Use for alternate control
     // elevatorWrist.set(pidWrist.calculate(wristEncoder.getPosition()));
-    Constants.log(wristFeedforward.calculate(wristEncoder.getPosition(), wristEncoder.getVelocity()));
+    //Constants.log(wristFeedforward.calculate(wristEncoder.getPosition(), wristEncoder.getVelocity()));
 
     if (useNetworkTables) {
       motorVelocityRads.set(rightEncoder.getVelocity());

@@ -32,7 +32,7 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final Drivetrain drivetrainSubsystem = new Drivetrain(false);
+  private final Drivetrain drivetrainSubsystem = new Drivetrain(false, 1);
   private final Elevator elevatorSubsystem = new Elevator(false);
   private final Claw clawSubsystem = new Claw();
 
@@ -89,6 +89,7 @@ public class RobotContainer {
 
   public void periodic() {
     //imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
+    //imuDataPublisher.set(Constants.Sensors.getImuRotation3d().getZ(), Constants.Sensors);
   }
 
   /**
@@ -121,17 +122,17 @@ public class RobotContainer {
   }
 
   private void configureDashboard() {
-    imuPlotting = imuTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    double[] def = {0, 0};
+
+    imuPlotting = netTables.getDoubleTopic("IMU Yaw Accel Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     imuPlotting.setDefault(0);
 
-    gyroPlotting = gyroTopic.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    gyroPlotting = netTables.getDoubleTopic("IMU Gyro Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     gyroPlotting.setDefault(0);
 
-    imuDataPublisher = imuData.publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
-    double[] def = {0, 0};
+    imuDataPublisher = netTables.getDoubleArrayTopic("IMU Data").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     imuDataPublisher.setDefault(def);
-    imuTopic = new DoubleTopic(netTables.getTopic("IMU Yaw Accel Rads"));
-    gyroTopic = new DoubleTopic(netTables.getTopic("IMU Gyro Rads"));
+
     SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
     SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
     SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));

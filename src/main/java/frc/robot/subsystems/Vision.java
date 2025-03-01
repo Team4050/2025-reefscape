@@ -26,7 +26,7 @@ public class Vision {
     //Constants.log(pose);
     loop++;
     if (loop > 25) {
-      Constants.log(pose.getRotation().getZ());
+      Constants.log("Pose Z:" + pose.getRotation().getZ());
       loop = 0;
     }
   }

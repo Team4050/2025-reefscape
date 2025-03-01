@@ -9,12 +9,16 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.LinearPlantInversionFeedforward;
+import edu.wpi.first.math.controller.LinearQuadraticRegulator;
+import edu.wpi.first.math.estimator.KalmanFilter;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
+import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N4;
 import edu.wpi.first.math.numbers.N5;
@@ -50,8 +54,10 @@ public class Drivetrain extends SubsystemBase {
 
   // ******************************************************** Math & Control ******************************************************** //
   private MecanumDriveKinematics kinematics;
-  private LinearSystem mecanumSystem;
-  private LinearPlantInversionFeedforward mecanumFF;
+  private KalmanFilter<N3, N3, N4> mecanumFieldRelativeKalmanFilter;
+  private LinearSystem<N3, N3, N4> mecanumFieldRelativeSystem;
+  private LinearQuadraticRegulator<N3, N3, N4> mecanumFieldRelativeLQR;
+  private LinearPlantInversionFeedforward<N3, N3, N4> mecanumFF;
 
   // ******************************************************** Networktables ******************************************************** //
   private boolean useNetworkTables;
@@ -59,9 +65,24 @@ public class Drivetrain extends SubsystemBase {
   private DoubleArrayPublisher appliedCurrent;
   private DoubleArrayPublisher velocity;
 
+  // ******************************************************** Networktables ******************************************************** //
+  private int loggingLoop = -1;
+
   @SuppressWarnings("unchecked")
-  public Drivetrain(boolean useNetworkTables) {
+  /***
+   * Constructor
+   * @param useNetworkTables
+   * @param logInfo 0 = No logging, 1 = logging every loop, 2 or >2 = logging every 50 loops (roughly every second)
+   */
+  public Drivetrain(boolean useNetworkTables, int logInfo) {
     this.useNetworkTables = useNetworkTables;
+    if (logInfo != 0) {
+      if (logInfo == 1) {
+        loggingLoop = 0;
+      } else if (logInfo > 1) {
+        loggingLoop = 50;
+      }
+    }
     FL = new TalonFX(Constants.Drivetrain.FL);
     FR = new TalonFX(Constants.Drivetrain.FR);
     RL = new TalonFX(Constants.Drivetrain.RL);
@@ -124,41 +145,52 @@ public class Drivetrain extends SubsystemBase {
 
     double rootHalf = Math.sqrt(2) / 2;
     double d = 0.39513;
-    double[] dA = {
-      -0.001, 0, 0,
-      0, -0.001, 0,
-      0, 0, -0.001
+    //mecanumChassisRelativeSystem = new LinearSystem<N3, N4, N5>(A, B, C, D);
+
+
+
+    double[] dA2 = { //States x states
+      0, 0, 0,
+      0, 0, 0,
+      0, 0, 0
     };
-    double[] dB = {
-      rootHalf, rootHalf, rootHalf, rootHalf,
-      -rootHalf, rootHalf, rootHalf, -rootHalf,
-      d, -d, d, -d
-    };
-    double[] dC = {
-      rootHalf, -rootHalf, d,
-      rootHalf,  rootHalf, -d,
-      rootHalf, rootHalf, d,
-      rootHalf, -rootHalf, -d,
+    double[] dB2 = { //States x inputs
+      1, 0, 0,
+      0, 1, 0,
       0, 0, 1
     };
-    double[] dD = {
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0,
-      0, 0, 0, 1,
-      d, -d, d, -d
+    
+    double[] dC2 = { //Outputs x states
+      0.000001, 0, 0,
+      0, 0.000001, 0,
+      0, 0, 0.000001,
+      0, 0, 0.000001,
     };
-    Matrix<N3, N3> A = new Matrix<N3, N3>(N3.instance, N3.instance, dA);
-    Matrix<N3, N4> B = new Matrix<N3, N4>(N3.instance, N4.instance, dB);
-    Matrix<N5, N3> C = new Matrix<N5, N3>(N5.instance, N3.instance, dC);
-    Matrix<N5, N4> D = new Matrix<N5, N4>(N5.instance, N4.instance, dD);
-    mecanumSystem = new LinearSystem<N3, N4, N5>(A, B, C, D);
+    double[] dD2 = { //Outputs x inputs
+      1, 0, 0,
+      0, 1, 0,
+      0, 0, 1,
+      0, 0, 1,
+    };
+    Matrix<N3, N3> A2 = new Matrix<N3, N3>(N3.instance, N3.instance, dA2);
+    Matrix<N3, N3> B2 = new Matrix<N3, N3>(N3.instance, N3.instance, dB2);
+    Matrix<N4, N3> C2 = new Matrix<N4, N3>(N4.instance, N3.instance, dC2);
+    Matrix<N4, N3> D2 = new Matrix<N4, N3>(N4.instance, N3.instance, dD2);
+    mecanumFieldRelativeSystem = new LinearSystem<N3, N3, N4>(A2, B2, C2, D2); 
+    
+    Matrix<N3, N1> stateDev = VecBuilder.fill(0.01, 0.01, 0.01);
+    Matrix<N4, N1> sensorDev = VecBuilder.fill(0.001, 0.001, 0.001, 0.05);
+
+    mecanumFieldRelativeKalmanFilter = new KalmanFilter<N3, N3, N4>(N3.instance, N4.instance, mecanumFieldRelativeSystem, stateDev, sensorDev, 0.02);
+
+    mecanumFieldRelativeLQR = new LinearQuadraticRegulator<>(mecanumFieldRelativeSystem, VecBuilder.fill(0.05, 0.05, 0.05), VecBuilder.fill(1, 1, 1), d);
+    mecanumFF = new LinearPlantInversionFeedforward<>(mecanumFieldRelativeSystem, 0.02);
+    //mecanumKalmanFilter.predict();
 
     //mecanumFF = new LinearPlantInversionFeedforward<N3, N4, N5>(mecanumSystem, 0.02);
     //Matrix FF = mecanumFF.calculate(VecBuilder.fill(2, 2, 0), VecBuilder.fill(2, 2, 0));
-
-    Matrix xN = mecanumSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 1);
-    Constants.log("New X:" + xN.toString());
+    //Matrix xN = mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 1);
+    //Constants.log("New X:" + xN.toString());
     //Constants.log("FF:" + FF.toString());
   }
 
@@ -192,6 +224,28 @@ public class Drivetrain extends SubsystemBase {
       motorAppliedCurrent[3].refresh().getValue().in(Units.Amps)
     };
     return d;
+  }
+
+  public Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
+  public Vector<N4> getY() {
+    double rh = Math.sqrt(2) / 2;
+    double d = 0.39513;
+    double[] dB = {
+      rh, -rh, -d,
+      rh, rh, d,
+      rh, rh, -d,
+      rh, -rh, d
+    }; // y = M * x
+    //x = M+ * y
+    Matrix<N4, N3> B = new Matrix<N3, N4>(N3.instance, N4.instance, dB).transpose();
+
+    stateSim = new Vector<N3>(mecanumFieldRelativeSystem.calculateX(stateSim, u, 0.02));
+    return new Vector<N4>(mecanumFieldRelativeSystem.getC().times(stateSim).plus(mecanumFieldRelativeSystem.getD().times(u)));
+    /*
+    Vector<N4> motorVelocities = new Vector<N4>(new SimpleMatrix(getEncoders()));
+    Vector<N3> inputToChassisVelocity = new Vector<N3>(B.transpose().times(motorVelocities));
+    //return VecBuilder.fill(inputToChassisVelocity.get(0), inputToChassisVelocity.get(1), inputToChassisVelocity.get(2), Constants.Sensors.imu.getRate());
+    return VecBuilder.fill(stateSim.get(0), stateSim.get(1), stateSim.get(2), stateSim.get(2));*/
   }
 
   /***
@@ -242,14 +296,37 @@ public class Drivetrain extends SubsystemBase {
 
   }
 
+  private Vector<N3> u = VecBuilder.fill(0, 0, 0);
+  private int loop = 0;
   @Override
   public void periodic() {
     if (useNetworkTables) {
       appliedCurrent.set(getAppliedCurrents());
       velocity.set(getEncoders());  
     }
+
+    //Vector<N3> xN = (Vector<N3>) mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 0.02);
+
+    Vector<N4> y = getY();
+    Constants.log("Calculated output:" + mecanumFieldRelativeSystem.calculateY(stateSim, u).toString());
+    Constants.log("Output simulation:" + y.toString());
+    mecanumFieldRelativeKalmanFilter.predict(u, 0.02);
+    Constants.log("Predicted:" + mecanumFieldRelativeKalmanFilter.getXhat());
+    mecanumFieldRelativeKalmanFilter.correct(u, y);
+    Vector<N3> x = new Vector<N3>(mecanumFieldRelativeKalmanFilter.getXhat());
+    u = new Vector<N3>(mecanumFieldRelativeLQR.calculate(x, VecBuilder.fill(1, 0, 0)).plus(mecanumFF.calculate(VecBuilder.fill(1, 0, 0))));
+
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
     super.periodic();
+
+    if (loggingLoop == -1) return;
+    loop++;
+    if (loop > loggingLoop) {
+      Constants.log("State simulation:" + stateSim.toString());
+      Constants.log("State estimate:" + x.toString());
+      Constants.log("Control vec:" + u.toString());
+      loop = 0;
+    }
   }
 }

@@ -30,7 +30,9 @@ public final class Constants {
     public static final int FR = 2;
     public static final int RL = 3;
     public static final int RR = 4;
-    public static final float moduleGearReduction = 56 / 12;
+    public static final double moduleGearReduction = 56d / 12d;
+    public static final double NEOKvRadsPerV = 49.5324;
+    public static final double NEOKvRPSPerV = 473d / 60d;
     public static final float wheelRadiusMeters = 0.0762f; // 3in
   }
 
@@ -55,12 +57,12 @@ public final class Constants {
   }
 
   public static class Sensors {
-    //public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
+    public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
     public static Vision vision = new Vision();
 
-    /*public static Rotation3d getImuRotation3d() {
-      //return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
-    }*/
+    public static Rotation3d getImuRotation3d() {
+      return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
+    }
 
     public static void calibrate() {
       //imu.configCalTime(CalibrationTime._4s);
