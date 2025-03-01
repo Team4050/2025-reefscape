@@ -19,6 +19,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
 import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N4;
 import edu.wpi.first.math.numbers.N5;
@@ -54,8 +55,13 @@ public class Drivetrain extends SubsystemBase {
 
   // ******************************************************** Math & Control ******************************************************** //
   private MecanumDriveKinematics kinematics;
+  private Vector<N3> referenceVector;
   private KalmanFilter<N3, N3, N4> mecanumFieldRelativeKalmanFilter;
   private LinearSystem<N3, N3, N4> mecanumFieldRelativeSystem;
+  private LinearQuadraticRegulator<N2, N1, N2> FLLQR;
+  private LinearQuadraticRegulator<N2, N1, N2> FRLQR;
+  private LinearQuadraticRegulator<N2, N1, N2> RLLQR;
+  private LinearQuadraticRegulator<N2, N1, N2> RRLQR;
   private LinearQuadraticRegulator<N3, N3, N4> mecanumFieldRelativeLQR;
   private LinearPlantInversionFeedforward<N3, N3, N4> mecanumFF;
 
@@ -64,6 +70,11 @@ public class Drivetrain extends SubsystemBase {
   private NetworkTable drivetrainTable;
   private DoubleArrayPublisher appliedCurrent;
   private DoubleArrayPublisher velocity;
+  private DoubleArrayPublisher referenceVectorPublisher;
+  private DoubleArrayPublisher yPublisher;
+  private DoubleArrayPublisher xPublisher;
+  private DoubleArrayPublisher xHatPublisher;
+  private DoubleArrayPublisher uPublisher;
 
   // ******************************************************** Networktables ******************************************************** //
   private int loggingLoop = -1;
@@ -134,6 +145,9 @@ public class Drivetrain extends SubsystemBase {
       drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
       appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | amperes").publish();
       velocity = drivetrainTable.getDoubleArrayTopic("Wheel encoder velocities | rad/s").publish();
+      xPublisher = drivetrainTable.getDoubleArrayTopic("Predicted state | m/s").publish();
+      xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered state | m/s").publish();
+      yPublisher = drivetrainTable.getDoubleArrayTopic("Sensor measurements | m/s & rad/s").publish();
     }
 
     kinematics =
@@ -164,16 +178,16 @@ public class Drivetrain extends SubsystemBase {
     };
     
     double[] dC2 = { //Outputs x states
-      0.000001, 0, 0,
-      0, 0.000001, 0,
-      0, 0, 0.000001,
-      0, 0, 0.000001,
-    };
-    double[] dD2 = { //Outputs x inputs
       1, 0, 0,
       0, 1, 0,
       0, 0, 1,
       0, 0, 1,
+    };
+    double[] dD2 = { //Outputs x inputs
+      0, 0, 0,
+      0, 0, 0,
+      0, 0, 0,
+      0, 0, 0,
     };
     Matrix<N3, N3> A2 = new Matrix<N3, N3>(N3.instance, N3.instance, dA2);
     Matrix<N3, N3> B2 = new Matrix<N3, N3>(N3.instance, N3.instance, dB2);
@@ -182,12 +196,13 @@ public class Drivetrain extends SubsystemBase {
     mecanumFieldRelativeSystem = new LinearSystem<N3, N3, N4>(A2, B2, C2, D2); 
     
     Matrix<N3, N1> stateDev = VecBuilder.fill(0.01, 0.01, 0.01);
-    Matrix<N4, N1> sensorDev = VecBuilder.fill(0.001, 0.001, 0.001, 0.05);
+    Matrix<N4, N1> sensorDev = VecBuilder.fill(0.1, 0.1, 0.1, 0.05);
 
     mecanumFieldRelativeKalmanFilter = new KalmanFilter<N3, N3, N4>(N3.instance, N4.instance, mecanumFieldRelativeSystem, stateDev, sensorDev, 0.02);
 
     mecanumFieldRelativeLQR = new LinearQuadraticRegulator<>(mecanumFieldRelativeSystem, VecBuilder.fill(0.05, 0.05, 0.05), VecBuilder.fill(1, 1, 1), d);
     mecanumFF = new LinearPlantInversionFeedforward<>(mecanumFieldRelativeSystem, 0.02);
+    referenceVector = VecBuilder.fill(1, 0, 1);
     //mecanumKalmanFilter.predict();
 
     //mecanumFF = new LinearPlantInversionFeedforward<N3, N4, N5>(mecanumSystem, 0.02);
@@ -207,6 +222,10 @@ public class Drivetrain extends SubsystemBase {
     return rads * Constants.Drivetrain.wheelRadiusMeters / Constants.Drivetrain.moduleGearReduction;
   }
 
+  private double krakenRadSToMPS(double rads) {
+    return rads * Constants.Drivetrain.moduleGearReduction * Constants.Drivetrain.wheelRadiusMeters;
+  }
+
   public double[] getEncoders() {
     // ChassisSpeeds s = kinematics.toChassisSpeeds(new
     // MecanumDriveWheelSpeeds(FL.().getValueAsDouble(), 0, 0, 0))
@@ -216,6 +235,14 @@ public class Drivetrain extends SubsystemBase {
       motorVelocities[2].refresh().getValue().in(Units.RadiansPerSecond),
       motorVelocities[3].refresh().getValue().in(Units.RadiansPerSecond)
     };
+    return d;
+  }
+
+  public double[] getWheelVelocitiesMPS() {
+    double[] d = getEncoders();
+    for (int i = 0; i < d.length; i++) {
+      d[i] = krakenRadSToMPS(d[i]);
+    }
     return d;
   }
 
@@ -241,14 +268,19 @@ public class Drivetrain extends SubsystemBase {
     }; // y = M * x
     //x = M+ * y
     Matrix<N4, N3> B = new Matrix<N3, N4>(N3.instance, N4.instance, dB).transpose();
+    Matrix<N3, N4> Bhat = new Matrix<N3, N4>(N3.instance, N4.instance, dB);
+
+    Vector<N4> simulatedMotorVelocities = new Vector<N4>(B.times(stateSim));
+    Constants.log("Sim motor velocities:" + simulatedMotorVelocities);
 
     stateSim = new Vector<N3>(mecanumFieldRelativeSystem.calculateX(stateSim, u, 0.02));
-    return new Vector<N4>(mecanumFieldRelativeSystem.getC().times(stateSim).plus(mecanumFieldRelativeSystem.getD().times(u)));
-    /*
-    Vector<N4> motorVelocities = new Vector<N4>(new SimpleMatrix(getEncoders()));
-    Vector<N3> inputToChassisVelocity = new Vector<N3>(B.transpose().times(motorVelocities));
+    //Vector<N4> variance = new Vector<N4>(new Matrix<N4, N1>(N4.instance, N1.instance, new double[] {Math.random() * 0.01, Math.random() * 0.01, Math.random() * 0.01, Math.random() * 0.05}));
+    //return new Vector<N4>(mecanumFieldRelativeSystem.getC().times(stateSim).plus(mecanumFieldRelativeSystem.getD().times(u))).plus(variance);
+    
+    Vector<N4> motorVelocities = new Vector<N4>(new SimpleMatrix(getWheelVelocitiesMPS()));
+    Vector<N3> chassisVelocities = new Vector<N3>(B.transpose().times(motorVelocities));
     //return VecBuilder.fill(inputToChassisVelocity.get(0), inputToChassisVelocity.get(1), inputToChassisVelocity.get(2), Constants.Sensors.imu.getRate());
-    return VecBuilder.fill(stateSim.get(0), stateSim.get(1), stateSim.get(2), stateSim.get(2));*/
+    return VecBuilder.fill(chassisVelocities.get(0), chassisVelocities.get(1), chassisVelocities.get(2), Constants.Sensors.getImuYawVelocityRads());
   }
 
   /***
@@ -303,11 +335,6 @@ public class Drivetrain extends SubsystemBase {
   private int loop = 0;
   @Override
   public void periodic() {
-    if (useNetworkTables) {
-      appliedCurrent.set(getAppliedCurrents());
-      velocity.set(getEncoders());  
-    }
-
     //Vector<N3> xN = (Vector<N3>) mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 0.02);
 
     Vector<N4> y = getY();
@@ -322,6 +349,16 @@ public class Drivetrain extends SubsystemBase {
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
     super.periodic();
+
+    if (useNetworkTables) {
+      appliedCurrent.set(getAppliedCurrents());
+      velocity.set(getEncoders());
+      //xPublisher.set();
+      xHatPublisher.set(x.getData());
+      yPublisher.set(y.getData());
+      uPublisher.set(u.getData());
+      referenceVectorPublisher.set(referenceVector.getData());
+    }
 
     if (loggingLoop == -1) return;
     loop++;

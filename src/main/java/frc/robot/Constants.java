@@ -60,6 +60,10 @@ public final class Constants {
     public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
     public static Vision vision = new Vision();
 
+    public static double getImuYawVelocityRads() {
+      return Math.toRadians(imu.getRate());
+    }
+
     public static Rotation3d getImuRotation3d() {
       return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
     }
