@@ -13,6 +13,7 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -102,17 +103,18 @@ public class RobotContainer {
     m_driverController
     .b()
     .onTrue(
-        new RunCommand(
+        new InstantCommand(
             () -> {
-              elevatorSubsystem.set(-104);
+              elevatorSubsystem.set(-40);
             }));
     m_driverController
         .a()
         .onTrue(
-            new RunCommand(
+            new InstantCommand(
                 () -> {
                   elevatorSubsystem.set(0);
                 }));
+    m_driverController.x().onTrue(new InstantCommand(() -> {elevatorSubsystem.logEncoders();}, elevatorSubsystem));
   }
 
   private void configureDashboard() {
