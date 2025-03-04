@@ -10,8 +10,8 @@ import frc.robot.subsystems.Drivetrain;
 
 public final class Autos {
   /** Example static factory for an autonomous command. */
-  public static Command exampleAuto() {
-    return Commands.sequence(null, null);
+  public static Command exampleAuto(Drivetrain drivetrain) {
+    return Commands.sequence(new FollowPath(drivetrain));
   }
 
   public static Command timedMovementTest(Drivetrain drivetrain) {

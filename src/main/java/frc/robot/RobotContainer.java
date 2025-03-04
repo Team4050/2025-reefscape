@@ -33,7 +33,7 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final Drivetrain drivetrainSubsystem = new Drivetrain(false, 0);
+  private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 2);
   private final Elevator elevatorSubsystem = new Elevator(false);
   private final Claw clawSubsystem = new Claw();
 
@@ -146,6 +146,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return Autos.timedMovementTest(drivetrainSubsystem);
+    return Autos.exampleAuto(drivetrainSubsystem);
   }
 }

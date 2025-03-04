@@ -4,8 +4,12 @@
 
 package frc.robot;
 
+import com.pathplanner.lib.config.ModuleConfig;
+import com.pathplanner.lib.config.RobotConfig;
+
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
@@ -34,6 +38,15 @@ public final class Constants {
     public static final double NEOKvRadsPerV = 49.5324;
     public static final double NEOKvRPSPerV = 473d / 60d;
     public static final float wheelRadiusMeters = 0.0762f; // 3in
+    public static final RobotConfig mainConfig = new RobotConfig(
+      61.235, 
+      5.64646, // Current estimate 
+      new ModuleConfig(Drivetrain.wheelRadiusMeters,
+      8, 
+      1.0, 
+      DCMotor.getKrakenX60(1), 
+      80, 
+      4), 0.5588);
   }
 
   public static class Elevator {
