@@ -7,6 +7,7 @@ import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.Vector;
@@ -99,8 +100,9 @@ public class Drivetrain extends SubsystemBase {
     RL = new TalonFX(Constants.Drivetrain.RL);
     RR = new TalonFX(Constants.Drivetrain.RR);
 
-    double maxOutput = 0.3; // Increase in proportion to confidence in driver skill
+    double maxOutput = 1; // Increase in proportion to confidence in driver skill
     leftSideConfig = new TalonFXConfiguration();
+    leftSideConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     leftSideConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     leftSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput;
     leftSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
@@ -109,6 +111,7 @@ public class Drivetrain extends SubsystemBase {
     leftSideConfig.Audio.AllowMusicDurDisable = true;
 
     rightSideConfig = new TalonFXConfiguration();
+    rightSideConfig.MotorOutput.NeutralMode = NeutralModeValue.Brake;
     rightSideConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
     rightSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput; // Increase in proportion to confidence in driver skill
     rightSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
