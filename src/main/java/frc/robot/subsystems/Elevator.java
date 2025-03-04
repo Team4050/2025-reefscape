@@ -41,11 +41,6 @@ public class Elevator extends SubsystemBase {
   private double wristTarget = 0;
 
   private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
-  private DoublePublisher elevatorVelPub = elevatorTable.getDoubleTopic("Velocity").publish();
-  private DoublePublisher elevatorPosPub = elevatorTable.getDoubleTopic("Position").publish();
-  private DoublePublisher elevatorSetPub = elevatorTable.getDoubleTopic("Setpoint").publish();
-  private DoublePublisher elevatorOutPub = elevatorTable.getDoubleTopic("Output").publish();
-
 
   public Elevator() {
     //leftMotor = new SparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless);
@@ -97,8 +92,8 @@ public class Elevator extends SubsystemBase {
     wristConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.wristGearboxReduction);
     wristConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.wristGearboxReduction);
 
-    leftMotor = new HazardSparkMax(loop, MotorType.kBrushless, leftConfig, false, false, elevatorTable);
-    rightMotor = new HazardSparkMax(loop, MotorType.kBrushless, rightConfig, false, true, elevatorTable);
+    leftMotor = new HazardSparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless, leftConfig, false, false, elevatorTable);
+    rightMotor = new HazardSparkMax(Constants.Elevator.elevatorRight, MotorType.kBrushless, rightConfig, false, true, elevatorTable);
 
 
     //leftMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
