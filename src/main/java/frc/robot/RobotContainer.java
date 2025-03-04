@@ -13,6 +13,7 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -33,7 +34,7 @@ import frc.robot.subsystems.Vision;
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final Drivetrain drivetrainSubsystem = new Drivetrain(false, 1);
-  private final Elevator elevatorSubsystem = new Elevator(false);
+  private final Elevator elevatorSubsystem = new Elevator();
   private final Claw clawSubsystem = new Claw();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
@@ -83,7 +84,7 @@ public class RobotContainer {
   public void init() {
     Constants.log("Enabling...");
   
-    configureDashboard();
+    //configureDashboard();
     //drivetrainSubsystem.stop();
   }
 
@@ -108,17 +109,18 @@ public class RobotContainer {
     m_driverController
     .b()
     .onTrue(
-        new RunCommand(
+        new InstantCommand(
             () -> {
-              elevatorSubsystem.set(-104);
+              elevatorSubsystem.set(-40);
             }));
     m_driverController
         .a()
         .onTrue(
-            new RunCommand(
+            new InstantCommand(
                 () -> {
                   elevatorSubsystem.set(0);
                 }));
+    m_driverController.x().onTrue(new InstantCommand(() -> {elevatorSubsystem.logEncoders();}, elevatorSubsystem));
   }
 
   private void configureDashboard() {

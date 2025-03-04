@@ -16,16 +16,19 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.hazard.HazardSparkMax;
 
 public class Elevator extends SubsystemBase {
-  private SparkMax leftMotor;
-  private SparkMax rightMotor;
-  private SparkMax elevatorWrist; // Not in CAN yet
+  private HazardSparkMax leftMotor;
+  private HazardSparkMax rightMotor;
+
+  //private SparkMax elevatorWrist; // Not in CAN yet
   private SparkClosedLoopController leftMotorController;
   private SparkClosedLoopController rightMotorController;
   private SparkClosedLoopController wristMotorController;
@@ -40,18 +43,13 @@ public class Elevator extends SubsystemBase {
   private double elevatorTarget = 0;
   private double wristTarget = 0;
 
-  private boolean useNetworkTables;
-  private NetworkTable elevatorTable;
-  private DoublePublisher motorVelocityRads;
-  private DoublePublisher appliedOutputAmps;
-  private DoublePublisher encoderPosition;
-  private DoublePublisher setpointPublisher;
+  private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
 
-  public Elevator(boolean useNetworkTables) {
-    this.useNetworkTables = useNetworkTables;
-    leftMotor = new SparkMax(Constants.Elevator.left, MotorType.kBrushless);
-    rightMotor = new SparkMax(Constants.Elevator.right, MotorType.kBrushless);
-    elevatorWrist = new SparkMax(Constants.Elevator.shoulder, MotorType.kBrushless);
+  public Elevator() {
+    //leftMotor = new SparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless);
+    //rightMotor = new SparkMax(Constants.Elevator.elevatorRight, MotorType.kBrushless);
+    // elevatorWrist = new SparkMax(Constants.Elevator.elevatorWrist, MotorType.kBrushless);
+
 
     // Default configs
     SparkMaxConfig leftConfig = new SparkMaxConfig();
@@ -68,12 +66,17 @@ public class Elevator extends SubsystemBase {
 
     rightConfig.smartCurrentLimit(60);
     rightConfig.idleMode(IdleMode.kCoast);
+    // rightConfig.inverted(true);
+    // rightConfig.follow(Constants.Elevator.elevatorLeft, true);
     rightConfig.closedLoop.outputRange(-1, 1);
     rightConfig.closedLoop.iMaxAccum(1);
-    rightConfig.closedLoop.pidf(0.7, 0, 0.05, 0);
+    rightConfig.closedLoop.pid(0.4, 0, 0);
     rightConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
-    rightConfig.closedLoop.maxMotion.maxAcceleration(0, ClosedLoopSlot.kSlot0);
-    rightConfig.closedLoop.maxMotion.maxVelocity(0, ClosedLoopSlot.kSlot0);
+    rightConfig.closedLoop.maxMotion.allowedClosedLoopError(1);
+    rightConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
+    rightConfig.closedLoop.maxMotion.maxAcceleration(1600, ClosedLoopSlot.kSlot0);
+    rightConfig.closedLoop.maxMotion.maxVelocity(5000, ClosedLoopSlot.kSlot0);
+    rightConfig.closedLoop.iZone(15);
     rightConfig.closedLoop.feedbackSensor(
         FeedbackSensor.kPrimaryEncoder);
     rightConfig.absoluteEncoder.positionConversionFactor(
@@ -81,39 +84,32 @@ public class Elevator extends SubsystemBase {
     rightConfig.absoluteEncoder.velocityConversionFactor(
         Constants.Elevator.elevatorGearboxReduction);
 
-    leftMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-    rightMotor.configure(
-        rightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-    elevatorWrist.configure(
-       wristConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-    leftEncoder = leftMotor.getEncoder();
-    rightEncoder = rightMotor.getEncoder();
-    wristEncoder = elevatorWrist.getAlternateEncoder();
-    leftMotorController = leftMotor.getClosedLoopController();
-    rightMotorController = rightMotor.getClosedLoopController();
-    elevatorPID = new PIDController(0.1, 0, 0.05);
-    elevatorFeedforward = new ElevatorFeedforward(0, 0.00262, 0, 0);
-    // 0.0036 for 40A limit
-    // See https://docs.wpilib.org/en/stable/docs/software/advanced-controls/controllers/feedforward.html and my math
-
     wristConfig.inverted(true);
     wristConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
-    wristConfig.closedLoop.outputRange(-0.2, 0.2);
-    wristConfig.closedLoop.iMaxAccum(1);
-    wristConfig.closedLoop.pidf(0, 0, 0, 0);
-    wristConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.shoulderGearboxReduction);
-    wristConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.shoulderGearboxReduction);
-    wristMotorController = elevatorWrist.getClosedLoopController();
-    wristPID = new PIDController(0.1, 0, 0);
-    wristFeedforward = new ArmFeedforward(0, 0, 0, 0);
+    wristConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.wristGearboxReduction);
+    wristConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.wristGearboxReduction);
 
-    if (useNetworkTables) {
-      elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
-      motorVelocityRads = elevatorTable.getDoubleTopic("Motor velocity - Revs").publish();
-      appliedOutputAmps = elevatorTable.getDoubleTopic("Stator current - Amps").publish();
-      encoderPosition = elevatorTable.getDoubleTopic("Encoder position - Revs").publish();
-      setpointPublisher = elevatorTable.getDoubleTopic("PID setpoint - Revs").publish();
-    }
+    leftMotor = new HazardSparkMax(Constants.Elevator.left, MotorType.kBrushless, leftConfig, false, false, elevatorTable);
+    rightMotor = new HazardSparkMax(Constants.Elevator.right, MotorType.kBrushless, rightConfig, false, true, elevatorTable);
+
+
+    //leftMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+    //rightMotor.configure(
+    //    rightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters); 
+    // elevatorWrist.configure(
+    //   wristConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+
+    //leftEncoder = leftMotor.getEncoder();
+    //rightEncoder = rightMotor.getEncoder();
+    //wristEncoder = elevatorWrist.getAlternateEncoder();
+
+    elevatorPID = new PIDController(0.1, 0, 0.05);
+    elevatorFeedforward = new ElevatorFeedforward(0, 0.4128, 0, 0); // See
+    wristPID = new PIDController(0.1, 0, 0);
+
+    //leftMotorController = leftMotor.getClosedLoopController();
+    //rightMotorController = rightMotor.getClosedLoopController();
+    //wristMotorController = elevatorWrist.getClosedLoopController();    
   }
 
   /**
@@ -142,15 +138,17 @@ public class Elevator extends SubsystemBase {
   public void set(double position) {
     // Constants.log("Elevator target position:" + position);
     // leftMotor.set(position); //
-    // Constants.log(position);
+    if (loop > 5) {
+      Constants.log(position);  
+    }
+    
     elevatorTarget = position;
-    if (elevatorTarget > 0) elevatorTarget = 0;
-    if (elevatorTarget < -104) elevatorTarget = -104;
-    rightMotorController.setReference(
-        elevatorTarget,
-        ControlType.kPosition,
-        ClosedLoopSlot.kSlot0,
-        Constants.Elevator.elevatorFFVoltage);
+    if (elevatorTarget > -Constants.Elevator.elevatorMinExtension) elevatorTarget = -Constants.Elevator.elevatorMinExtension;
+    if (elevatorTarget < -Constants.Elevator.elevatorMaxExtension) elevatorTarget = -Constants.Elevator.elevatorMaxExtension;
+    rightMotor.setControl(elevatorTarget, ControlType.kMAXMotionPositionControl);
+    //rightMotorController.setReference(
+    //    elevatorTarget,
+    //    ControlType.kMAXMotionPositionControl);
   }
 
   public void setElevatorHeight(double heightMM) {
@@ -205,20 +203,20 @@ public class Elevator extends SubsystemBase {
 
   @Override
   public void periodic() {
+    //elevatorData.set(new double[] {rightEncoder.getPosition(), elevatorTarget, rightEncoder.getVelocity(), rightMotor.getAppliedOutput()});
+    leftMotor.publishToNetworkTables();
+    rightMotor.publishToNetworkTables();
+
+    //elevatorPosPub.set(rightEncoder.getPosition());
+    //elevatorSetPub.set(elevatorTarget);
+    //elevatorVelPub.set(rightEncoder.getVelocity());
+    //elevatorOutPub.set(rightMotor.getAppliedOutput());
 
     // leftMotor.set(pidElevator.calculate(encoderLeft.getPosition())); // Use for alternate control
     // elevatorWrist.set(pidWrist.calculate(wristEncoder.getPosition()));
-    //Constants.log(wristFeedforward.calculate(wristEncoder.getPosition(), wristEncoder.getVelocity()));
-
-    if (useNetworkTables) {
-      motorVelocityRads.set(rightEncoder.getVelocity());
-      appliedOutputAmps.set(rightMotor.getOutputCurrent());
-      encoderPosition.set(rightEncoder.getPosition());
-      setpointPublisher.set(elevatorTarget);
-    }
-    
+    /*
     loop++;
-    if (loop > 25) { // Log twice per second
+    if (loop > 5) { // Log twice per second
       // Constants.log("Raw encoder L R:" + leftEncoder.getPosition() + rightEncoder.getPosition());
       // Constants.log("Calculated:" + elevatorPID.calculate(leftEncoder.getPosition()));
       Constants.log(
@@ -228,6 +226,11 @@ public class Elevator extends SubsystemBase {
               + rightMotor.getAppliedOutput());
       // Constants.log("Encoder:" + leftEncoder.getPosition());
       loop = 0;
-    }
+    }*/
+  }
+
+  public void logEncoders() {
+    leftMotor.logEncoderState();
+    rightMotor.logEncoderState();
   }
 }

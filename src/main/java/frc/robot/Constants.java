@@ -40,6 +40,17 @@ public final class Constants {
     public static final int left = 6;
     public static final int right = 7;
     public static final double elevatorGearboxReduction = 1d / 10d;
+    public static final float elevatorMaxExtension = 40f;
+    public static final float elevatorMinExtension = 0.5f;
+
+    public static final int elevatorShoulder = 8;
+    public static final float shoudlerGearboxReduction = 1f / 21f;
+    public static final float shoulderStartingPositionOffset = 0f;
+
+    public static final int elevatorWrist = 9;
+    public static final float wristEncoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
+    public static final float wristGearboxReduction = 1f / 25f;
+    public static final float wristStartingPositionOffset = 0f;
     public static final double elevatorGearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
 
