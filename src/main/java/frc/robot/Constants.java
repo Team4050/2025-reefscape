@@ -33,23 +33,31 @@ public final class Constants {
     public static final double moduleGearReduction = 56d / 12d;
     public static final double NEOKvRadsPerV = 49.5324;
     public static final double NEOKvRPSPerV = 473d / 60d;
-    public static final float wheelRadiusMeters = 0.0762f; // 3in
+    public static final double wheelRadiusMeters = 0.0762; // 3in
   }
 
   public static class Elevator {
-    public static final int elevatorLeft = 5;
-    public static final int elevatorRight = 6;
-    public static final int elevatorWrist = 8;
-    public static final float elevatorGearboxReduction = 1f / 25f;
-    public static final float wristEncoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
-    public static final float wristGearboxReduction = 21; // 7:1 * 3:1 gearbox
+    public static final int left = 6;
+    public static final int right = 7;
+    public static final double elevatorGearboxReduction = 1d / 10d;
     public static final double elevatorGearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
+
+    public static final int shoulder = 8;
+    public static final double shoulderEncoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
+    public static final double shoulderGearboxReduction = 1d / 21d; // 7:1 * 3:1 gearbox
   }
 
   public static class Claw {
+    public static final int wristMotor = 9;
+    public static final double wristGearboxReduction = 1d / 25d;
+
     public static final int clawMotor = 10;
-    public static final double clawGearboxReduction = 1f / 10f;
+  }
+
+  public static class Climber {
+    public static final int climber = 5;
+    public static final double climberGearReduction = (12d / 54d) * (1d / 49d); //Sprocket * gearbox 220.5:1 ratio
   }
 
   public static void log(Object o) {

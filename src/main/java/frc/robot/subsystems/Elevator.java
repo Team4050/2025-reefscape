@@ -49,9 +49,9 @@ public class Elevator extends SubsystemBase {
 
   public Elevator(boolean useNetworkTables) {
     this.useNetworkTables = useNetworkTables;
-    leftMotor = new SparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless);
-    rightMotor = new SparkMax(Constants.Elevator.elevatorRight, MotorType.kBrushless);
-    elevatorWrist = new SparkMax(Constants.Elevator.elevatorWrist, MotorType.kBrushless);
+    leftMotor = new SparkMax(Constants.Elevator.left, MotorType.kBrushless);
+    rightMotor = new SparkMax(Constants.Elevator.right, MotorType.kBrushless);
+    elevatorWrist = new SparkMax(Constants.Elevator.shoulder, MotorType.kBrushless);
 
     // Default configs
     SparkMaxConfig leftConfig = new SparkMaxConfig();
@@ -60,7 +60,7 @@ public class Elevator extends SubsystemBase {
 
     leftConfig.smartCurrentLimit(60);
     leftConfig.idleMode(IdleMode.kCoast);
-    leftConfig.follow(Constants.Elevator.elevatorRight, true);
+    leftConfig.follow(Constants.Elevator.right, true);
     leftConfig.absoluteEncoder.positionConversionFactor(
         Constants.Elevator.elevatorGearboxReduction);
     leftConfig.absoluteEncoder.velocityConversionFactor(
@@ -101,8 +101,8 @@ public class Elevator extends SubsystemBase {
     wristConfig.closedLoop.outputRange(-0.2, 0.2);
     wristConfig.closedLoop.iMaxAccum(1);
     wristConfig.closedLoop.pidf(0, 0, 0, 0);
-    wristConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.wristGearboxReduction);
-    wristConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.wristGearboxReduction);
+    wristConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.shoulderGearboxReduction);
+    wristConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.shoulderGearboxReduction);
     wristMotorController = elevatorWrist.getClosedLoopController();
     wristPID = new PIDController(0.1, 0, 0);
     wristFeedforward = new ArmFeedforward(0, 0, 0, 0);
@@ -134,8 +134,8 @@ public class Elevator extends SubsystemBase {
    * @return The wrist angle in radians
    */
   public double encoderRevToWristAngle(double r) {
-    r /= Constants.Elevator.wristEncoderCountsPerRevolution;
-    r /= Constants.Elevator.wristGearboxReduction;
+    r /= Constants.Elevator.shoulderEncoderCountsPerRevolution;
+    r /= Constants.Elevator.shoulderGearboxReduction;
     return r * 2 * Math.PI;
   }
 
