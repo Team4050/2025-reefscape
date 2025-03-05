@@ -7,8 +7,10 @@ package frc.robot;
 import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.RobotConfig;
 
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime;
@@ -48,6 +50,7 @@ public final class Constants {
       DCMotor.getKrakenX60(1), 
       80, 
       4), 0.5588);
+    public static final Transform3d robotToCamera = new Transform3d(0.185, 0, 0.27, new Rotation3d());
   }
 
   public static class Elevator {
@@ -105,10 +108,11 @@ public final class Constants {
       return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
     }
 
-    public static void calibrate() {
+    public static void calibrate(Pose3d startingPose) {
       //imu.configCalTime(CalibrationTime._4s);
       //imu.calibrate();
-      vision.periodic();
+      vision.setRobotPose(startingPose);
+      vision.setPipeline(0);
     }
   }
 }

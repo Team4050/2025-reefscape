@@ -30,6 +30,8 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.wpilibj.RobotController;
+import frc.robot.Constants;
+
 import java.util.Optional;
 import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
@@ -51,12 +53,8 @@ public class HazardVision {
     poseEstimator =
         new PhotonPoseEstimator(
             fieldLayout,
-            PoseStrategy.CLOSEST_TO_LAST_POSE,
-            new Transform3d(0, 0, 0, new Rotation3d()));
-    /*catch (UncheckedIOException e) {
-      DriverStation.reportError("Failed to load AprilTagFieldLayout", e.getStackTrace());
-      poseEstimator = null;
-    }*/
+            PoseStrategy.AVERAGE_BEST_TARGETS,
+            Constants.Drivetrain.robotToCamera);
   }
 
   /**
@@ -70,6 +68,9 @@ public class HazardVision {
     }
     Optional<EstimatedRobotPose> latest = Optional.empty();
     for (PhotonPipelineResult r : chassis.getAllUnreadResults()) {
+      if (r.hasTargets()) {
+        Constants.log("Latest photon result: " + r.getBestTarget().bestCameraToTarget);
+      }
       latest = poseEstimator.update(r);
     }
     return latest;

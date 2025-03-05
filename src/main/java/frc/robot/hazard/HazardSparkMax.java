@@ -17,6 +17,7 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import frc.robot.Constants;
 
 public class HazardSparkMax {
+    private int CAN_ID;
     private SparkMax controller;
     private boolean useExternalEncoder;
     private RelativeEncoder integratedEncoder;
@@ -33,6 +34,7 @@ public class HazardSparkMax {
     private DoublePublisher current;
 
     public HazardSparkMax(int CAN_ID, MotorType type, SparkMaxConfig config, boolean useExternalEncoder, boolean publishToMotorTable, NetworkTable table) {
+        this.CAN_ID = CAN_ID;
         this.useExternalEncoder = useExternalEncoder;
         this.publishToMotorTable = publishToMotorTable;
         controller = new SparkMax(CAN_ID, MotorType.kBrushless);
@@ -45,7 +47,6 @@ public class HazardSparkMax {
         closedLoop = controller.getClosedLoopController();
 
         if (publishToMotorTable) {
-          Constants.log("publishing");
             velocity = table.getDoubleTopic("Velocity RPS").publish();
             position = table.getDoubleTopic("Position Rotations").publish();
             setpointPub = table.getDoubleTopic("Control setpoint (Rotations, RPS, Volts)").publish();
@@ -80,11 +81,11 @@ public class HazardSparkMax {
      */
     public void logEncoderState() {
         if (useExternalEncoder) {
-            Constants.log(externalEncoder.getPosition());
-            Constants.log(externalEncoder.getVelocity());
+            Constants.log(CAN_ID + " Position: " + externalEncoder.getPosition());
+            Constants.log(CAN_ID + " Velocity: " + externalEncoder.getVelocity());
         } else {
-            Constants.log(integratedEncoder.getPosition());
-            Constants.log(integratedEncoder.getVelocity());
+            Constants.log(CAN_ID + " Position: " + integratedEncoder.getPosition());
+            Constants.log(CAN_ID + " Velocity: " + integratedEncoder.getVelocity());
         }
     }
 

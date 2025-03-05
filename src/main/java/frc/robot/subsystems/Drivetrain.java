@@ -58,6 +58,19 @@ public class Drivetrain extends SubsystemBase {
   private StatusSignal<Current>[] motorAppliedCurrent;
 
   // ******************************************************** Math & Control ******************************************************** //
+  double rh = Math.sqrt(2) / 2;
+  double d = 0.39513;
+  double[] dB = {
+    rh, -rh, -d,
+    rh, rh, d,
+    rh, rh, -d,
+    rh, -rh, d
+  }; 
+  // y = M * x
+  // x = M+ * y
+  Matrix<N4, N3> RobotToWheel = new Matrix<N3, N4>(N3.instance, N4.instance, dB).transpose();
+  Matrix<N3, N4> WheelToRobot = new Matrix<N3, N4>(N3.instance, N4.instance, dB);
+
   private MecanumDriveKinematics kinematics;
   private Vector<N3> referenceVector;
   private KalmanFilter<N3, N3, N4> mecanumFieldRelativeKalmanFilter;
@@ -93,9 +106,9 @@ public class Drivetrain extends SubsystemBase {
     this.useNetworkTables = useNetworkTables;
     if (logInfo != 0) {
       if (logInfo == 1) {
-        loggingLoop = 0;
-      } else if (logInfo > 1) {
         loggingLoop = 50;
+      } else if (logInfo > 1) {
+        loggingLoop = 0;
       }
     }
     FL = new TalonFX(Constants.Drivetrain.FL);
@@ -127,7 +140,7 @@ public class Drivetrain extends SubsystemBase {
     music.addInstrument(FR, 1);
     music.addInstrument(RL, 2);
     music.addInstrument(RR, 3);
-    music.loadMusic("E1M1.chrp");
+    Constants.log("music status: " + music.loadMusic("redbone.chrp"));
 
     FL.getConfigurator().apply(leftSideConfig);
     RL.getConfigurator().apply(leftSideConfig);
@@ -164,11 +177,6 @@ public class Drivetrain extends SubsystemBase {
             new Translation2d(0.5588, -0.5588),
             new Translation2d(-0.5588, 0.5588),
             new Translation2d(-0.5588, -0.5588));
-
-    double rootHalf = Math.sqrt(2) / 2;
-    double d = 0.39513;
-    //mecanumChassisRelativeSystem = new LinearSystem<N3, N4, N5>(A, B, C, D);
-
 
     // xhat = Ax + Bu
     // yhat = Cx + Du
@@ -257,31 +265,20 @@ public class Drivetrain extends SubsystemBase {
     return d;
   }
 
-  public Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
-  public Vector<N4> getY() {
-    double rh = Math.sqrt(2) / 2;
-    double d = 0.39513;
-    double[] dB = {
-      rh, -rh, -d,
-      rh, rh, d,
-      rh, rh, -d,
-      rh, -rh, d
-    }; // y = M * x
-    //x = M+ * y
-    Matrix<N4, N3> B = new Matrix<N3, N4>(N3.instance, N4.instance, dB).transpose();
-    Matrix<N3, N4> Bhat = new Matrix<N3, N4>(N3.instance, N4.instance, dB);
+  Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
 
-    Vector<N4> simulatedMotorVelocities = new Vector<N4>(B.times(stateSim));
+  public Vector<N4> getY() {
+    //Vector<N4> simulatedMotorVelocities = new Vector<N4>(B.times(stateSim));
     //Constants.log("Sim motor velocities:" + simulatedMotorVelocities);
 
-    stateSim = new Vector<N3>(mecanumFieldRelativeSystem.calculateX(stateSim, u, 0.02));
-    Vector<N4> variance = new Vector<N4>(new Matrix<N4, N1>(N4.instance, N1.instance, new double[] {Math.random() * 0.001, Math.random() * 0.01, Math.random() * 0.001, Math.random() * 0.05}));
-    return new Vector<N4>(mecanumFieldRelativeSystem.getC().times(stateSim).plus(mecanumFieldRelativeSystem.getD().times(u))).plus(variance);
+    //stateSim = new Vector<N3>(mecanumFieldRelativeSystem.calculateX(stateSim, u, 0.02));
+    //Vector<N4> variance = new Vector<N4>(new Matrix<N4, N1>(N4.instance, N1.instance, new double[] {Math.random() * 0.001, Math.random() * 0.01, Math.random() * 0.001, Math.random() * 0.05}));
+    //return new Vector<N4>(mecanumFieldRelativeSystem.getC().times(stateSim).plus(mecanumFieldRelativeSystem.getD().times(u))).plus(variance);
     
-    //Vector<N4> motorVelocities = new Vector<N4>(new SimpleMatrix(getWheelVelocitiesMPS()));
-    //Vector<N3> chassisVelocities = new Vector<N3>(B.transpose().times(motorVelocities));
+    Vector<N4> motorVelocities = new Vector<N4>(new SimpleMatrix(getWheelVelocitiesMPS()));
+    Vector<N3> chassisVelocities = new Vector<N3>(RobotToWheel.transpose().times(motorVelocities));
     //return VecBuilder.fill(inputToChassisVelocity.get(0), inputToChassisVelocity.get(1), inputToChassisVelocity.get(2), Constants.Sensors.imu.getRate());
-    //return VecBuilder.fill(chassisVelocities.get(0), chassisVelocities.get(1), chassisVelocities.get(2), Constants.Sensors.getImuYawVelocityRads());
+    return VecBuilder.fill(chassisVelocities.get(0), chassisVelocities.get(1), chassisVelocities.get(2), Constants.Sensors.getImuYawVelocityRads());
   }
 
   /***
