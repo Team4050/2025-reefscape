@@ -34,6 +34,7 @@ public final class Constants {
     public static final int FR = 2;
     public static final int RL = 3;
     public static final int RR = 4;
+    public static final int currentLimit = 60;
     public static final double moduleGearReduction = 56d / 12d;
     public static final double NEOKvRadsPerV = 49.5324;
     public static final double NEOKvRPSPerV = 473d / 60d;
@@ -52,36 +53,40 @@ public final class Constants {
   public static class Elevator {
     public static final int left = 6;
     public static final int right = 7;
-    public static final double elevatorGearboxReduction = 1d / 10d;
-    public static final float elevatorMaxExtension = 40f;
-    public static final float elevatorMinExtension = 0.5f;
-
-    public static final int elevatorShoulder = 8;
-    public static final float shoudlerGearboxReduction = 1f / 21f;
-    public static final float shoulderStartingPositionOffset = 0f;
-
-    public static final int elevatorWrist = 9;
-    public static final float wristEncoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
-    public static final float wristGearboxReduction = 1f / 25f;
-    public static final float wristStartingPositionOffset = 0f;
-    public static final double elevatorGearboxRotationsToHeightMM = 140.178;
+    public static final int elevatorCurrentLimit = 20;
+    public static final double gearboxReduction = 1.0 / 10.0;
+    public static final double gearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
-
-    public static final int shoulder = 8;
-    public static final double shoulderEncoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
-    public static final double shoulderGearboxReduction = 1d / 21d; // 7:1 * 3:1 gearbox
+    public static final double minExtension = 0.2;
+    public static final double maxExtension = 40;
   }
 
-  public static class Claw {
-    public static final int wristMotor = 9;
-    public static final double wristGearboxReduction = 1d / 25d;
+  public static class Shoulder {
+    public static final int CAN = 8;
+    public static final int currentLimit = 40;
+    public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
+    public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
+  }
 
-    public static final int clawMotor = 10;
+  public static class Wrist {
+    public static final int CAN = 9;
+    public static final int currentLimit = 30;
+    public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
+    public static final double gearboxReduction = 1.0 / 25.0;
+    public static final double startingPositionOffset = 0.0;
+  }
+
+  public static class Coral {
+    public static final int CAN = 10;
+    public static final int currentLimit = 20;
+    public static final double clawGearboxReduction = 1.0 / 10.0;
+    public static final double Yoffset = 0;
   }
 
   public static class Climber {
     public static final int climber = 5;
-    public static final double climberGearReduction = (12d / 54d) * (1d / 49d); //Sprocket * gearbox 220.5:1 ratio
+    public static final int currentLimit = 40;
+    public static final double climberGearReduction = (12.0 / 54.0) * (1.0 / 49.0); //Sprocket * gearbox 220.5:1 ratio
   }
 
   public static void log(Object o) {

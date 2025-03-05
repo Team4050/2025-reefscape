@@ -9,7 +9,7 @@ public class Claw extends SubsystemBase {
   public static SparkMax clawMotor;
 
   public Claw() {
-    clawMotor = new SparkMax(Constants.Claw.clawMotor, MotorType.kBrushless);
+    clawMotor = new SparkMax(Constants.Coral.CAN, MotorType.kBrushless);
   }
 
   /***
