@@ -69,15 +69,15 @@ public class RobotContainer {
                 () -> {
                   elevatorSubsystem.set(1000);
                 }));*/
-    clawSubsystem.setDefaultCommand(new RunCommand(() -> {clawSubsystem.set(-m_secondaryController.getRightY());}, clawSubsystem));
-    elevatorSubsystem.setDefaultCommand(
+    //clawSubsystem.setDefaultCommand(new RunCommand(() -> {clawSubsystem.set(-m_secondaryController.getRightY());}, clawSubsystem));
+    /*elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
               elevatorSubsystem.setAdditive(m_driverController.getRightY());
             },
-            elevatorSubsystem));
+            elevatorSubsystem));*/
     drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
-        drivetrainSubsystem.set(-m_driverController.getLeftY(), m_driverController.getLeftX(), -m_driverController.getRightX());
+        drivetrainSubsystem.set(-m_driverController.getLeftY() / 3, m_driverController.getLeftX() / 3, -m_driverController.getRightX() / 3);
     }, drivetrainSubsystem));
   }
 
@@ -135,9 +135,9 @@ public class RobotContainer {
     imuDataPublisher = netTables.getDoubleArrayTopic("IMU Data").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     imuDataPublisher.setDefault(def);
 
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.play(); }));
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.pause(); }));
-    SmartDashboard.putData(new RunCommand(() -> { drivetrainSubsystem.stop(); }));
+    SmartDashboard.putData("play", new InstantCommand(() -> { drivetrainSubsystem.play(); }));
+    SmartDashboard.putData("pause", new InstantCommand(() -> { drivetrainSubsystem.pause(); }));
+    SmartDashboard.putData("stop", new InstantCommand(() -> { drivetrainSubsystem.stop(); }));
   }
 
   /**
@@ -147,6 +147,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return Autos.timedMovementTest(drivetrainSubsystem);
+    return Autos.exampleAuto(drivetrainSubsystem);
   }
 }
