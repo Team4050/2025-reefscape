@@ -29,16 +29,21 @@ public class Vision {
     photonVision.setPipeline(index);
   }
 
+  public Pose3d getPose() {
+    return pose;
+  }
+
   int loop = 0;
 
   public void periodic() {
     //photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
+    photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
     Optional<EstimatedRobotPose> optional = photonVision.getEstimatedGlobalPose();
     if (optional.isPresent()) {
       pose = optional.get().estimatedPose;
     }
 
-    posePublisher.set(new double[] {pose.getX(), pose.getY(), pose.getZ(), pose.getRotation().getZ()});
+    posePublisher.set(new double[] {pose.getX(), pose.getY(), pose.getRotation().getZ()});
 
     loop++;
     if (loop > 25) {

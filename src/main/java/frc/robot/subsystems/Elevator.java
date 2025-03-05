@@ -25,8 +25,8 @@ import frc.robot.Constants;
 import frc.robot.hazard.HazardSparkMax;
 
 public class Elevator extends SubsystemBase {
-  private HazardSparkMax leftMotor;
-  private HazardSparkMax rightMotor;
+  private HazardSparkMax backMotor;
+  private HazardSparkMax frontMotor;
 
   //private SparkMax elevatorWrist; // Not in CAN yet
   //private SparkClosedLoopController wristMotorController;
@@ -51,34 +51,35 @@ public class Elevator extends SubsystemBase {
 
 
     // Default configs
-    SparkMaxConfig leftConfig = new SparkMaxConfig();
-    SparkMaxConfig rightConfig = new SparkMaxConfig();
+    SparkMaxConfig followConfig = new SparkMaxConfig();
+    SparkMaxConfig leadConfig = new SparkMaxConfig();
     SparkMaxConfig shoulderConfig = new SparkMaxConfig();
 
-    leftConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
-    leftConfig.idleMode(IdleMode.kCoast);
-    leftConfig.follow(Constants.Elevator.right, true);
-    leftConfig.absoluteEncoder.positionConversionFactor(
+    followConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
+    followConfig.idleMode(IdleMode.kBrake);
+    followConfig.follow(Constants.Elevator.front, true);
+    followConfig.absoluteEncoder.positionConversionFactor(
         Constants.Elevator.gearboxReduction);
-    leftConfig.absoluteEncoder.velocityConversionFactor(
+    followConfig.absoluteEncoder.velocityConversionFactor(
         Constants.Elevator.gearboxReduction);
 
-    rightConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
-    rightConfig.idleMode(IdleMode.kCoast);
-    rightConfig.closedLoop.outputRange(-1, 1);
-    rightConfig.closedLoop.iMaxAccum(1);
-    rightConfig.closedLoop.pid(0.4, 0, 0);
-    rightConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
-    rightConfig.closedLoop.maxMotion.allowedClosedLoopError(1);
-    rightConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
-    rightConfig.closedLoop.maxMotion.maxAcceleration(80, ClosedLoopSlot.kSlot0); //TODO:
-    rightConfig.closedLoop.maxMotion.maxVelocity(5000, ClosedLoopSlot.kSlot0);
-    rightConfig.closedLoop.iZone(15);
-    rightConfig.closedLoop.feedbackSensor(
+    leadConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
+    leadConfig.idleMode(IdleMode.kBrake);
+    leadConfig.inverted(true);
+    leadConfig.closedLoop.outputRange(-1, 1);
+    leadConfig.closedLoop.iMaxAccum(1);
+    leadConfig.closedLoop.pid(0.4, 0, 0);
+    leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
+    leadConfig.closedLoop.maxMotion.allowedClosedLoopError(1);
+    leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
+    leadConfig.closedLoop.maxMotion.maxAcceleration(80, ClosedLoopSlot.kSlot0); //TODO:
+    leadConfig.closedLoop.maxMotion.maxVelocity(5000, ClosedLoopSlot.kSlot0);
+    leadConfig.closedLoop.iZone(15);
+    leadConfig.closedLoop.feedbackSensor(
         FeedbackSensor.kPrimaryEncoder);
-    rightConfig.absoluteEncoder.positionConversionFactor(
+    leadConfig.absoluteEncoder.positionConversionFactor(
         Constants.Elevator.gearboxReduction);
-    rightConfig.absoluteEncoder.velocityConversionFactor(
+    leadConfig.absoluteEncoder.velocityConversionFactor(
         Constants.Elevator.gearboxReduction);
 
     shoulderConfig.inverted(true);
@@ -86,8 +87,8 @@ public class Elevator extends SubsystemBase {
     shoulderConfig.absoluteEncoder.positionConversionFactor(Constants.Shoulder.gearboxReduction);
     shoulderConfig.absoluteEncoder.velocityConversionFactor(Constants.Shoulder.gearboxReduction);
 
-    leftMotor = new HazardSparkMax(Constants.Elevator.left, MotorType.kBrushless, leftConfig, false, true, elevatorTable);
-    rightMotor = new HazardSparkMax(Constants.Elevator.right, MotorType.kBrushless, rightConfig, false, true, elevatorTable);
+    backMotor = new HazardSparkMax(Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
+    frontMotor = new HazardSparkMax(Constants.Elevator.front, MotorType.kBrushless, followConfig, false, false, elevatorTable);
 
 
     //leftMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -135,10 +136,10 @@ public class Elevator extends SubsystemBase {
     Constants.log("Elevator target position:" + position); 
     
     elevatorSetpoint = position;
-    if (elevatorSetpoint > Constants.Elevator.minExtension) elevatorSetpoint = Constants.Elevator.minExtension;
-    if (elevatorSetpoint < Constants.Elevator.maxExtension) elevatorSetpoint = Constants.Elevator.maxExtension;
+    if (elevatorSetpoint < Constants.Elevator.minExtension) elevatorSetpoint = Constants.Elevator.minExtension;
+    if (elevatorSetpoint > Constants.Elevator.maxExtension) elevatorSetpoint = Constants.Elevator.maxExtension;
 
-    rightMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
+    backMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
   }
 
   public void setElevatorHeight(double heightMM) {
@@ -193,13 +194,13 @@ public class Elevator extends SubsystemBase {
 
   @Override
   public void periodic() {
-    leftMotor.publishToNetworkTables();
-    rightMotor.publishToNetworkTables();
+    frontMotor.publishToNetworkTables();
+    backMotor.publishToNetworkTables();
     setpointPublisher.set(elevatorSetpoint);
 
     loop++;
-    if (loop > 50) { // Log twice per second
-      rightMotor.logEncoderState();
+    if (loop > 25) { // Log twice per second
+      //frontMotor.logEncoderState();
       // Constants.log("Calculated:" + elevatorPID.calculate(leftEncoder.getPosition()));
       // Constants.log("Encoder:" + leftEncoder.getPosition());
       loop = 0;
@@ -207,7 +208,7 @@ public class Elevator extends SubsystemBase {
   }
 
   public void logEncoders() {
-    leftMotor.logEncoderState();
-    rightMotor.logEncoderState();
+    backMotor.logEncoderState();
+    frontMotor.logEncoderState();
   }
 }

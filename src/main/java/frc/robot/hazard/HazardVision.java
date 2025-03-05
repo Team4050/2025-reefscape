@@ -69,7 +69,7 @@ public class HazardVision {
     Optional<EstimatedRobotPose> latest = Optional.empty();
     for (PhotonPipelineResult r : chassis.getAllUnreadResults()) {
       if (r.hasTargets()) {
-        Constants.log("Latest photon result: " + r.getBestTarget().bestCameraToTarget);
+        //Constants.log("Latest photon result: " + r.getBestTarget().bestCameraToTarget);
       }
       latest = poseEstimator.update(r);
     }
@@ -89,6 +89,7 @@ public class HazardVision {
   }
 
   public void setPipeline(int pipeline) {
+    Constants.log("Setting pipeline index to " + pipeline);
     chassis.setPipelineIndex(pipeline);
   }
 }

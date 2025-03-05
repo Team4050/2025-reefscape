@@ -41,27 +41,28 @@ public final class Constants {
     public static final double NEOKvRadsPerV = 49.5324;
     public static final double NEOKvRPSPerV = 473d / 60d;
     public static final double wheelRadiusMeters = 0.0762; // 3in
+    public static final DCMotor drivetrainMotor = DCMotor.getKrakenX60(1);
     public static final RobotConfig mainConfig = new RobotConfig(
       61.235, 
       5.64646, // Current estimate TODO: empirically determine
       new ModuleConfig(Drivetrain.wheelRadiusMeters,
       8, 
       1.0, 
-      DCMotor.getKrakenX60(1), 
+      drivetrainMotor, 
       80, 
       4), 0.5588);
     public static final Transform3d robotToCamera = new Transform3d(0.185, 0, 0.27, new Rotation3d());
   }
 
   public static class Elevator {
-    public static final int left = 6;
-    public static final int right = 7;
+    public static final int back = 6;
+    public static final int front = 7;
     public static final int elevatorCurrentLimit = 20;
     public static final double gearboxReduction = 1.0 / 10.0;
     public static final double gearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
     public static final double minExtension = 0.2;
-    public static final double maxExtension = 40;
+    public static final double maxExtension = 44;
   }
 
   public static class Shoulder {
@@ -100,17 +101,27 @@ public final class Constants {
     public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
     public static Vision vision = new Vision();
 
+    public static void resetIMU() {
+      Constants.log("Resetting gyro angle to 0...");
+      imu.setGyroAngleZ(0);
+    }
+
     public static double getImuYawVelocityRads() {
-      return Math.toRadians(imu.getRate());
+      return Math.toRadians(-imu.getRate());
+    }
+
+    public static double getIMUYaw() {
+      return Math.toRadians(-imu.getAngle());
     }
 
     public static Rotation3d getImuRotation3d() {
-      return new Rotation3d(new Rotation2d(Math.toRadians(imu.getAngle())));
+      return new Rotation3d(new Rotation2d(Math.toRadians(-imu.getAngle())));
     }
 
     public static void calibrate(Pose3d startingPose) {
-      //imu.configCalTime(CalibrationTime._4s);
-      //imu.calibrate();
+      //Current orientation imu is CW+
+      imu.configCalTime(CalibrationTime._4s);
+      imu.calibrate();
       vision.setRobotPose(startingPose);
       vision.setPipeline(0);
     }

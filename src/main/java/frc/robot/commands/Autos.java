@@ -21,6 +21,14 @@ public final class Autos {
       new MoveTime(drivetrain, -0.2, -0.2, 0, 0.5));
   }
 
+  public static Command velTest(Drivetrain drivetrain) {
+    return new DVel(drivetrain);
+  }
+
+  public static Command OrientLimelight(Drivetrain drivetrain) {
+    return new OrientLL(drivetrain);
+  }
+
   private Autos() {
     throw new UnsupportedOperationException("This is a utility class!");
   }
