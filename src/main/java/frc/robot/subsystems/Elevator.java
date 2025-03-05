@@ -27,8 +27,6 @@ public class Elevator extends SubsystemBase {
   private HazardSparkMax rightMotor;
 
   //private SparkMax elevatorWrist; // Not in CAN yet
-  private SparkClosedLoopController leftMotorController;
-  private SparkClosedLoopController rightMotorController;
   //private SparkClosedLoopController wristMotorController;
   private RelativeEncoder leftEncoder;
   private RelativeEncoder rightEncoder;
@@ -92,7 +90,7 @@ public class Elevator extends SubsystemBase {
     wristConfig.absoluteEncoder.positionConversionFactor(Constants.Elevator.wristGearboxReduction);
     wristConfig.absoluteEncoder.velocityConversionFactor(Constants.Elevator.wristGearboxReduction);
 
-    leftMotor = new HazardSparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless, leftConfig, false, false, elevatorTable);
+    leftMotor = new HazardSparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless, leftConfig, false, true, elevatorTable);
     rightMotor = new HazardSparkMax(Constants.Elevator.elevatorRight, MotorType.kBrushless, rightConfig, false, true, elevatorTable);
 
 
@@ -144,10 +142,12 @@ public class Elevator extends SubsystemBase {
     if (loop > 5) {
       Constants.log(position);  
     }
+    Constants.log(position);  
+
     
     elevatorTarget = position;
-    if (elevatorTarget > -Constants.Elevator.elevatorMinExtension) elevatorTarget = -Constants.Elevator.elevatorMinExtension;
-    if (elevatorTarget < -Constants.Elevator.elevatorMaxExtension) elevatorTarget = -Constants.Elevator.elevatorMaxExtension;
+    if (elevatorTarget > Constants.Elevator.elevatorMinExtension) elevatorTarget = Constants.Elevator.elevatorMinExtension;
+    if (elevatorTarget < Constants.Elevator.elevatorMaxExtension) elevatorTarget = Constants.Elevator.elevatorMaxExtension;
     rightMotor.setControl(elevatorTarget, ControlType.kMAXMotionPositionControl);
     //rightMotorController.setReference(
     //    elevatorTarget,

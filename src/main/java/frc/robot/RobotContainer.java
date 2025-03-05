@@ -100,7 +100,7 @@ public class RobotContainer {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
-    m_driverController
+    /*m_driverController
     .b()
     .onTrue(
         new InstantCommand(
@@ -113,7 +113,7 @@ public class RobotContainer {
             new InstantCommand(
                 () -> {
                   elevatorSubsystem.set(0);
-                }));
+                }));*/
     m_driverController.x().onTrue(new InstantCommand(() -> {elevatorSubsystem.logEncoders();}, elevatorSubsystem));
   }
 

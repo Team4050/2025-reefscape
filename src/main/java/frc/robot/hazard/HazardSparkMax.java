@@ -42,7 +42,10 @@ public class HazardSparkMax {
             externalEncoder = controller.getAbsoluteEncoder();
         }
 
+        closedLoop = controller.getClosedLoopController();
+
         if (publishToMotorTable) {
+          Constants.log("publishing");
             velocity = table.getDoubleTopic("Velocity RPS").publish();
             position = table.getDoubleTopic("Position Rotations").publish();
             setpointPub = table.getDoubleTopic("Control setpoint (Rotations, RPS, Volts)").publish();
