@@ -17,7 +17,14 @@ public class Vision {
   NetworkTable table = NetworkTableInstance.getDefault().getTable("Vision");
   DoubleArrayPublisher posePublisher = table.getDoubleArrayTopic("Robot pose meters").publish();
 
+  public enum Pipelines {
+    FAST,
+    PRECISE
+  };
+
   public Vision() {
+    Constants.log(Pipelines.FAST.ordinal());
+    Constants.log(Pipelines.PRECISE.ordinal());
     photonVision = new HazardVision();
   }
 
@@ -25,7 +32,11 @@ public class Vision {
     photonVision.setLastPose(pose);
   }
 
-  public void setPipeline(int index) {
+  public void setPipeline(Pipelines pipeline) {
+    photonVision.setPipeline(pipeline.ordinal());
+  }
+
+  public void setPipelineIndex(int index) {
     photonVision.setPipeline(index);
   }
 

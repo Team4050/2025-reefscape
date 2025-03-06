@@ -22,6 +22,7 @@ public class DVel extends Command {
   public void initialize() {
     // TODO Auto-generated method stub
     super.initialize();
+    drivetrain.setReference(1, 0, 0);
     timer.start();
   }
 
@@ -41,7 +42,7 @@ public class DVel extends Command {
   @Override
   public void end(boolean interrupted) {
     // TODO Auto-generated method stub
-    drivetrain.setVelocity(new ChassisSpeeds(0, 0, 0));
+    drivetrain.set(new ChassisSpeeds(0, 0, 0));
   }
 
   @Override

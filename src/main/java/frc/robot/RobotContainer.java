@@ -91,7 +91,7 @@ public class RobotContainer {
   public void periodic() {
     Constants.Sensors.vision.periodic();
     imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
-    imuDataPublisher.set(new double[] {Constants.Sensors.getIMUYaw(), -Constants.Sensors.imu.getRate()});
+    imuDataPublisher.set(new double[] {Constants.Sensors.getIMUYawRadians(), -Constants.Sensors.imu.getRate()});
     voltagePublisher.set(pdh.getVoltage());
     //imuDataPublisher.set(Constants.Sensors.getImuRotation3d().getZ());
   }
@@ -131,7 +131,7 @@ public class RobotContainer {
     m_driverController.y().onTrue(new InstantCommand(() -> {
       if (pipeline == 0) {pipeline = 1;}
       else if (pipeline == 1) {pipeline = 0;}
-      Constants.Sensors.vision.setPipeline(pipeline);}));
+      Constants.Sensors.vision.setPipelineIndex(pipeline);}));
   }
 
   private void configureDashboard() {

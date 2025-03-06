@@ -10,7 +10,9 @@ import com.pathplanner.lib.config.RobotConfig;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime;
@@ -52,6 +54,7 @@ public final class Constants {
       80, 
       4), 0.5588);
     public static final Transform3d robotToCamera = new Transform3d(0.185, 0, 0.27, new Rotation3d());
+    public static final Translation2d COMOffsetFromWheelbaseCenter = new Translation2d(0, 0);
   }
 
   public static class Elevator {
@@ -106,11 +109,11 @@ public final class Constants {
       imu.setGyroAngleZ(0);
     }
 
-    public static double getImuYawVelocityRads() {
+    public static double getIMUYawVelocityRads() {
       return Math.toRadians(-imu.getRate());
     }
 
-    public static double getIMUYaw() {
+    public static double getIMUYawRadians() {
       return Math.toRadians(-imu.getAngle());
     }
 
@@ -118,12 +121,16 @@ public final class Constants {
       return new Rotation3d(new Rotation2d(Math.toRadians(-imu.getAngle())));
     }
 
+    public static double[] getImuAccelXY() {
+      return new double[] {imu.getAccelY(), imu.getAccelX()};
+    }
+
     public static void calibrate(Pose3d startingPose) {
       //Current orientation imu is CW+
       imu.configCalTime(CalibrationTime._4s);
       imu.calibrate();
       vision.setRobotPose(startingPose);
-      vision.setPipeline(0);
+      vision.setPipelineIndex(0);
     }
   }
 }
