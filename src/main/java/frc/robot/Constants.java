@@ -121,6 +121,10 @@ public final class Constants {
       return new Rotation3d(new Rotation2d(Math.toRadians(-imu.getAngle())));
     }
 
+    public static Rotation2d getImuRotation2d() {
+      return new Rotation2d(Math.toRadians(-imu.getAngle()));
+    }
+
     public static double[] getImuAccelXY() {
       return new double[] {imu.getAccelY(), imu.getAccelX()};
     }

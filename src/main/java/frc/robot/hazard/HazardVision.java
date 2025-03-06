@@ -55,6 +55,7 @@ public class HazardVision {
             fieldLayout,
             PoseStrategy.AVERAGE_BEST_TARGETS,
             Constants.Drivetrain.robotToCamera);
+    
   }
 
   /**

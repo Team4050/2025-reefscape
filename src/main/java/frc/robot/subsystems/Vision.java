@@ -23,8 +23,6 @@ public class Vision {
   };
 
   public Vision() {
-    Constants.log(Pipelines.FAST.ordinal());
-    Constants.log(Pipelines.PRECISE.ordinal());
     photonVision = new HazardVision();
   }
 

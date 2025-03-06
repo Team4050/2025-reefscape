@@ -1,6 +1,14 @@
 package frc.robot.subsystems;
 
+import java.lang.reflect.Type;
+import java.util.Optional;
+
 import org.ejml.simple.SimpleMatrix;
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
@@ -10,7 +18,10 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.controller.LinearPlantInversionFeedforward;
@@ -18,17 +29,22 @@ import edu.wpi.first.math.controller.LinearQuadraticRegulator;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.KalmanFilter;
+import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator;
+import edu.wpi.first.math.estimator.UnscentedKalmanFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
+import edu.wpi.first.math.kinematics.MecanumDriveWheelPositions;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.numbers.N4;
 import edu.wpi.first.math.numbers.N5;
+import edu.wpi.first.math.numbers.N6;
+import edu.wpi.first.math.numbers.N9;
 import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
@@ -60,8 +76,15 @@ public class Drivetrain extends SubsystemBase {
   private TalonFXConfiguration rightSideConfig;
 
   // ******************************************************** Sensors ******************************************************** //
+  private StatusSignal<Angle>[] motorPositions;
   private StatusSignal<AngularVelocity>[] motorVelocities;
   private StatusSignal<Current>[] motorAppliedCurrent;
+
+  private PhotonCamera chassisCam = new PhotonCamera("Limelight");
+  private PhotonPoseEstimator photonPoseEstimator = new PhotonPoseEstimator(AprilTagFieldLayout.loadField(
+    AprilTagFields.k2025ReefscapeWelded), 
+    PoseStrategy.CLOSEST_TO_LAST_POSE, 
+    Constants.Drivetrain.robotToCamera);
 
   // ******************************************************** Math & Control ******************************************************** //
   double rh = Math.sqrt(2) / 2;
@@ -75,22 +98,30 @@ public class Drivetrain extends SubsystemBase {
     new Translation2d(-0.2794, 0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(-0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter));
 
+  private MecanumDrivePoseEstimator poseEstimator = new MecanumDrivePoseEstimator(kinematics, Constants.Sensors.getImuRotation3d().toRotation2d(), new MecanumDriveWheelPositions(0, 0, 0, 0), Constants.Sensors.vision.pose.toPose2d());
+
   // ******************************************************** Model-based control ******************************************************** //
-  private Vector<N3> referenceVector;
-  private KalmanFilter<N3, N3, N4> mecanumFieldRelativeKalmanFilter;
-  private LinearSystem<N3, N3, N4> mecanumFieldRelativeSystem;
-  private PIDController FLVelPID = new PIDController(0.3, 0, 0.1);
-  private PIDController FRVelPID = new PIDController(0.3, 0, 0.1);
-  private PIDController RLVelPID = new PIDController(0.3, 0, 0.1);
-  private PIDController RRVelPID = new PIDController(0.3, 0, 0.1);
-  private LinearQuadraticRegulator<N3, N3, N4> mecanumFieldRelativeLQR;
-  private LinearPlantInversionFeedforward<N3, N3, N4> mecanumFF;
+  private boolean useSimulator = false;
+  private Vector<N6> referenceVector;
+  private Vector<N6> stateEstimate = VecBuilder.fill(0, 0, 0, 0, 0, 0);
+  static final Type states = N6.class;
+  static final Type inputs = N3.class;
+  static final Type outputs = N6.class;
+  private KalmanFilter<N6, N3, N6> mecanumFieldRelativeKalmanFilter;
+  private UnscentedKalmanFilter<N6, N3, N6> posKalmanFilter;
+  private LinearSystem<N6, N3, N6> mecanumFieldRelativeSystem;
+  private LinearQuadraticRegulator<N6, N3, N6> mecanumFieldRelativeLQR;
+  private LinearPlantInversionFeedforward<N6, N3, N6> mecanumFF;
 
   // ******************************************************** Model-based control ******************************************************** //
   // x in meters, y in meters, theta in radians
   private ProfiledPIDController xController = new ProfiledPIDController(0, 0, 0, new Constraints(2, 5));
   private ProfiledPIDController yController = new ProfiledPIDController(0, 0, 0, new Constraints(2, 5));;
-  private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.2, 0.01));;
+  private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.2, 0.01));
+  private PIDController FLVelPID = new PIDController(0.3, 0, 0.1);
+  private PIDController FRVelPID = new PIDController(0.3, 0, 0.1);
+  private PIDController RLVelPID = new PIDController(0.3, 0, 0.1);
+  private PIDController RRVelPID = new PIDController(0.3, 0, 0.1);
 
   // ******************************************************** Networktables ******************************************************** //
   private boolean useNetworkTables;
@@ -190,45 +221,64 @@ public class Drivetrain extends SubsystemBase {
     // yhat = Cx + Du
     // u =  
 
-  
-    double[] dA2 = { //States x states
-      0, 0, 0, 
-      0, 0, 0,
-      0, 0, 0
+    // States: xpos, ypos, angle, xvel, yvel, avel
+    // Inputs: xaccel, yaccel, angaccel
+    // Outputs: x, y, a, vx, vy, va
+
+
+
+    double[][] dA2 = { //States x states
+      {0, 0, 0, 1, 0, 0,},
+      {0, 0, 0, 0, 1, 0,},
+      {0, 0, 0, 0, 0, 1,},
+      {0, 0, 0, 0, 0, 0,},
+      {0, 0, 0, 0, 0, 0,},
+      {0, 0, 0, 0, 0, 0,},
     };
-    double[] dB2 = { //States x inputs
-      1, 0, 0,
-      0, 1, 0,
-      0, 0, 1
+    double[][] dB2 = { //States x inputs
+    //xa, ya, anga
+      {0, 0, 0,}, //xpos
+      {0, 0, 0,}, //ypos
+      {0, 0, 0,}, //angle
+      {1, 0, 0,}, //xvel
+      {0, 1, 0,}, //yvel
+      {0, 0, 1,}, //avel
     };
     
-    double[] dC2 = { //Outputs x states
-      1, 0, 0,
-      0, 1, 0,
-      0, 0, 1,
-      0, 0, 1,
+    double[][] dC2 = { //Outputs x states
+      //xpos, ypos, angle, xvel, yvel, avel
+      {1, 0, 0, 0, 0, 0,}, //x
+      {0, 1, 0, 0, 0, 0,}, //y
+      {0, 0, 1, 0, 0, 0,}, //a
+      {0, 0, 0, 1, 0, 0,}, //vx
+      {0, 0, 0, 0, 1, 0,}, //vy
+      {0, 0, 0, 0, 0, 1,}, //va
     };
-    double[] dD2 = { //Outputs x inputs
-      0, 0, 0,
-      0, 0, 0,
-      0, 0, 0,
-      0, 0, 0,
+    double[][] dD2 = { //Outputs x inputs
+    //xacc, yacc, angacc
+      {0, 0, 0,}, //x
+      {0, 0, 0,}, //y
+      {0, 0, 0,}, //a
+      {1, 0, 0,}, //vx
+      {0, 1, 0,}, //vy
+      {0, 0, 1,}, //va
     };
-    Matrix<N3, N3> A2 = new Matrix<N3, N3>(N3.instance, N3.instance, dA2);
-    Matrix<N3, N3> B2 = new Matrix<N3, N3>(N3.instance, N3.instance, dB2);
-    Matrix<N4, N3> C2 = new Matrix<N4, N3>(N4.instance, N3.instance, dC2);
-    Matrix<N4, N3> D2 = new Matrix<N4, N3>(N4.instance, N3.instance, dD2);
-    mecanumFieldRelativeSystem = new LinearSystem<N3, N3, N4>(A2, B2, C2, D2);
+    var A2 = new SimpleMatrix(dA2);
+    var B2 = new SimpleMatrix(dB2);
+    var C2 = new SimpleMatrix(dC2);
+    var D2 = new SimpleMatrix(dD2);
+    mecanumFieldRelativeSystem = new LinearSystem<N6, N3, N6>(new Matrix<>(A2), new Matrix<>(B2), new Matrix<>(C2), new Matrix<>(D2));
     
-    Matrix<N3, N1> stateDev = VecBuilder.fill(0.01, 0.01, 0.01);
-    Matrix<N4, N1> sensorDev = VecBuilder.fill(0.01, 0.01, 0.1, 0.05);
+    Matrix<N6, N1> stateDev = VecBuilder.fill(0.35, 0.288, 2.098, 0.1, 0.1, 0.1);
+    Matrix<N6, N1> sensorDev = VecBuilder.fill(0.1, 0.1, 9, 10, 10, 10);
 
-    mecanumFieldRelativeKalmanFilter = new KalmanFilter<N3, N3, N4>(N3.instance, N4.instance, mecanumFieldRelativeSystem, stateDev, sensorDev, 0.02);
+    mecanumFieldRelativeKalmanFilter = new KalmanFilter<N6, N3, N6>(N6.instance, N6.instance, mecanumFieldRelativeSystem, stateDev, sensorDev, 0.02);
 
-    mecanumFieldRelativeLQR = new LinearQuadraticRegulator<>(mecanumFieldRelativeSystem, VecBuilder.fill(0.05, 0.05, 0.05), VecBuilder.fill(1, 1, 1), d);
+    mecanumFieldRelativeLQR = new LinearQuadraticRegulator<N6, N3, N6>(mecanumFieldRelativeSystem, VecBuilder.fill(0.05, 0.05, 0.05, 0.05, 0.05, 0.05), VecBuilder.fill(1, 1, 1), d);
+
     Constants.log("Controller gain: " + mecanumFieldRelativeLQR.getK());
     mecanumFF = new LinearPlantInversionFeedforward<>(mecanumFieldRelativeSystem, 0.02);
-    referenceVector = VecBuilder.fill(0.5, 0, 0);
+    referenceVector = VecBuilder.fill(0.5, 0, 0, 0, 0, 0);
   }
 
   private double moduleMetersPerSecondToKrakenRPM(double mps) {
@@ -241,8 +291,16 @@ public class Drivetrain extends SubsystemBase {
     return rads * Constants.Drivetrain.wheelRadiusMeters / Constants.Drivetrain.moduleGearReduction;
   }
 
-  private double krakenRadSToMPS(double rads) {
+  private double krakenRadToM(double rads) {
     return (rads / Constants.Drivetrain.moduleGearReduction) * Constants.Drivetrain.wheelRadiusMeters;
+  }
+
+  public MecanumDriveWheelPositions getModulePositionsMeters() {
+    return new MecanumDriveWheelPositions(
+    krakenRadToM(motorPositions[0].refresh().getValue().in(Units.Radian)),
+    krakenRadToM(motorPositions[1].refresh().getValue().in(Units.Radian)),
+    krakenRadToM(motorPositions[2].refresh().getValue().in(Units.Radian)),
+    krakenRadToM(motorPositions[3].refresh().getValue().in(Units.Radian)));
   }
 
   public double[] getEncoders() {
@@ -260,7 +318,7 @@ public class Drivetrain extends SubsystemBase {
   public double[] getWheelVelocitiesMPS() {
     double[] d = getEncoders();
     for (int i = 0; i < d.length; i++) {
-      d[i] = krakenRadSToMPS(d[i]);
+      d[i] = krakenRadToM(d[i]);
     }
     return d;
   }
@@ -275,19 +333,29 @@ public class Drivetrain extends SubsystemBase {
     return d;
   }
 
-  Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
+  public Drivetrain(boolean useNetworkTables, int logInfo, boolean useSimulator) {
+    this(useNetworkTables, logInfo);
+    this.useSimulator = true;
+  }
 
-  public Vector<N4> getY() {
-    //Vector<N4> simulatedMotorVelocities = new Vector<N4>(B.times(stateSim));
+  public Vector<N6> getY() {
+    //Vector<N3> simulatedMotorVelocities = new Vector<N3>(B.times(stateSim));
     //Constants.log("Sim motor velocities:" + simulatedMotorVelocities);
 
     //stateSim = new Vector<N3>(mecanumFieldRelativeSystem.calculateX(stateSim, u, 0.02));
     //Vector<N4> variance = new Vector<N4>(new Matrix<N4, N1>(N4.instance, N1.instance, new double[] {Math.random() * 0.001, Math.random() * 0.01, Math.random() * 0.001, Math.random() * 0.05}));
     //return new Vector<N4>(mecanumFieldRelativeSystem.getC().times(stateSim).plus(mecanumFieldRelativeSystem.getD().times(u))).plus(variance);
     //return VecBuilder.fill(inputToChassisVelocity.get(0), inputToChassisVelocity.get(1), inputToChassisVelocity.get(2), Constants.Sensors.imu.getRate());
+
+    if (useSimulator) {
+      return VecBuilder.fill(0, 0, 0, stateEstimate.get(3), stateEstimate.get(4), stateEstimate.get(5)); // , Math.random() * 0.001, Math.random() * 0.001, Math.random() * 0.001
+    }
+
     double[] d = getWheelVelocitiesMPS();
     ChassisSpeeds s = kinematics.toChassisSpeeds(new MecanumDriveWheelSpeeds(d[0], d[1], d[2], d[3]));
-    return VecBuilder.fill(s.vxMetersPerSecond, s.vyMetersPerSecond, s.omegaRadiansPerSecond, Constants.Sensors.getIMUYawVelocityRads());
+    double[] xyaccel = Constants.Sensors.getImuAccelXY();
+    Pose2d pose = poseEstimator.getEstimatedPosition();
+    return VecBuilder.fill(pose.getX(), pose.getY(), pose.getRotation().getRadians(), s.vxMetersPerSecond, s.vyMetersPerSecond, s.omegaRadiansPerSecond);
   }
 
   /***
@@ -363,7 +431,7 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public void setReference(double vx, double vy, double va) {
-    referenceVector = VecBuilder.fill(vx, vy, va);
+    referenceVector = VecBuilder.fill(0, 0, 0, vx, vy, va);
   }
 
   public void setReference(Pose2d velocity) {
@@ -395,11 +463,23 @@ public class Drivetrain extends SubsystemBase {
   public void periodic() {
     //Vector<N3> xN = (Vector<N3>) mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 0.02);
 
-    Vector<N4> y = getY();
+    var results = chassisCam.getAllUnreadResults();
+    for (PhotonPipelineResult photonPipelineResult : results) {
+      Optional<EstimatedRobotPose> pose = photonPoseEstimator.update(photonPipelineResult);
+      if (pose.isPresent()) {
+        poseEstimator.addVisionMeasurement(pose.get().estimatedPose.toPose2d(), pose.get().timestampSeconds);
+      }
+    }
+
+    poseEstimator.update(Constants.Sensors.getImuRotation2d(), getModulePositionsMeters());
+
+
+    var y = getY();
     mecanumFieldRelativeKalmanFilter.predict(u, 0.02);
     mecanumFieldRelativeKalmanFilter.correct(u, y);
-    Vector<N3> x = new Vector<N3>(mecanumFieldRelativeKalmanFilter.getXhat());
-    u = new Vector<N3>(mecanumFieldRelativeLQR.calculate(x, referenceVector));//.plus(mecanumFF.calculate(referenceVector)));
+    var xhat = new Vector<N6>(mecanumFieldRelativeKalmanFilter.getXhat());
+    u = new Vector<N3>(mecanumFieldRelativeLQR.calculate(xhat, referenceVector));//.plus(mecanumFF.calculate(referenceVector)));
+    stateEstimate = stateEstimate.plus(xhat);
 
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
@@ -408,8 +488,8 @@ public class Drivetrain extends SubsystemBase {
     if (useNetworkTables) {
       appliedCurrent.set(getAppliedCurrents());
       velocity.set(getEncoders());
-      xPublisher.set(stateSim.getData());
-      xHatPublisher.set(x.getData());
+      xPublisher.set(stateEstimate.getData());
+      xHatPublisher.set(xhat.getData());
       yPublisher.set(y.getData());
       uPublisher.set(u.getData());
       referenceVectorPublisher.set(referenceVector.getData());
@@ -418,8 +498,7 @@ public class Drivetrain extends SubsystemBase {
     if (loggingLoop == -1) return;
     loop++;
     if (loop > loggingLoop) {
-      Constants.log("State simulation:" + stateSim.toString());
-      Constants.log("State estimate:" + x.toString());
+      Constants.log("State estimate:" + stateEstimate.toString());
       Constants.log("Control vec:" + u.toString());
       loop = 0;
     }
