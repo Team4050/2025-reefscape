@@ -9,12 +9,12 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Vision;
 
-public class ReefAlign extends Command {
+public class AlignToReef extends Command {
     private Drivetrain drivetrain;
     private Vision vision;
     private HolonomicDriveController holonomicDriveController;
 
-    ReefAlign() {
+    AlignToReef() {
         holonomicDriveController = new HolonomicDriveController(
             new PIDController(0.1, 0, 0), 
             new PIDController(0.1, 0, 0),

@@ -10,11 +10,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.subsystems.Drivetrain;
 
-public class DVel extends Command {
+public class TestModelBasedControl extends Command {
   private Drivetrain drivetrain;
   private Timer timer = new Timer();
 
-  DVel(Drivetrain d) {
+  TestModelBasedControl(Drivetrain d) {
     drivetrain = d;
   }
 

@@ -21,7 +21,7 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.Autos;
+import frc.robot.commands.ReturnAutonomous;
 import frc.robot.hazard.HazardXbox;
 import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Drivetrain;
@@ -69,12 +69,13 @@ public class RobotContainer {
 
     Constants.Sensors.calibrate(new Pose3d());
 
-    /*elevatorSubsystem.setDefaultCommand(
+    elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
-              elevatorSubsystem.setAdditive(-m_driverController.getRightY() / 6);
+              //elevatorSubsystem.setAdditive(-m_driverController.getRightY() / 6);
+              elevatorSubsystem.goToPosition(700, 600, -35);
             },
-            elevatorSubsystem));*/
+            elevatorSubsystem));
     drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
         drivetrainSubsystem.set(-m_driverController.getLeftY(), -m_driverController.getLeftX(), -m_driverController.getRightX());
     }, drivetrainSubsystem));
@@ -158,6 +159,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return Autos.OrientLimelight(drivetrainSubsystem);
+    return ReturnAutonomous.OrientLimelight(drivetrainSubsystem);
   }
 }

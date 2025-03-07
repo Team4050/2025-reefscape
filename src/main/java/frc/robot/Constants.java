@@ -55,6 +55,7 @@ public final class Constants {
       4), 0.5588);
     public static final Transform3d robotToCamera = new Transform3d(0.185, 0, 0.27, new Rotation3d());
     public static final Translation2d COMOffsetFromWheelbaseCenter = new Translation2d(0, 0);
+    public static final double chassisTopPlateHeightMM = 167.64;
   }
 
   public static class Elevator {
@@ -64,8 +65,10 @@ public final class Constants {
     public static final double gearboxReduction = 1.0 / 10.0;
     public static final double gearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
-    public static final double minExtension = 0.2;
-    public static final double maxExtension = 44;
+    public static final double minExtension = 0.02;
+    public static final double maxExtension = 4.4;
+    public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
+    public static final double baseHeightMM = 812.800 + Drivetrain.chassisTopPlateHeightMM; //From Elevator - Full Assembly CAD
   }
 
   public static class Shoulder {
@@ -73,6 +76,11 @@ public final class Constants {
     public static final int currentLimit = 40;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
+    public static final double shoulderStartingRotation = -0.23;
+    public static final double shoulderMax = 0.25; //0.46 rotations
+    public static final double shoulderMin = -0.23;
+
+    public static final double shoulderArmLengthMM = 302;
   }
 
   public static class Wrist {
@@ -80,7 +88,14 @@ public final class Constants {
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double startingPositionOffset = 0.0;
+    public static final double startingPositionRotation = -0.2;
+    public static final double wristMaxShoulderOffsetRotations = 0.25;
+    public static final double wristMinShoulderOffsetRotations = -0.25;
+    public static final double wristMax = 0.8;
+    public static final double wristMin = -0.25;
+
+    public static final double chuteCenterXOffsetMM = 330; //From Claw - Full Assembly CAD
+    public static final double chuteCenterYOffsetMM = -222; //From Claw - Full Assembly CAD
   }
 
   public static class Coral {
