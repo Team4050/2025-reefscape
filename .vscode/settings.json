@@ -61,7 +61,8 @@
   "java.format.enabled": false,
   "[gradle][java][xml]": {
     "editor.codeActionsOnSave": {
-      "source.fixAll.spotlessGradle": "explicit"
+      "source.fixAll.spotlessGradle": "explicit",
+      "source.organizeImports": "explicit",
     },
     "files.trimTrailingWhitespace": false,
     "spotlessGradle.diagnostics.enable": true,
