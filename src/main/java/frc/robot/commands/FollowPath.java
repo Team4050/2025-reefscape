@@ -14,6 +14,7 @@ import com.pathplanner.lib.trajectory.PathPlannerTrajectoryState;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.Trajectory;
@@ -33,15 +34,14 @@ public class FollowPath extends Command {
     FollowPath(Drivetrain drivetrain) {
         this.drivetrain = drivetrain;
         timer = new Timer();
-        var slowConfig = new TrajectoryConfig(4, 4);
         List<Pose2d> list = new ArrayList<Pose2d>();
-        list.add(new Pose2d(0, 0, new Rotation2d()));
-        list.add(new Pose2d(5, 5, new Rotation2d()));
+        list.add(drivetrain.getPoseEstimate());
+        list.add(drivetrain.getPoseEstimate().plus(new Transform2d(0, 1, new Rotation2d())));
         //trajectory = TrajectoryGenerator.generateTrajectory(list, slowConfig);
         
         List<Waypoint> waypoints = new ArrayList<>();
         waypoints = PathPlannerPath.waypointsFromPoses(list);
-        PathPlannerPath path = new PathPlannerPath(waypoints, new PathConstraints(10, 6, 8, 6), new IdealStartingState(0, Rotation2d.kZero), new GoalEndState(0, Rotation2d.kZero));
+        PathPlannerPath path = new PathPlannerPath(waypoints, new PathConstraints(1, 1, 1, 1), new IdealStartingState(0, Rotation2d.kZero), new GoalEndState(0, Rotation2d.kZero));
         trajectory = path.generateTrajectory(new ChassisSpeeds(0, 0, 0), Rotation2d.kZero, Constants.Drivetrain.mainConfig);
     }
 
@@ -57,7 +57,7 @@ public class FollowPath extends Command {
         // TODO Auto-generated method stub
         PathPlannerTrajectoryState state = trajectory.sample(timer.getTimestamp());
         Constants.log(state.pose + " " + state.fieldSpeeds.omegaRadiansPerSecond);
-        drivetrain.setReference(state.fieldSpeeds.vxMetersPerSecond, state.fieldSpeeds.vyMetersPerSecond, state.fieldSpeeds.omegaRadiansPerSecond);
+        drivetrain.setReference(state.pose.getX(), state.pose.getY(), 0, state.fieldSpeeds.vxMetersPerSecond, state.fieldSpeeds.vyMetersPerSecond, state.fieldSpeeds.omegaRadiansPerSecond);
         super.execute();
     }
 

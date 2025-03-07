@@ -22,7 +22,7 @@ public class DVel extends Command {
   public void initialize() {
     // TODO Auto-generated method stub
     super.initialize();
-    drivetrain.setReference(1, 0, 0);
+    drivetrain.setReference(1, 0, 0, 0, 0, 0);
     timer.start();
   }
 

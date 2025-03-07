@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
 
-public class OrientLL extends Command {
+public class OrientFaceLL extends Command {
   private Drivetrain drivetrain;
   private Timer timer = new Timer();
   private PIDController xController = new PIDController(0.15, 0, 0);
@@ -27,7 +27,7 @@ public class OrientLL extends Command {
 
   private DoubleArrayPublisher pidOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
 
-  OrientLL(Drivetrain drivetrain) {
+  OrientFaceLL(Drivetrain drivetrain) {
     this.drivetrain = drivetrain;
     xController.setTolerance(0.1);
     yController.setTolerance(0.1);

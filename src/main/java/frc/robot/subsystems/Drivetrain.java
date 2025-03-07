@@ -189,6 +189,12 @@ public class Drivetrain extends SubsystemBase {
     FR.getConfigurator().apply(rightSideConfig);
     RR.getConfigurator().apply(rightSideConfig);
 
+    motorPositions = new StatusSignal[4];
+    motorPositions[0] = FL.getPosition();
+    motorPositions[1] = FR.getPosition();
+    motorPositions[2] = RL.getPosition();
+    motorPositions[3] = RR.getPosition();
+
     motorVelocities = new StatusSignal[4];
     motorVelocities[0] = FL.getVelocity();
     motorVelocities[1] = FR.getVelocity();
@@ -206,7 +212,7 @@ public class Drivetrain extends SubsystemBase {
       appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | Amps").publish();
       velocity = drivetrainTable.getDoubleArrayTopic("Wheel encoder velocities | radps").publish();
       xPublisher = drivetrainTable.getDoubleArrayTopic("Simulated state | mps").publish();
-      xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered state | mps").publish();
+      xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered change in state | mps").publish();
       yPublisher = drivetrainTable.getDoubleArrayTopic("Sensor measurements | mps & radps").publish();
       uPublisher = drivetrainTable.getDoubleArrayTopic("Control vector").publish();
       referenceVectorPublisher = drivetrainTable.getDoubleArrayTopic("Target pose").publish();
@@ -281,14 +287,9 @@ public class Drivetrain extends SubsystemBase {
     referenceVector = VecBuilder.fill(0.5, 0, 0, 0, 0, 0);
   }
 
-  private double moduleMetersPerSecondToKrakenRPM(double mps) {
-    double rads = mps * Constants.Drivetrain.moduleGearReduction / Constants.Drivetrain.wheelRadiusMeters;
-    return rads * 60 / (2 * Math.PI);
-  }
-
-  private double krakenRPMToMetersPerSecond(double rpm) {
-    double rads = rpm * 2 * Math.PI / 60;
-    return rads * Constants.Drivetrain.wheelRadiusMeters / Constants.Drivetrain.moduleGearReduction;
+  public void setRobotPose(Pose2d pose) {
+    poseEstimator.resetPose(pose);
+    stateEstimate = VecBuilder.fill(pose.getX(), pose.getY(), pose.getRotation().getRadians(), 0, 0 ,0);
   }
 
   private double krakenRadToM(double rads) {
@@ -348,12 +349,11 @@ public class Drivetrain extends SubsystemBase {
     //return VecBuilder.fill(inputToChassisVelocity.get(0), inputToChassisVelocity.get(1), inputToChassisVelocity.get(2), Constants.Sensors.imu.getRate());
 
     if (useSimulator) {
-      return VecBuilder.fill(0, 0, 0, stateEstimate.get(3), stateEstimate.get(4), stateEstimate.get(5)); // , Math.random() * 0.001, Math.random() * 0.001, Math.random() * 0.001
+      return stateEstimate.plus(VecBuilder.fill(Math.random() * 0.001, Math.random() * 0.001, Math.random() * 0.001, Math.random() * 0.001, Math.random() * 0.001, Math.random() * 0.001)); // , Math.random() * 0.001, Math.random() * 0.001, Math.random() * 0.001
     }
 
     double[] d = getWheelVelocitiesMPS();
     ChassisSpeeds s = kinematics.toChassisSpeeds(new MecanumDriveWheelSpeeds(d[0], d[1], d[2], d[3]));
-    double[] xyaccel = Constants.Sensors.getImuAccelXY();
     Pose2d pose = poseEstimator.getEstimatedPosition();
     return VecBuilder.fill(pose.getX(), pose.getY(), pose.getRotation().getRadians(), s.vxMetersPerSecond, s.vyMetersPerSecond, s.omegaRadiansPerSecond);
   }
@@ -430,12 +430,16 @@ public class Drivetrain extends SubsystemBase {
     setVelocity(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
   }
 
-  public void setReference(double vx, double vy, double va) {
-    referenceVector = VecBuilder.fill(0, 0, 0, vx, vy, va);
+  public void setReference(double x, double y, double a, double vx, double vy, double va) {
+    referenceVector = VecBuilder.fill(x, y, a, vx, vy, va);
   }
 
-  public void setReference(Pose2d velocity) {
-    setReference(velocity.getX(), velocity.getY(), velocity.getRotation().getRadians());
+  public void setReference(Pose2d pose, Pose2d velocity) {
+    setReference(pose.getX(), pose.getY(), 0, velocity.getX(), velocity.getY(), 0);
+  }
+
+  public Pose2d getPoseEstimate() {
+    return new Pose2d(stateEstimate.get(0), stateEstimate.get(1), new Rotation2d(stateEstimate.get(2)));
   }
 
   public void play() {
@@ -480,6 +484,8 @@ public class Drivetrain extends SubsystemBase {
     var xhat = new Vector<N6>(mecanumFieldRelativeKalmanFilter.getXhat());
     u = new Vector<N3>(mecanumFieldRelativeLQR.calculate(xhat, referenceVector));//.plus(mecanumFF.calculate(referenceVector)));
     stateEstimate = stateEstimate.plus(xhat);
+
+    set(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
 
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
