@@ -1,6 +1,11 @@
 package frc.robot.subsystems;
 
 import org.ejml.simple.SimpleMatrix;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.PhotonPipelineResult;
+import org.photonvision.targeting.PhotonTrackedTarget;
 
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
@@ -10,6 +15,8 @@ import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.VecBuilder;
@@ -18,11 +25,14 @@ import edu.wpi.first.math.controller.LinearQuadraticRegulator;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.estimator.KalmanFilter;
+import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
+import edu.wpi.first.math.kinematics.MecanumDriveWheelPositions;
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
@@ -60,8 +70,15 @@ public class Drivetrain extends SubsystemBase {
   private TalonFXConfiguration rightSideConfig;
 
   // ******************************************************** Sensors ******************************************************** //
+  private StatusSignal<Angle>[] motorPositions;
   private StatusSignal<AngularVelocity>[] motorVelocities;
   private StatusSignal<Current>[] motorAppliedCurrent;
+
+  private AprilTagFieldLayout aprilTags = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+
+  private PhotonCamera chassisCam = new PhotonCamera("Limelight");
+  private PhotonPoseEstimator aprilTagPoseEstimator = new PhotonPoseEstimator(aprilTags, PoseStrategy.AVERAGE_BEST_TARGETS, Constants.Drivetrain.robotToCamera);
+  private Pose3d lastAprilTagSeen = new Pose3d();
 
   // ******************************************************** Math & Control ******************************************************** //
   double rh = Math.sqrt(2) / 2;
@@ -74,6 +91,7 @@ public class Drivetrain extends SubsystemBase {
     new Translation2d(0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(-0.2794, 0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(-0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter));
+  private MecanumDrivePoseEstimator poseEstimator = new MecanumDrivePoseEstimator(kinematics, Rotation2d.kZero, new MecanumDriveWheelPositions(), Pose2d.kZero, VecBuilder.fill(0.1, 0.1, 0.1), VecBuilder.fill(0.45, 0.45, 0.45));
 
   // ******************************************************** Model-based control ******************************************************** //
   private Vector<N3> referenceVector;
@@ -85,6 +103,7 @@ public class Drivetrain extends SubsystemBase {
   private PIDController RRVelPID = new PIDController(0.3, 0, 0.1);
   private LinearQuadraticRegulator<N3, N3, N4> mecanumFieldRelativeLQR;
   private LinearPlantInversionFeedforward<N3, N3, N4> mecanumFF;
+  private Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
 
   // ******************************************************** Model-based control ******************************************************** //
   // x in meters, y in meters, theta in radians
@@ -96,6 +115,7 @@ public class Drivetrain extends SubsystemBase {
   private boolean useNetworkTables;
   private NetworkTable drivetrainTable;
   private DoubleArrayPublisher appliedCurrent;
+  private DoubleArrayPublisher position;
   private DoubleArrayPublisher velocity;
   private DoubleArrayPublisher referenceVectorPublisher;
   private DoubleArrayPublisher yPublisher;
@@ -158,6 +178,12 @@ public class Drivetrain extends SubsystemBase {
     FR.getConfigurator().apply(rightSideConfig);
     RR.getConfigurator().apply(rightSideConfig);
 
+    motorPositions = new StatusSignal[4];
+    motorPositions[0] = FL.getPosition();
+    motorPositions[1] = FR.getPosition();
+    motorPositions[2] = RL.getPosition();
+    motorPositions[3] = RR.getPosition();
+
     motorVelocities = new StatusSignal[4];
     motorVelocities[0] = FL.getVelocity();
     motorVelocities[1] = FR.getVelocity();
@@ -174,6 +200,7 @@ public class Drivetrain extends SubsystemBase {
       drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
       appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | Amps").publish();
       velocity = drivetrainTable.getDoubleArrayTopic("Wheel encoder velocities | radps").publish();
+      position = drivetrainTable.getDoubleArrayTopic("Wheel positions | meters").publish();
       xPublisher = drivetrainTable.getDoubleArrayTopic("Simulated state | mps").publish();
       xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered state | mps").publish();
       yPublisher = drivetrainTable.getDoubleArrayTopic("Sensor measurements | mps & radps").publish();
@@ -231,21 +258,26 @@ public class Drivetrain extends SubsystemBase {
     referenceVector = VecBuilder.fill(0.5, 0, 0);
   }
 
-  private double moduleMetersPerSecondToKrakenRPM(double mps) {
-    double rads = mps * Constants.Drivetrain.moduleGearReduction / Constants.Drivetrain.wheelRadiusMeters;
-    return rads * 60 / (2 * Math.PI);
+  public Drivetrain(boolean useNetworkTables, int logInfo, Pose2d initalPoseEstimate) {
+    this(useNetworkTables, logInfo);
+    poseEstimator.resetPose(initalPoseEstimate);
   }
 
-  private double krakenRPMToMetersPerSecond(double rpm) {
-    double rads = rpm * 2 * Math.PI / 60;
-    return rads * Constants.Drivetrain.wheelRadiusMeters / Constants.Drivetrain.moduleGearReduction;
-  }
-
-  private double krakenRadSToMPS(double rads) {
+  private double krakenRadToM(double rads) {
     return (rads / Constants.Drivetrain.moduleGearReduction) * Constants.Drivetrain.wheelRadiusMeters;
   }
 
-  public double[] getEncoders() {
+  public double[] getMotorPositionRadians() {
+    double d[] = {
+      motorPositions[0].refresh().getValue().in(Units.Radians),
+      motorPositions[1].refresh().getValue().in(Units.Radians),
+      motorPositions[2].refresh().getValue().in(Units.Radians),
+      motorPositions[3].refresh().getValue().in(Units.Radians),
+    };
+    return d;
+  }
+
+  public double[] getMotorVelocitiesRadPS() {
     // ChassisSpeeds s = kinematics.toChassisSpeeds(new
     // MecanumDriveWheelSpeeds(FL.().getValueAsDouble(), 0, 0, 0))
     double[] d = {
@@ -257,12 +289,28 @@ public class Drivetrain extends SubsystemBase {
     return d;
   }
 
-  public double[] getWheelVelocitiesMPS() {
-    double[] d = getEncoders();
+  public MecanumDriveWheelPositions getWheelPositionsMeters() {
+    double[] d = getMotorPositionRadians();
     for (int i = 0; i < d.length; i++) {
-      d[i] = krakenRadSToMPS(d[i]);
+      d[i] = krakenRadToM(d[i]);
     }
-    return d;
+    return new MecanumDriveWheelPositions(d[0], d[1], d[2], d[3]);
+  }
+
+
+  public MecanumDriveWheelSpeeds getWheelVelocitiesMPS() {
+    double[] d = getMotorVelocitiesRadPS();
+    for (int i = 0; i < d.length; i++) {
+      d[i] = krakenRadToM(d[i]);
+    }
+    return new MecanumDriveWheelSpeeds(d[0], d[1], d[2], d[3]);
+  }
+
+  public ChassisSpeeds getFieldRelativeSpeedsMPS() {
+    var speeds = kinematics.toChassisSpeeds(getWheelVelocitiesMPS());
+    Translation2d d = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+    d.rotateBy(Constants.Sensors.getImuRotation2d());
+    return new ChassisSpeeds(d.getX(), d.getY(), speeds.omegaRadiansPerSecond);
   }
 
   public double[] getAppliedCurrents() {
@@ -275,7 +323,13 @@ public class Drivetrain extends SubsystemBase {
     return d;
   }
 
-  Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
+  public Pose2d getPoseEstimate() {
+    return poseEstimator.getEstimatedPosition();
+  }
+
+  public Pose3d getLastSeenAprilTag() {
+    return lastAprilTagSeen;
+  }
 
   public Vector<N4> getY() {
     //Vector<N4> simulatedMotorVelocities = new Vector<N4>(B.times(stateSim));
@@ -285,9 +339,14 @@ public class Drivetrain extends SubsystemBase {
     //Vector<N4> variance = new Vector<N4>(new Matrix<N4, N1>(N4.instance, N1.instance, new double[] {Math.random() * 0.001, Math.random() * 0.01, Math.random() * 0.001, Math.random() * 0.05}));
     //return new Vector<N4>(mecanumFieldRelativeSystem.getC().times(stateSim).plus(mecanumFieldRelativeSystem.getD().times(u))).plus(variance);
     //return VecBuilder.fill(inputToChassisVelocity.get(0), inputToChassisVelocity.get(1), inputToChassisVelocity.get(2), Constants.Sensors.imu.getRate());
-    double[] d = getWheelVelocitiesMPS();
-    ChassisSpeeds s = kinematics.toChassisSpeeds(new MecanumDriveWheelSpeeds(d[0], d[1], d[2], d[3]));
+    var d = getWheelVelocitiesMPS();
+    ChassisSpeeds s = kinematics.toChassisSpeeds(d);
     return VecBuilder.fill(s.vxMetersPerSecond, s.vyMetersPerSecond, s.omegaRadiansPerSecond, Constants.Sensors.getIMUYawVelocityRads());
+  }
+
+  public void setVisionPipeline(int index) {
+    chassisCam.setPipelineIndex(index);
+    Constants.log("Drivetrain - Set limelight pipeline index to " + index);
   }
 
   /***
@@ -340,7 +399,7 @@ public class Drivetrain extends SubsystemBase {
   @Deprecated
   public void setVelocity(ChassisSpeeds speeds) {
     MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
-    double[] d = getWheelVelocitiesMPS();
+    double[] d = {};//getWheelVelocitiesMPS();
     FL.set(FLVelPID.calculate(d[0], wheelSpeeds.frontLeftMetersPerSecond));
     FR.set(FRVelPID.calculate(d[1], wheelSpeeds.frontRightMetersPerSecond));
     RL.set(RLVelPID.calculate(d[2], wheelSpeeds.rearLeftMetersPerSecond));
@@ -395,6 +454,18 @@ public class Drivetrain extends SubsystemBase {
   public void periodic() {
     //Vector<N3> xN = (Vector<N3>) mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 0.02);
 
+    var unreadResults = chassisCam.getAllUnreadResults();
+    for (PhotonPipelineResult photonPipelineResult : unreadResults) {
+      var estimate = aprilTagPoseEstimator.update(photonPipelineResult);
+      if (estimate.isPresent()) {
+        Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).objDetectId);
+        lastAprilTagSeen = aprilTags.getTagPose(estimate.get().targetsUsed.get(0).objDetectId).get();
+        poseEstimator.addVisionMeasurement(estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
+      }
+    }
+
+    poseEstimator.update(Constants.Sensors.getImuRotation2d(), getWheelPositionsMeters());
+
     Vector<N4> y = getY();
     mecanumFieldRelativeKalmanFilter.predict(u, 0.02);
     mecanumFieldRelativeKalmanFilter.correct(u, y);
@@ -407,7 +478,9 @@ public class Drivetrain extends SubsystemBase {
 
     if (useNetworkTables) {
       appliedCurrent.set(getAppliedCurrents());
-      velocity.set(getEncoders());
+      velocity.set(getMotorVelocitiesRadPS());
+      MecanumDriveWheelPositions positions = getWheelPositionsMeters();
+      position.set(new double[] {positions.frontLeftMeters, positions.frontRightMeters, positions.rearLeftMeters, positions.rearRightMeters});
       xPublisher.set(stateSim.getData());
       xHatPublisher.set(x.getData());
       yPublisher.set(y.getData());

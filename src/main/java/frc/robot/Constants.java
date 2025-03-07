@@ -117,7 +117,7 @@ public final class Constants {
 
   public static class Sensors {
     public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
-    public static Vision vision = new Vision();
+    //public static Vision vision = new Vision();
 
     public static void resetIMU() {
       Constants.log("Resetting gyro angle to 0...");
@@ -136,6 +136,10 @@ public final class Constants {
       return new Rotation3d(new Rotation2d(Math.toRadians(-imu.getAngle())));
     }
 
+    public static Rotation2d getImuRotation2d() {
+      return new Rotation2d(Math.toRadians(-imu.getAngle()));
+    }
+
     public static double[] getImuAccelXY() {
       return new double[] {imu.getAccelY(), imu.getAccelX()};
     }
@@ -144,8 +148,9 @@ public final class Constants {
       //Current orientation imu is CW+
       imu.configCalTime(CalibrationTime._4s);
       imu.calibrate();
-      vision.setRobotPose(startingPose);
-      vision.setPipelineIndex(0);
+      imu.setGyroAngleZ(180);
+      //vision.setRobotPose(startingPose);
+      //vision.setPipelineIndex(0);
     }
   }
 }

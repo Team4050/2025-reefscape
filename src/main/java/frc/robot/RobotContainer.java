@@ -4,7 +4,11 @@
 
 package frc.robot;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoubleArrayTopic;
@@ -36,7 +40,7 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0);
+  private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0, new Pose2d(15, 4, Rotation2d.k180deg));
   private final Elevator elevatorSubsystem = new Elevator();
   //private final Claw clawSubsystem = new Claw();
 
@@ -67,6 +71,8 @@ public class RobotContainer {
     configureBindings();
     configureDashboard();
 
+    Constants.log(AprilTagFields.k2025ReefscapeWelded.m_resourceFile);
+
     Constants.Sensors.calibrate(new Pose3d());
 
     elevatorSubsystem.setDefaultCommand(
@@ -90,8 +96,8 @@ public class RobotContainer {
   }
 
   public void periodic() {
-    Constants.Sensors.vision.periodic();
-    imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
+    //Constants.Sensors.vision.periodic();
+    //imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
     imuDataPublisher.set(new double[] {Constants.Sensors.getIMUYawRadians(), -Constants.Sensors.imu.getRate()});
     voltagePublisher.set(pdh.getVoltage());
     //imuDataPublisher.set(Constants.Sensors.getImuRotation3d().getZ());
@@ -132,19 +138,19 @@ public class RobotContainer {
     m_driverController.y().onTrue(new InstantCommand(() -> {
       if (pipeline == 0) {pipeline = 1;}
       else if (pipeline == 1) {pipeline = 0;}
-      Constants.Sensors.vision.setPipelineIndex(pipeline);}));
+      drivetrainSubsystem.setVisionPipeline(pipeline);}));
   }
 
   private void configureDashboard() {
     double[] def = {0, 0};
 
-    imuPlotting = netTables.getDoubleTopic("IMU Gyro Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
-    imuPlotting.setDefault(0);
+    //imuPlotting = netTables.getDoubleTopic("IMU Gyro Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    //imuPlotting.setDefault(0);
 
     //gyroPlotting = netTables.getDoubleTopic("IMU Gyro Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     //gyroPlotting.setDefault(0);
 
-    imuDataPublisher = netTables.getDoubleArrayTopic("IMU Data").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    imuDataPublisher = netTables.getDoubleArrayTopic("IMU Data | Yaw & Yaw Velocity").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     imuDataPublisher.setDefault(def);
 
     SmartDashboard.putData("play", new InstantCommand(() -> { drivetrainSubsystem.play(); }));
