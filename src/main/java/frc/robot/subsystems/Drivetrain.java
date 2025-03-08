@@ -520,7 +520,7 @@ public class Drivetrain extends SubsystemBase {
     u = new Vector<N3>(mecanumFieldRelativeLQR.calculate(xhat, referenceVector));//.plus(mecanumFF.calculate(referenceVector)));
     stateEstimate = xhat;
 
-    set(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
+    setAccel(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
 
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
