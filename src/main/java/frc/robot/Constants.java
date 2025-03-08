@@ -89,8 +89,8 @@ public final class Constants {
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
     public static final double startingPositionRotation = -0.1055555;
-    public static final double wristMaxShoulderOffsetRotations = 0.25;
-    public static final double wristMinShoulderOffsetRotations = -0.25;
+    public static final double wristMaxShoulderOffsetRotations = 0.20;
+    public static final double wristMinShoulderOffsetRotations = -0.20;
     public static final double wristMax = 0.8;
     public static final double wristMin = 0; // -0.25?
 

@@ -19,10 +19,12 @@ import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.DoubleSubscriber;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.hazard.HazardSparkMax;
@@ -47,8 +49,16 @@ public class Elevator extends SubsystemBase {
   private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
   private DoublePublisher setpointPublisher = elevatorTable.getDoubleTopic("Elevator setpoint").publish();
   private DoubleArrayPublisher kinematicsPublisher = elevatorTable.getDoubleArrayTopic("Elevator kinematics").publish();
+  private double PSub = 0.25;
+  private double ISub = 0.005;
+  private double DSub = 0.05;
 
   public Elevator() {
+    SmartDashboard.putNumber("P", PSub);
+    SmartDashboard.putNumber("I", ISub);
+    SmartDashboard.putNumber("D", DSub);
+
+    shoulderFF= new ArmFeedforward(0, 1, 0);
     //leftMotor = new SparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless);
     //rightMotor = new SparkMax(Constants.Elevator.elevatorRight, MotorType.kBrushless);
     // elevatorWrist = new SparkMax(Constants.Elevator.elevatorWrist, MotorType.kBrushless);
@@ -255,8 +265,19 @@ public class Elevator extends SubsystemBase {
     return backMotor.getPosition() - frontMotor.getPosition();
   }
 
+  public void reconfig() {
+    Constants.log(lastP + " " + lastI + " " + lastD);
+    shoulderMotor.configurePID(SmartDashboard.getNumber("P", PSub), SmartDashboard.getNumber("I", ISub), SmartDashboard.getNumber("D", DSub));
+  }
+
+  double lastP = 0;
+  double lastI = 0;
+  double lastD = 0;
+
   @Override
   public void periodic() {
+    shoulderFF.calculate(shoulderSetpoint, shoulderMotor.getVelocity());
+
     frontMotor.publishToNetworkTables();
     backMotor.publishToNetworkTables();
     shoulderMotor.publishToNetworkTables();

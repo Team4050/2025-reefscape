@@ -19,6 +19,7 @@ import frc.robot.Constants;
 public class HazardSparkMax {
     private int CAN_ID;
     private SparkMax controller;
+    private SparkMaxConfig config;
     private boolean useExternalEncoder;
     private RelativeEncoder integratedEncoder;
     private SparkAbsoluteEncoder externalEncoder;
@@ -35,6 +36,7 @@ public class HazardSparkMax {
 
     public HazardSparkMax(int CAN_ID, MotorType type, SparkMaxConfig config, boolean useExternalEncoder, boolean publishToMotorTable, NetworkTable table) {
         this.CAN_ID = CAN_ID;
+        this.config = config;
         this.useExternalEncoder = useExternalEncoder;
         this.publishToMotorTable = publishToMotorTable;
         controller = new SparkMax(CAN_ID, MotorType.kBrushless);
@@ -57,6 +59,11 @@ public class HazardSparkMax {
 
     public HazardSparkMax(int CAN_ID, MotorType type, SparkMaxConfig config, boolean publishToMotorTable, String name) {
         this(CAN_ID, type, config, false, publishToMotorTable, NetworkTableInstance.getDefault().getTable("SparkMax " + CAN_ID + " - " + name));
+    }
+
+    public void configurePID(double p, double i, double d) {
+      config.closedLoop.pid(p, i, d);
+      controller.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
     }
 
     /***
