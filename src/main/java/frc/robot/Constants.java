@@ -76,9 +76,9 @@ public final class Constants {
     public static final int currentLimit = 40;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static final double shoulderStartingRotation = 0; // -0.23 TODO: find out
+    public static final double shoulderStartingRotation = -0.25; // -0.23 TODO: find out
     public static final double shoulderMax = 0.25; //0.46 rotations
-    public static final double shoulderMin = -0.23;
+    public static final double shoulderMin = -0.24;
 
     public static final double shoulderArmLengthMM = 302;
   }
@@ -88,7 +88,7 @@ public final class Constants {
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double startingPositionRotation = -0.2;
+    public static final double startingPositionRotation = -0.1055555;
     public static final double wristMaxShoulderOffsetRotations = 0.25;
     public static final double wristMinShoulderOffsetRotations = -0.25;
     public static final double wristMax = 0.8;

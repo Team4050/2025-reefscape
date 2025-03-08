@@ -73,7 +73,7 @@ public class HazardSparkMax {
         }
         setpointPub.set(setpoint);
         voltage.set(controller.getBusVoltage());
-        current.set(controller.getOutputCurrent());
+        current.set(controller.getAppliedOutput());
     }
 
     /***
@@ -103,6 +103,7 @@ public class HazardSparkMax {
      * @param type
      */
     public void setControl(double value, ControlType type) {
+        setpoint = value;
         closedLoop.setReference(value, type);
     }
 
