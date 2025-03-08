@@ -65,6 +65,9 @@ public class RobotContainer {
 
   private PowerDistribution pdh = new PowerDistribution();
 
+  private double elevatorIKTargetX = 0;
+  private double elevatorIKTargetY = 0;
+
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // Configure the trigger bindings
@@ -78,8 +81,10 @@ public class RobotContainer {
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
+              elevatorIKTargetX -= m_secondaryController.getLeftX();
+              elevatorIKTargetY -= m_secondaryController.getLeftY();
               //elevatorSubsystem.setAdditive(-m_driverController.getRightY() / 6);
-              elevatorSubsystem.goToPosition(700, 600, -35);
+              elevatorSubsystem.goToPosition(elevatorIKTargetY, elevatorIKTargetX, 0);
             },
             elevatorSubsystem));
     drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {

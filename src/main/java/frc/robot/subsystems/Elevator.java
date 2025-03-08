@@ -114,11 +114,12 @@ public class Elevator extends SubsystemBase {
     wristConfig.encoder.positionConversionFactor(Constants.Wrist.gearboxReduction);
     wristConfig.encoder.velocityConversionFactor(Constants.Wrist.gearboxReduction);
 
-
     backMotor = new HazardSparkMax(Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
     frontMotor = new HazardSparkMax(Constants.Elevator.front, MotorType.kBrushless, followConfig, false, false, elevatorTable);
     shoulderMotor = new HazardSparkMax(Constants.Shoulder.CAN, MotorType.kBrushless, wristConfig, true, "Shoulder");
+    shoulderMotor.setEncoder(Constants.Shoulder.shoulderStartingRotation);
     wristMotor = new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
+    wristMotor.setEncoder(Constants.Wrist.startingPositionRotation);
 
     elevatorPID = new PIDController(0.1, 0, 0.05);//Unused, backup if manual feedforward calculation is needed
     elevatorFF = new ElevatorFeedforward(0, 0.4128, 0, 0);

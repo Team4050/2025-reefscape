@@ -76,7 +76,7 @@ public final class Constants {
     public static final int currentLimit = 40;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static final double shoulderStartingRotation = -0.23;
+    public static final double shoulderStartingRotation = 0; // -0.23 TODO: find out
     public static final double shoulderMax = 0.25; //0.46 rotations
     public static final double shoulderMin = -0.23;
 
@@ -92,7 +92,7 @@ public final class Constants {
     public static final double wristMaxShoulderOffsetRotations = 0.25;
     public static final double wristMinShoulderOffsetRotations = -0.25;
     public static final double wristMax = 0.8;
-    public static final double wristMin = -0.25;
+    public static final double wristMin = 0; // -0.25?
 
     public static final double chuteCenterXOffsetMM = 330; //From Claw - Full Assembly CAD
     public static final double chuteCenterYOffsetMM = -222; //From Claw - Full Assembly CAD
