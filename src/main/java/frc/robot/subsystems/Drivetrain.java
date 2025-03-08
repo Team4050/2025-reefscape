@@ -104,7 +104,7 @@ public class Drivetrain extends SubsystemBase {
   private MecanumDrivePoseEstimator poseEstimator = new MecanumDrivePoseEstimator(kinematics, Rotation2d.kZero, new MecanumDriveWheelPositions(), Pose2d.kZero, VecBuilder.fill(0.1, 0.1, 0.1), VecBuilder.fill(0.45, 0.45, 0.45));
 
   // ******************************************************** Model-based control ******************************************************** //
-  private boolean useSimulator = true;
+  private boolean useSimulator = false;
   private Vector<N6> referenceVector;
   private Vector<N6> stateEstimate = VecBuilder.fill(0, 0, 0, 0, 0, 0);
   private KalmanFilter<N6, N3, N6> mecanumFieldRelativeKalmanFilter;
@@ -504,7 +504,7 @@ public class Drivetrain extends SubsystemBase {
     for (PhotonPipelineResult photonPipelineResult : unreadResults) {
       var estimate = aprilTagPoseEstimator.update(photonPipelineResult);
       if (estimate.isPresent()) {
-        Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).objDetectId);
+        Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).fiducialId);
         lastAprilTagSeen = aprilTags.getTagPose(estimate.get().targetsUsed.get(0).objDetectId).get();
         poseEstimator.addVisionMeasurement(estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
       }
@@ -520,7 +520,7 @@ public class Drivetrain extends SubsystemBase {
     u = new Vector<N3>(mecanumFieldRelativeLQR.calculate(xhat, referenceVector));//.plus(mecanumFF.calculate(referenceVector)));
     stateEstimate = xhat;
 
-    setAccel(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
+    set(new ChassisSpeeds(u.get(0) / 4, u.get(1) / 4, u.get(2) / 4));
 
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
