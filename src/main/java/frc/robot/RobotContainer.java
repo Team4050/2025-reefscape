@@ -106,7 +106,7 @@ public class RobotContainer {
     //Constants.Sensors.vision.periodic();
     //imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
     imuDataPublisher.set(new double[] {Constants.Sensors.getIMUYawRadians(), -Constants.Sensors.imu.getRate()});
-    voltagePublisher.set(pdh.getVoltage());
+    //voltagePublisher.set(pdh.getVoltage()); // Not in CAN
     //imuDataPublisher.set(Constants.Sensors.getImuRotation3d().getZ());
   }
 

@@ -38,7 +38,7 @@ public class OrientFaceLL extends Command {
   public void initialize() {
     // TODO Auto-generated method stub
     super.initialize();
-    Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
+    Pose2d p = drivetrain.getPoseEstimate();
     Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
     timer.start();
   }
@@ -46,7 +46,7 @@ public class OrientFaceLL extends Command {
   @Override
   public void execute() {
     // TODO Auto-generated method stub
-    Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
+    Pose2d p = drivetrain.getPoseEstimate();
     double vx = xController.calculate(p.getX(), target.getX());
     double vy = yController.calculate(p.getY(), target.getY());
     Rotation2d rot = target.getRotation().minus(p.getRotation());

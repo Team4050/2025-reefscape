@@ -44,6 +44,7 @@ public final class Constants {
     public static final double NEOKvRPSPerV = 473d / 60d;
     public static final double wheelRadiusMeters = 0.0762; // 3in
     public static final DCMotor drivetrainMotor = DCMotor.getKrakenX60(1);
+    public static final double KrakenKt = drivetrainMotor.KtNMPerAmp;
     public static final RobotConfig mainConfig = new RobotConfig(
       61.235, 
       5.64646, // Current estimate TODO: empirically determine

@@ -14,6 +14,7 @@ import org.photonvision.targeting.PhotonTrackedTarget;
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -99,22 +100,20 @@ public class Drivetrain extends SubsystemBase {
     new Translation2d(0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(-0.2794, 0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(-0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter));
+  private int windingCount = 0;
   private MecanumDrivePoseEstimator poseEstimator = new MecanumDrivePoseEstimator(kinematics, Rotation2d.kZero, new MecanumDriveWheelPositions(), Pose2d.kZero, VecBuilder.fill(0.1, 0.1, 0.1), VecBuilder.fill(0.45, 0.45, 0.45));
 
   // ******************************************************** Model-based control ******************************************************** //
-  private boolean useSimulator = false;
+  private boolean useSimulator = true;
   private Vector<N6> referenceVector;
   private Vector<N6> stateEstimate = VecBuilder.fill(0, 0, 0, 0, 0, 0);
-  static final Type states = N6.class;
-  static final Type inputs = N3.class;
-  static final Type outputs = N6.class;
   private KalmanFilter<N6, N3, N6> mecanumFieldRelativeKalmanFilter;
   private UnscentedKalmanFilter<N6, N3, N6> posKalmanFilter;
   private LinearSystem<N6, N3, N6> mecanumFieldRelativeSystem;
   private LinearQuadraticRegulator<N6, N3, N6> mecanumFieldRelativeLQR;
   private LinearPlantInversionFeedforward<N6, N3, N6> mecanumFF;
 
-  // ******************************************************** Model-based control ******************************************************** //
+  // ******************************************************** PID control ******************************************************** //
   // x in meters, y in meters, theta in radians
   private ProfiledPIDController xController = new ProfiledPIDController(0, 0, 0, new Constraints(2, 5));
   private ProfiledPIDController yController = new ProfiledPIDController(0, 0, 0, new Constraints(2, 5));;
@@ -136,7 +135,7 @@ public class Drivetrain extends SubsystemBase {
   private DoubleArrayPublisher xHatPublisher;
   private DoubleArrayPublisher uPublisher;
 
-  // ******************************************************** Networktables ******************************************************** //
+  // ******************************************************** Logging ******************************************************** //
   private int loggingLoop = -1;
 
   @SuppressWarnings("unchecked")
@@ -454,6 +453,12 @@ public class Drivetrain extends SubsystemBase {
     set(speeds);
   }
 
+  public void setAccel(ChassisSpeeds fieldRelativeAcceleration) {
+    var fieldRelativeForces = new ChassisSpeeds(fieldRelativeAcceleration.vxMetersPerSecond * Constants.Drivetrain.mainConfig.massKG, fieldRelativeAcceleration.vyMetersPerSecond * Constants.Drivetrain.mainConfig.massKG, fieldRelativeAcceleration.omegaRadiansPerSecond * Constants.Drivetrain.mainConfig.MOI * 2.5308);
+    var forces = kinematics.toWheelSpeeds(ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeForces, new Rotation2d(stateEstimate.get(2))));
+    FL.setControl(new TorqueCurrentFOC((forces.frontLeftMetersPerSecond * 0.0762) / (Constants.Drivetrain.moduleGearReduction * Constants.Drivetrain.KrakenKt)));
+  }
+
   public void followReference() {
     setVelocity(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
   }
@@ -511,8 +516,9 @@ public class Drivetrain extends SubsystemBase {
     mecanumFieldRelativeKalmanFilter.predict(u, 0.02);
     mecanumFieldRelativeKalmanFilter.correct(u, y);
     var xhat = new Vector<N6>(mecanumFieldRelativeKalmanFilter.getXhat());
+    //Constants.log(xhat.getData());
     u = new Vector<N3>(mecanumFieldRelativeLQR.calculate(xhat, referenceVector));//.plus(mecanumFF.calculate(referenceVector)));
-    stateEstimate = stateEstimate.plus(xhat);
+    stateEstimate = xhat;
 
     set(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
 
