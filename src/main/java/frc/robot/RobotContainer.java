@@ -4,7 +4,11 @@
 
 package frc.robot;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoubleArrayTopic;
@@ -22,7 +26,7 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.Autos;
+import frc.robot.commands.ReturnAutonomous;
 import frc.robot.hazard.HazardXbox;
 import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Drivetrain;
@@ -37,7 +41,7 @@ import frc.robot.subsystems.Vision;
  */
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
-  private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0, true);
+  private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0, new Pose2d(15, 4, Rotation2d.k180deg));
   private final Elevator elevatorSubsystem = new Elevator();
   //private final Claw clawSubsystem = new Claw();
 
@@ -62,6 +66,9 @@ public class RobotContainer {
 
   private PowerDistribution pdh = new PowerDistribution();
 
+  private double elevatorIKTargetX = 0;
+  private double elevatorIKTargetY = 0;
+
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     DriverStation.silenceJoystickConnectionWarning(true);
@@ -69,14 +76,19 @@ public class RobotContainer {
     configureBindings();
     configureDashboard();
 
+    Constants.log(AprilTagFields.k2025ReefscapeWelded.m_resourceFile);
+
     Constants.Sensors.calibrate(new Pose3d());
 
-    /*elevatorSubsystem.setDefaultCommand(
+    elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
-              elevatorSubsystem.setAdditive(-m_driverController.getRightY() / 6);
+              elevatorIKTargetX -= m_secondaryController.getLeftX();
+              elevatorIKTargetY -= m_secondaryController.getLeftY();
+              //elevatorSubsystem.setAdditive(-m_driverController.getRightY() / 6);
+              elevatorSubsystem.goToPosition(elevatorIKTargetY, elevatorIKTargetX, 0);
             },
-            elevatorSubsystem));*/
+            elevatorSubsystem));
     drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
         drivetrainSubsystem.set(-m_driverController.getLeftY(), -m_driverController.getLeftX(), -m_driverController.getRightX());
     }, drivetrainSubsystem));
@@ -91,8 +103,8 @@ public class RobotContainer {
   }
 
   public void periodic() {
-    Constants.Sensors.vision.periodic();
-    imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
+    //Constants.Sensors.vision.periodic();
+    //imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
     imuDataPublisher.set(new double[] {Constants.Sensors.getIMUYawRadians(), -Constants.Sensors.imu.getRate()});
     voltagePublisher.set(pdh.getVoltage());
     //imuDataPublisher.set(Constants.Sensors.getImuRotation3d().getZ());
@@ -133,19 +145,19 @@ public class RobotContainer {
     m_driverController.y().onTrue(new InstantCommand(() -> {
       if (pipeline == 0) {pipeline = 1;}
       else if (pipeline == 1) {pipeline = 0;}
-      Constants.Sensors.vision.setPipelineIndex(pipeline);}));
+      drivetrainSubsystem.setVisionPipeline(pipeline);}));
   }
 
   private void configureDashboard() {
     double[] def = {0, 0};
 
-    imuPlotting = netTables.getDoubleTopic("IMU Gyro Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
-    imuPlotting.setDefault(0);
+    //imuPlotting = netTables.getDoubleTopic("IMU Gyro Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    //imuPlotting.setDefault(0);
 
     //gyroPlotting = netTables.getDoubleTopic("IMU Gyro Rads").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     //gyroPlotting.setDefault(0);
 
-    imuDataPublisher = netTables.getDoubleArrayTopic("IMU Data").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
+    imuDataPublisher = netTables.getDoubleArrayTopic("IMU Data | Yaw & Yaw Velocity").publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     imuDataPublisher.setDefault(def);
 
     SmartDashboard.putData("play", new InstantCommand(() -> { drivetrainSubsystem.play(); }));
@@ -160,6 +172,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return Autos.exampleAuto(drivetrainSubsystem);
+    return ReturnAutonomous.OrientLimelight(drivetrainSubsystem);
   }
 }

@@ -8,7 +8,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.robot.subsystems.Drivetrain;
 
-public final class Autos {
+public final class ReturnAutonomous {
   /** Example static factory for an autonomous command. */
   public static Command exampleAuto(Drivetrain drivetrain) {
     return Commands.sequence(new FollowPath(drivetrain));
@@ -22,14 +22,14 @@ public final class Autos {
   }
 
   public static Command velTest(Drivetrain drivetrain) {
-    return new DVel(drivetrain);
+    return new TestModelBasedControl(drivetrain);
   }
 
   public static Command OrientLimelight(Drivetrain drivetrain) {
-    return new OrientLL(drivetrain);
+    return new AlignToReefTest(drivetrain);
   }
 
-  private Autos() {
+  private ReturnAutonomous() {
     throw new UnsupportedOperationException("This is a utility class!");
   }
 }

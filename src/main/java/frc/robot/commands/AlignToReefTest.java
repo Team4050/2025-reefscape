@@ -17,7 +17,7 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
 
-public class OrientLL extends Command {
+public class AlignToReefTest extends Command {
   private Drivetrain drivetrain;
   private Timer timer = new Timer();
   private PIDController xController = new PIDController(0.15, 0, 0);
@@ -27,7 +27,7 @@ public class OrientLL extends Command {
 
   private DoubleArrayPublisher pidOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
 
-  OrientLL(Drivetrain drivetrain) {
+  AlignToReefTest(Drivetrain drivetrain) {
     this.drivetrain = drivetrain;
     xController.setTolerance(0.1);
     yController.setTolerance(0.1);
@@ -38,7 +38,7 @@ public class OrientLL extends Command {
   public void initialize() {
     // TODO Auto-generated method stub
     super.initialize();
-    Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
+    Pose2d p = drivetrain.getPoseEstimate();//Constants.Sensors.vision.getPose().toPose2d();
     Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
     timer.start();
   }
@@ -46,7 +46,8 @@ public class OrientLL extends Command {
   @Override
   public void execute() {
     // TODO Auto-generated method stub
-    Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
+    //Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
+    Pose2d p = drivetrain.getPoseEstimate();
     double vx = xController.calculate(p.getX(), target.getX());
     double vy = yController.calculate(p.getY(), target.getY());
     Rotation2d rot = target.getRotation().minus(p.getRotation());

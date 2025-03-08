@@ -107,6 +107,14 @@ public class HazardSparkMax {
     }
 
     /***
+     * Set the encoder value
+     * @param value
+     */
+    public void setEncoder(double value) {
+        integratedEncoder.setPosition(value);
+    }
+
+    /***
      * Returns the position of the encoder in rotations
      * @return
      */

@@ -13,6 +13,7 @@ import com.revrobotics.spark.config.MAXMotionConfig.MAXMotionPositionMode;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
@@ -20,6 +21,8 @@ import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.hazard.HazardSparkMax;
@@ -27,22 +30,23 @@ import frc.robot.hazard.HazardSparkMax;
 public class Elevator extends SubsystemBase {
   private HazardSparkMax backMotor;
   private HazardSparkMax frontMotor;
+  private HazardSparkMax shoulderMotor;
+  private HazardSparkMax wristMotor;
 
   //private SparkMax elevatorWrist; // Not in CAN yet
   //private SparkClosedLoopController wristMotorController;
-  private RelativeEncoder leftEncoder;
-  private RelativeEncoder rightEncoder;
-  private RelativeEncoder wristEncoder;
   private PIDController elevatorPID;
-  private ElevatorFeedforward elevatorFeedforward;
-  private PIDController wristPID;
-  private ArmFeedforward wristFeedforward;
+  private ElevatorFeedforward elevatorFF;
+  private PIDController shoulderPID;
+  private ArmFeedforward shoulderFF;
 
   private double elevatorSetpoint = 0;
+  private double shoulderSetpoint = 0;
   private double wristSetpoint = 0;
 
   private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
   private DoublePublisher setpointPublisher = elevatorTable.getDoubleTopic("Elevator setpoint").publish();
+  private DoubleArrayPublisher kinematicsPublisher = elevatorTable.getDoubleArrayTopic("Elevator kinematics").publish();
 
   public Elevator() {
     //leftMotor = new SparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless);
@@ -54,14 +58,15 @@ public class Elevator extends SubsystemBase {
     SparkMaxConfig followConfig = new SparkMaxConfig();
     SparkMaxConfig leadConfig = new SparkMaxConfig();
     SparkMaxConfig shoulderConfig = new SparkMaxConfig();
+    SparkMaxConfig wristConfig = new SparkMaxConfig();
 
     followConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
     followConfig.idleMode(IdleMode.kBrake);
     followConfig.follow(Constants.Elevator.front, true);
-    followConfig.absoluteEncoder.positionConversionFactor(
+    /*followConfig.absoluteEncoder.positionConversionFactor( //TODO: Change position conversion factor on sparkMaxes for convenience
         Constants.Elevator.gearboxReduction);
     followConfig.absoluteEncoder.velocityConversionFactor(
-        Constants.Elevator.gearboxReduction);
+        Constants.Elevator.gearboxReduction);*/
 
     leadConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
     leadConfig.idleMode(IdleMode.kBrake);
@@ -69,45 +74,57 @@ public class Elevator extends SubsystemBase {
     leadConfig.closedLoop.outputRange(-1, 1);
     leadConfig.closedLoop.iMaxAccum(1);
     leadConfig.closedLoop.pid(0.4, 0, 0);
-    leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     leadConfig.closedLoop.maxMotion.allowedClosedLoopError(1);
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
-    leadConfig.closedLoop.maxMotion.maxAcceleration(80, ClosedLoopSlot.kSlot0); //TODO:
-    leadConfig.closedLoop.maxMotion.maxVelocity(5000, ClosedLoopSlot.kSlot0);
+    leadConfig.closedLoop.maxMotion.maxAcceleration(3, ClosedLoopSlot.kSlot0);
+    leadConfig.closedLoop.maxMotion.maxVelocity(10, ClosedLoopSlot.kSlot0);
     leadConfig.closedLoop.iZone(15);
     leadConfig.closedLoop.feedbackSensor(
         FeedbackSensor.kPrimaryEncoder);
-    leadConfig.absoluteEncoder.positionConversionFactor(
+    leadConfig.encoder.positionConversionFactor(
         Constants.Elevator.gearboxReduction);
-    leadConfig.absoluteEncoder.velocityConversionFactor(
+    leadConfig.encoder.velocityConversionFactor(
         Constants.Elevator.gearboxReduction);
 
+    shoulderConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
+    shoulderConfig.idleMode(IdleMode.kBrake);
     shoulderConfig.inverted(true);
+    shoulderConfig.closedLoop.pid(0.2, 0, 0);
+    shoulderConfig.closedLoop.iMaxAccum(5);
+    shoulderConfig.closedLoop.outputRange(0.2, 0.2);
     shoulderConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
-    shoulderConfig.absoluteEncoder.positionConversionFactor(Constants.Shoulder.gearboxReduction);
-    shoulderConfig.absoluteEncoder.velocityConversionFactor(Constants.Shoulder.gearboxReduction);
+    shoulderConfig.closedLoop.maxMotion.maxAcceleration(3);
+    shoulderConfig.closedLoop.maxMotion.maxVelocity(0.8);
+    shoulderConfig.closedLoop.maxMotion.allowedClosedLoopError(1);
+    shoulderConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
+    shoulderConfig.encoder.positionConversionFactor(Constants.Shoulder.gearboxReduction);
+    shoulderConfig.encoder.velocityConversionFactor(Constants.Shoulder.gearboxReduction);
+
+    wristConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
+    wristConfig.idleMode(IdleMode.kBrake);
+    wristConfig.inverted(true);
+    wristConfig.closedLoop.pid(0.3, 0, 0);
+    wristConfig.closedLoop.iMaxAccum(5);
+    wristConfig.closedLoop.outputRange(0.4, 0.4);
+    wristConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
+    wristConfig.closedLoop.maxMotion.maxAcceleration(0.1);
+    wristConfig.closedLoop.maxMotion.maxVelocity(1); //1 rotation/s
+    wristConfig.closedLoop.maxMotion.allowedClosedLoopError(2);
+    wristConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
+    wristConfig.encoder.positionConversionFactor(Constants.Wrist.gearboxReduction);
+    wristConfig.encoder.velocityConversionFactor(Constants.Wrist.gearboxReduction);
 
     backMotor = new HazardSparkMax(Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
     frontMotor = new HazardSparkMax(Constants.Elevator.front, MotorType.kBrushless, followConfig, false, false, elevatorTable);
+    shoulderMotor = new HazardSparkMax(Constants.Shoulder.CAN, MotorType.kBrushless, wristConfig, true, "Shoulder");
+    shoulderMotor.setEncoder(Constants.Shoulder.shoulderStartingRotation);
+    wristMotor = new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
+    wristMotor.setEncoder(Constants.Wrist.startingPositionRotation);
 
+    elevatorPID = new PIDController(0.1, 0, 0.05);//Unused, backup if manual feedforward calculation is needed
+    elevatorFF = new ElevatorFeedforward(0, 0.4128, 0, 0);
 
-    //leftMotor.configure(leftConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-    //rightMotor.configure(
-    //    rightConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters); 
-    // elevatorWrist.configure(
-    //   wristConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
-
-    //leftEncoder = leftMotor.getEncoder();
-    //rightEncoder = rightMotor.getEncoder();
-    //wristEncoder = elevatorWrist.getAlternateEncoder();
-
-    elevatorPID = new PIDController(0.1, 0, 0.05);
-    elevatorFeedforward = new ElevatorFeedforward(0, 0.4128, 0, 0); // See
-    wristPID = new PIDController(0.1, 0, 0);
-
-    //leftMotorController = leftMotor.getClosedLoopController();
-    //rightMotorController = rightMotor.getClosedLoopController();
-    //wristMotorController = elevatorWrist.getClosedLoopController();    
+    shoulderPID = new PIDController(0.1, 0, 0); // Unused, backup if arm feedforward is needed
   }
 
   /**
@@ -136,17 +153,12 @@ public class Elevator extends SubsystemBase {
     Constants.log("Elevator target position:" + position); 
     
     elevatorSetpoint = position;
-    if (elevatorSetpoint < Constants.Elevator.minExtension) elevatorSetpoint = Constants.Elevator.minExtension;
-    if (elevatorSetpoint > Constants.Elevator.maxExtension) elevatorSetpoint = Constants.Elevator.maxExtension;
-
+    elevatorSetpoint = MathUtil.clamp(elevatorSetpoint, Constants.Elevator.minExtension, Constants.Elevator.maxExtension);
     backMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
   }
 
-  public void setElevatorHeight(double heightMM) {
-    set(
-        heightMM
-            / (Constants.Elevator.gearboxRotationsToHeightMM
-                * Constants.Elevator.gearboxReduction));
+  public void setElevatorHeightMM(double heightMM) {
+    set(heightMM / Constants.Elevator.gearboxRotationsToHeightMM);
   }
 
   public void setAdditive(double additive) {
@@ -154,27 +166,82 @@ public class Elevator extends SubsystemBase {
     set(elevatorSetpoint);
   }
 
+  public void setShoulder(double position) {
+    shoulderSetpoint = MathUtil.clamp(position, Constants.Shoulder.shoulderMin, Constants.Shoulder.shoulderMax);
+    //Constants.log(wristSetpoint);
+    shoulderMotor.setControl(shoulderSetpoint, ControlType.kMAXMotionPositionControl);
+    checkWrist();
+  }
+
+  public void checkWrist() {
+    wristMotor.setControl(MathUtil.clamp(wristSetpoint, shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations, shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRotations), ControlType.kMAXMotionPositionControl);
+  }
+
   public void setWrist(double position) {
-    wristSetpoint = position;
-    wristPID.setSetpoint(wristSetpoint);
+    wristSetpoint = MathUtil.clamp(position, Constants.Wrist.wristMin, Constants.Wrist.wristMax);
+    //Constants.log(wristSetpoint);
+    checkWrist();
   }
 
   public void setWristAdditive(double additive) {
-    wristSetpoint = wristPID.getSetpoint() + additive;
-    wristPID.setSetpoint(wristSetpoint);
+    wristSetpoint = shoulderPID.getSetpoint() + additive;
+    shoulderPID.setSetpoint(wristSetpoint);
   }
 
   /***
    * Tell the end pivot of the claw to go to a target height and extension in MM
-   * @param heightMM
-   * @param extensionMM
+   * @param heightMM Height of coral chute
+   * @param extensionMM Center of coral chute
+   * @param wristAngleDegrees Wrist angle (0 parallel to floor, chute facing horizontal)
    */
-  public void goToPosition(double heightMM, double extensionMM) {
-    double clawRotation = Math.acos(extensionMM / 300);
-    double elevatorH = heightMM - Math.sin(clawRotation) * 300;
+  public void goToPosition(double heightMM, double extensionMM, double wristAngleDegrees) {
+    if (heightMM < 200) {
+      DriverStation.reportError("Tried to reach an impossible location with arm subsystem!", false);
+      return;
+    }
+    
+    double relativeHeightMM = heightMM - Constants.Elevator.baseHeightMM;
+    double wristRad = Math.toRadians(wristAngleDegrees);
+    double x = Constants.Wrist.chuteCenterXOffsetMM * Math.cos(wristRad) - (Constants.Wrist.chuteCenterYOffsetMM * Math.sin(wristRad));
+    //Constants.log("Wrist x: " + x);
+    double y = Constants.Wrist.chuteCenterYOffsetMM * Math.cos(wristRad) + (Constants.Wrist.chuteCenterXOffsetMM * Math.sin(wristRad));
+    //Constants.log("Wrist y:" + y);
+    double requiredX = extensionMM - x;
+    //Constants.log("Required X extension from arm: " + requiredX);
+    double shoulderRotRadians = Math.acos(requiredX / Constants.Shoulder.shoulderArmLengthMM); //Always positive
+
+    if (Double.isNaN(shoulderRotRadians)) {
+      Constants.log("Can't reach target!");
+      DriverStation.reportError("Tried to reach an impossible location with arm subsystem!", false);
+      return;
+    }
+    if (relativeHeightMM < Constants.Elevator.maxHeightExtensionMM) {
+      // Prioritize elevator movement
+      shoulderRotRadians = -shoulderRotRadians;
+    }
+
+    //Constants.log("Shoulder rotation: " + shoulderRotRadians);
+    //Constants.log("X total Extension: " + (x + (Math.cos(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
+    //Constants.log("Elevator + wrist Y: " + (y + (Math.sin(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
+
+    double requiredElevatorExt = (relativeHeightMM - (y + (Math.sin(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
+    //Constants.log("Required elevator height: " + requiredElevatorExt);
+    Constants.log(requiredElevatorExt + Constants.Elevator.baseHeightMM);
+
+    if (requiredElevatorExt < 0) {
+      DriverStation.reportError("Tried to reach an impossible location with arm subsystem!", false);
+      return;
+    }
+
+    //Constants.log("Successful!");
 
     //wristMotorController.setReference(clawRotation * Constants.Elevator.wristGearboxReduction, ControlType.kMAXMotionPositionControl);
-    setElevatorHeight(elevatorH);
+    wristSetpoint = wristRad / (2.0 * Math.PI);
+    shoulderSetpoint = shoulderRotRadians / (2.0 * Math.PI);
+    elevatorSetpoint = requiredElevatorExt;
+    setWrist(wristSetpoint);
+    setShoulder(shoulderSetpoint);
+    setElevatorHeightMM(elevatorSetpoint);
   }
 
   /***
@@ -182,29 +249,15 @@ public class Elevator extends SubsystemBase {
    * @return Right pos - Left pos
    */
   public double getEncoderDiff() {
-    return rightEncoder.getPosition() - leftEncoder.getPosition();
+    return backMotor.getPosition() - frontMotor.getPosition();
   }
-
-  public double getWrist() {
-    return 0;
-    //return wristEncoder.getPosition();
-  }
-
-  private int loop = 0;
 
   @Override
   public void periodic() {
     frontMotor.publishToNetworkTables();
     backMotor.publishToNetworkTables();
     setpointPublisher.set(elevatorSetpoint);
-
-    loop++;
-    if (loop > 25) { // Log twice per second
-      //frontMotor.logEncoderState();
-      // Constants.log("Calculated:" + elevatorPID.calculate(leftEncoder.getPosition()));
-      // Constants.log("Encoder:" + leftEncoder.getPosition());
-      loop = 0;
-    }
+    kinematicsPublisher.set(new double[] {elevatorSetpoint, shoulderSetpoint, wristSetpoint});
   }
 
   public void logEncoders() {
