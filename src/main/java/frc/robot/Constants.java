@@ -69,6 +69,11 @@ public final class Constants {
     public static final double maxExtension = 4.4;
     public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
     public static final double baseHeightMM = 812.800 + Drivetrain.chassisTopPlateHeightMM; //From Elevator - Full Assembly CAD
+
+    public static final double L1Scoring = 0;
+    public static final double L2Scoring = 2.77; //~2.77
+    public static final double L3Scoring = 2.34;
+    public static final double L4Scoring = 0;
   }
 
   public static class Shoulder {
@@ -81,6 +86,11 @@ public final class Constants {
     public static final double shoulderMin = -0.24;
 
     public static final double shoulderArmLengthMM = 302;
+
+    public static final double L1Scoring = 0;
+    public static final double L2Scoring = -0.22; //~0.22
+    public static final double L3Scoring = 0.22;
+    public static final double L4Scoring = 0.25;
   }
 
   public static class Wrist {
@@ -89,13 +99,18 @@ public final class Constants {
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
     public static final double startingPositionRotation = -0.1055555;
-    public static final double wristMaxShoulderOffsetRotations = 0.20;
-    public static final double wristMinShoulderOffsetRotations = -0.20;
+    public static final double wristMaxShoulderOffsetRotations = 0.5;
+    public static final double wristMinShoulderOffsetRotations = -0.35;
     public static final double wristMax = 0.8;
-    public static final double wristMin = 0; // -0.25?
+    public static final double wristMin = -0.12; // -0.25?
 
     public static final double chuteCenterXOffsetMM = 330; //From Claw - Full Assembly CAD
     public static final double chuteCenterYOffsetMM = -222; //From Claw - Full Assembly CAD
+
+    public static final double L1Scoring = 0;
+    public static final double L2Scoring = startingPositionRotation;
+    public static final double L3Scoring = startingPositionRotation;
+    public static final double L4Scoring = 0.25;
   }
 
   public static class Coral {
@@ -109,6 +124,10 @@ public final class Constants {
     public static final int climber = 5;
     public static final int currentLimit = 40;
     public static final double climberGearReduction = (12.0 / 54.0) * (1.0 / 49.0); //Sprocket * gearbox 220.5:1 ratio
+
+    public static final double startingPosition = 0;
+    public static final double deployedPosition = -0.5;
+    public static final double climbedPosition = 0.25;
   }
 
   public static void log(Object o) {

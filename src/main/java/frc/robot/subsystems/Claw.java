@@ -7,6 +7,7 @@ import frc.robot.Constants;
 
 public class Claw extends SubsystemBase {
   public static SparkMax clawMotor;
+  public static boolean algaeMode = false;
 
   public Claw() {
     clawMotor = new SparkMax(Constants.Coral.CAN, MotorType.kBrushless);

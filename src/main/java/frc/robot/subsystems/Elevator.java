@@ -82,13 +82,12 @@ public class Elevator extends SubsystemBase {
     leadConfig.idleMode(IdleMode.kBrake);
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
-    leadConfig.closedLoop.iMaxAccum(1);
-    leadConfig.closedLoop.pid(0.4, 0, 0);
+    leadConfig.closedLoop.pid(0.4, 0.00001, 0);
+    leadConfig.closedLoop.iMaxAccum(0.0005);
     leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.01);
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     leadConfig.closedLoop.maxMotion.maxAcceleration(30, ClosedLoopSlot.kSlot0);
     leadConfig.closedLoop.maxMotion.maxVelocity(100, ClosedLoopSlot.kSlot0);
-    leadConfig.closedLoop.iZone(15);
     leadConfig.closedLoop.feedbackSensor(
         FeedbackSensor.kPrimaryEncoder);
     leadConfig.encoder.positionConversionFactor(
@@ -99,9 +98,9 @@ public class Elevator extends SubsystemBase {
     shoulderConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
     shoulderConfig.idleMode(IdleMode.kBrake);
     shoulderConfig.inverted(true);
-    shoulderConfig.closedLoop.pidf(0.25, 0.005, 0.05, 0.1);
+    shoulderConfig.closedLoop.pidf(0.25, 0.005, 0.05, 0.25);
     shoulderConfig.closedLoop.iMaxAccum(0.085);
-    shoulderConfig.closedLoop.outputRange(-0.1, 0.1);
+    shoulderConfig.closedLoop.outputRange(-0.3, 0.3);
     shoulderConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
     shoulderConfig.closedLoop.maxMotion.maxAcceleration(50);
     shoulderConfig.closedLoop.maxMotion.maxVelocity(100);
@@ -119,7 +118,7 @@ public class Elevator extends SubsystemBase {
     wristConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
     wristConfig.closedLoop.maxMotion.maxAcceleration(50);
     wristConfig.closedLoop.maxMotion.maxVelocity(100); //1 rotation/s
-    wristConfig.closedLoop.maxMotion.allowedClosedLoopError(0.05);
+    wristConfig.closedLoop.maxMotion.allowedClosedLoopError(0.01);
     wristConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     wristConfig.encoder.positionConversionFactor(Constants.Wrist.gearboxReduction);
     wristConfig.encoder.velocityConversionFactor(Constants.Wrist.gearboxReduction);
@@ -173,7 +172,7 @@ public class Elevator extends SubsystemBase {
     set(heightMM / Constants.Elevator.gearboxRotationsToHeightMM);
   }
 
-  public void setAdditive(double additive) {
+  public void setElevatorAdditive(double additive) {
     elevatorSetpoint += additive;
     set(elevatorSetpoint);
   }
@@ -186,7 +185,12 @@ public class Elevator extends SubsystemBase {
     checkWrist();
   }
 
+  public void setShoulderAdditive() {
+
+  }
+
   public void checkWrist() {
+    Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
     wristMotor.setControl(
       MathUtil.clamp(wristSetpoint, 
       shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations, 
@@ -265,6 +269,12 @@ public class Elevator extends SubsystemBase {
     return backMotor.getPosition() - frontMotor.getPosition();
   }
 
+  public void resetEncoders() {
+    Constants.log("Resetting encoders...");
+    shoulderMotor.setEncoder(Constants.Shoulder.shoulderStartingRotation);
+    wristMotor.setEncoder(Constants.Wrist.startingPositionRotation);
+  }
+
   public void reconfig() {
     Constants.log(lastP + " " + lastI + " " + lastD);
     shoulderMotor.configurePID(SmartDashboard.getNumber("P", PSub), SmartDashboard.getNumber("I", ISub), SmartDashboard.getNumber("D", DSub));
@@ -276,7 +286,7 @@ public class Elevator extends SubsystemBase {
 
   @Override
   public void periodic() {
-    shoulderFF.calculate(shoulderSetpoint, shoulderMotor.getVelocity());
+    shoulderFF.calculate(shoulderSetpoint, 0);
 
     frontMotor.publishToNetworkTables();
     backMotor.publishToNetworkTables();

@@ -33,7 +33,11 @@ public class AlignToReef extends Command {
     private PathPlannerTrajectory trajectory;
     private Timer timer = new Timer();
 
-    AlignToReef() {
+    /***
+     * Aligns the robot to score on the reef. Defaults to left pole.
+     * @param right If the command will align to the right pole
+     */
+    public AlignToReef(boolean right) {
         holonomicDriveController = new HolonomicDriveController(
             new PIDController(0.1, 0, 0), 
             new PIDController(0.1, 0, 0),

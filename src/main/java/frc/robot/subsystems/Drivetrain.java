@@ -458,8 +458,8 @@ public class Drivetrain extends SubsystemBase {
     for (PhotonPipelineResult photonPipelineResult : unreadResults) {
       var estimate = aprilTagPoseEstimator.update(photonPipelineResult);
       if (estimate.isPresent()) {
-        Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).objDetectId);
-        lastAprilTagSeen = aprilTags.getTagPose(estimate.get().targetsUsed.get(0).objDetectId).get();
+        Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
+        lastAprilTagSeen = aprilTags.getTagPose(estimate.get().targetsUsed.get(0).getFiducialId()).get();
         poseEstimator.addVisionMeasurement(estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
       }
     }
@@ -480,7 +480,8 @@ public class Drivetrain extends SubsystemBase {
       appliedCurrent.set(getAppliedCurrents());
       velocity.set(getMotorVelocitiesRadPS());
       MecanumDriveWheelPositions positions = getWheelPositionsMeters();
-      position.set(new double[] {positions.frontLeftMeters, positions.frontRightMeters, positions.rearLeftMeters, positions.rearRightMeters});
+      Pose2d estimate = poseEstimator.getEstimatedPosition();
+      position.set(new double[] {estimate.getX(), estimate.getY(), estimate.getRotation().getRadians()});
       xPublisher.set(stateSim.getData());
       xHatPublisher.set(x.getData());
       yPublisher.set(y.getData());

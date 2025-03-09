@@ -25,9 +25,16 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.commands.AlignToReef;
 import frc.robot.commands.ReturnAutonomous;
+import frc.robot.commands.SetSubsystemsForL1Scoring;
+import frc.robot.commands.SetSubsystemsForL2Scoring;
+import frc.robot.commands.SetSubsystemsForL3Scoring;
+import frc.robot.commands.SetSubsystemsForL4Scoring;
+import frc.robot.commands.SetSubsystemsToClimbingConfig;
 import frc.robot.hazard.HazardXbox;
 import frc.robot.subsystems.Claw;
+import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
 import frc.robot.subsystems.Vision;
@@ -43,6 +50,7 @@ public class RobotContainer {
   private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0, new Pose2d(15, 4, Rotation2d.k180deg));
   private final Elevator elevatorSubsystem = new Elevator();
   //private final Claw clawSubsystem = new Claw();
+  private final Climber climberSubsystem = new Climber();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final HazardXbox m_driverController =
@@ -74,6 +82,8 @@ public class RobotContainer {
     configureBindings();
     configureDashboard();
 
+    elevatorSubsystem.resetEncoders();
+
     Constants.log(AprilTagFields.k2025ReefscapeWelded.m_resourceFile);
 
     Constants.Sensors.calibrate(new Pose3d());
@@ -85,7 +95,7 @@ public class RobotContainer {
               elevatorIKTargetY -= m_secondaryController.getRightY() / 80;
               Constants.log("Targets: " + elevatorIKTargetX + " " + elevatorIKTargetY);
               //Constants.log(elevatorIKTargetY);
-              //elevatorSubsystem.setAdditive(-m_secondaryController.getLeftY() / 60);
+              elevatorSubsystem.setElevatorAdditive(-m_secondaryController.getLeftY() / 60);
               elevatorSubsystem.setShoulder(elevatorIKTargetY);
               elevatorSubsystem.setWrist(elevatorIKTargetX);
               //elevatorSubsystem.goToPosition(elevatorIKTargetY, elevatorIKTargetX, 0);
@@ -108,7 +118,7 @@ public class RobotContainer {
     //Constants.Sensors.vision.periodic();
     //imuPlotting.set(Constants.Sensors.getImuRotation3d().getZ());
     imuDataPublisher.set(new double[] {Constants.Sensors.getIMUYawRadians(), -Constants.Sensors.imu.getRate()});
-    voltagePublisher.set(pdh.getVoltage());
+    //voltagePublisher.set(pdh.getVoltage());
     //imuDataPublisher.set(Constants.Sensors.getImuRotation3d().getZ());
   }
 
@@ -130,6 +140,8 @@ public class RobotContainer {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
+    //m_driverController.leftTrigger().onTrue(new AlignToReef(false));
+    //m_driverController.rightTrigger().onTrue(new AlignToReef(true));
     m_driverController.b().onTrue(
         new InstantCommand(
             () -> {
@@ -148,8 +160,21 @@ public class RobotContainer {
       if (pipeline == 0) {pipeline = 1;}
       else if (pipeline == 1) {pipeline = 0;}
       drivetrainSubsystem.setVisionPipeline(pipeline);}));
+    
+    //m_driverController.povDown().onTrue(new InstantCommand(()-> {climberSubsystem.set(Constants.Climber.deployedPosition);}, climberSubsystem));
+    //m_driverController.povUp().onTrue(new InstantCommand(() -> {climberSubsystem.set(Constants.Climber.climbedPosition);}, climberSubsystem));
+    
 
     m_secondaryController.a().onTrue(new InstantCommand(() -> {elevatorSubsystem.reconfig();}, elevatorSubsystem));
+    m_secondaryController.x().onTrue(new InstantCommand(() -> {elevatorSubsystem.resetEncoders();}, elevatorSubsystem));
+
+    //m_secondaryController.y().onTrue(new SetSubsystemsForL1Scoring());
+    //m_secondaryController.b().onTrue(new SetSubsystemsForL2Scoring());
+    //m_secondaryController.a().onTrue(new SetSubsystemsForL3Scoring());
+    //m_secondaryController.x().onTrue(new SetSubsystemsForL4Scoring());
+
+    //m_secondaryController.start().onTrue(new SetSubsystemsToClimbingConfig());
+    //m_secondaryController.back().onTrue(new SetSubsystemsToClimbingConfig());
   }
 
   private void configureDashboard() {
