@@ -17,6 +17,10 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.DoubleSubscriber;
@@ -25,8 +29,10 @@ import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.Mechanism2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
+import frc.robot.hazard.HazardArm;
 import frc.robot.hazard.HazardSparkMax;
 
 public class Elevator extends SubsystemBase {
@@ -39,8 +45,13 @@ public class Elevator extends SubsystemBase {
   //private SparkClosedLoopController wristMotorController;
   private PIDController elevatorPID;
   private ElevatorFeedforward elevatorFF;
-  private PIDController shoulderPID;
+
+  private ProfiledPIDController shoulderPID;
   private ArmFeedforward shoulderFF;
+  private Constraints shoulderAccelProfile = new Constraints(1, 0.1);
+
+  private HazardArm shoulder;
+  private HazardArm wrist;
 
   private double elevatorSetpoint = 0;
   private double shoulderSetpoint = 0;
@@ -49,22 +60,13 @@ public class Elevator extends SubsystemBase {
   private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
   private DoublePublisher setpointPublisher = elevatorTable.getDoubleTopic("Elevator setpoint").publish();
   private DoubleArrayPublisher kinematicsPublisher = elevatorTable.getDoubleArrayTopic("Elevator kinematics").publish();
-  private double PSub = 0.25;
-  private double ISub = 0.005;
-  private double DSub = 0.05;
+  private double Kg = Constants.Shoulder.shoulderMotorTorqueNM / Constants.Shoulder.motor.KtNMPerAmp;
+  private double Kv = 1 / Constants.Shoulder.motor.KvRadPerSecPerVolt;
+  private double Kp = 0.25;
+  private double Ki = 0.005;
+  private double Kd = 0.05;
 
   public Elevator() {
-    SmartDashboard.putNumber("P", PSub);
-    SmartDashboard.putNumber("I", ISub);
-    SmartDashboard.putNumber("D", DSub);
-
-    shoulderFF= new ArmFeedforward(0, 1, 0);
-    //leftMotor = new SparkMax(Constants.Elevator.elevatorLeft, MotorType.kBrushless);
-    //rightMotor = new SparkMax(Constants.Elevator.elevatorRight, MotorType.kBrushless);
-    // elevatorWrist = new SparkMax(Constants.Elevator.elevatorWrist, MotorType.kBrushless);
-
-
-    // Default configs
     SparkMaxConfig followConfig = new SparkMaxConfig();
     SparkMaxConfig leadConfig = new SparkMaxConfig();
     SparkMaxConfig shoulderConfig = new SparkMaxConfig();
@@ -135,7 +137,35 @@ public class Elevator extends SubsystemBase {
     elevatorPID = new PIDController(0.1, 0, 0.05);//Unused, backup if manual feedforward calculation is needed
     elevatorFF = new ElevatorFeedforward(0, 0.4128, 0, 0);
 
-    shoulderPID = new PIDController(0.1, 0, 0); // Unused, backup if arm feedforward is needed
+    shoulderPID = new ProfiledPIDController(Kp, Ki, Kd, shoulderAccelProfile); // Unused, backup if arm feedforward is needed
+    shoulderFF = new ArmFeedforward(0, Kg, Kv);
+
+    shoulder = new HazardArm(
+      shoulderMotor,
+      0,
+      0, 
+      Constants.Shoulder.shoulderMotorTorqueNM / Constants.Shoulder.motor.KtNMPerAmp, 
+      1 / Constants.Shoulder.motor.KvRadPerSecPerVolt, 
+      0.25, 
+      0.005, 
+      0.05, 
+      1, 
+      0.1, 
+      getName(), 
+      true);
+    wrist = new HazardArm(
+      wristMotor, 
+      0,
+      0, 
+      0, 
+      0, 
+      0.2, 
+      0.00005, 
+      0, 
+      0, 
+      0, 
+      "Wrist", 
+      true);
   }
 
   /**
@@ -276,17 +306,13 @@ public class Elevator extends SubsystemBase {
   }
 
   public void reconfig() {
-    Constants.log(lastP + " " + lastI + " " + lastD);
-    shoulderMotor.configurePID(SmartDashboard.getNumber("P", PSub), SmartDashboard.getNumber("I", ISub), SmartDashboard.getNumber("D", DSub));
+    shoulderMotor.configurePID(SmartDashboard.getNumber("P", Kp), SmartDashboard.getNumber("I", Ki), SmartDashboard.getNumber("D", Kd));
   }
-
-  double lastP = 0;
-  double lastI = 0;
-  double lastD = 0;
 
   @Override
   public void periodic() {
-    shoulderFF.calculate(shoulderSetpoint, 0);
+    shoulder.periodic();
+    wrist.periodic();
 
     frontMotor.publishToNetworkTables();
     backMotor.publishToNetworkTables();

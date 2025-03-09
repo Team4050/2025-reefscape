@@ -105,7 +105,7 @@ public class HazardSparkMax {
     }
 
     /***
-     * Set the controller reference value based on the selected control mode. Calls SparkClosedLoopController.setReference();
+     * Sets the controller reference value based on the selected control mode. Calls SparkClosedLoopController.setReference();
      * @param value
      * @param type
      */
@@ -115,7 +115,15 @@ public class HazardSparkMax {
     }
 
     /***
-     * Set the encoder value
+     * Sets the controller setpoint value, but does not send it to the motor controller. Use to publish a value to networktables using the motor's setpoint key.
+     * @param value
+     */
+    public void setSetpointPublishingOnly(double value) {
+        setpoint = value;
+    }
+
+    /***
+     * Sets the encoder value
      * @param value
      */
     public void setEncoder(double value) {
@@ -131,11 +139,27 @@ public class HazardSparkMax {
     }
 
     /***
+     * Returns the position of the encoder in radians
+     * @return
+     */
+    public double getPositionRadians() {
+        return integratedEncoder.getPosition() * 2 * Math.PI;
+    }
+
+    /***
      * Returns the velocity of the encoder in rotations per second
      * @return
      */
     public double getVelocity() {
         return integratedEncoder.getVelocity() / 60d; 
+    }
+
+    /***
+     * Returns the velocity of the encoder in radians per second
+     * @return
+     */
+    public double getVelocityRadPS() {
+        return integratedEncoder.getVelocity() * 2 * Math.PI;
     }
 
     /***

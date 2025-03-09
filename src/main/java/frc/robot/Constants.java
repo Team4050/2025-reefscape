@@ -79,6 +79,7 @@ public final class Constants {
   public static class Shoulder {
     public static final int CAN = 8;
     public static final int currentLimit = 40;
+    public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
     public static final double shoulderStartingRotation = -0.25; // -0.23 TODO: find out
@@ -86,6 +87,7 @@ public final class Constants {
     public static final double shoulderMin = -0.24;
 
     public static final double shoulderArmLengthMM = 302;
+    public static final double shoulderMotorTorqueNM = 0.45;
 
     public static final double L1Scoring = 0;
     public static final double L2Scoring = -0.22; //~0.22
