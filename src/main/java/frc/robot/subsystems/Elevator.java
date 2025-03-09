@@ -18,6 +18,7 @@ import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.kinematics.Kinematics;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
@@ -128,10 +129,10 @@ public class Elevator extends SubsystemBase {
     backMotor = new HazardSparkMax(Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
     frontMotor = new HazardSparkMax(Constants.Elevator.front, MotorType.kBrushless, followConfig, false, false, elevatorTable);
     shoulderMotor = new HazardSparkMax(Constants.Shoulder.CAN, MotorType.kBrushless, shoulderConfig, true, "Shoulder");
-    shoulderMotor.setEncoder(Constants.Shoulder.shoulderStartingRotation);
-    shoulderSetpoint = Constants.Shoulder.shoulderStartingRotation;
+    shoulderMotor.setEncoder(Constants.Shoulder.startingRotation);
+    shoulderSetpoint = Constants.Shoulder.startingRotation;
     wristMotor = new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
-    wristMotor.setEncoder(Constants.Wrist.startingPositionRotation);
+    wristMotor.setEncoder(Constants.Wrist.startingRotation);
     wristSetpoint = 0;
 
     elevatorPID = new PIDController(0.1, 0, 0.05);//Unused, backup if manual feedforward calculation is needed
@@ -215,8 +216,8 @@ public class Elevator extends SubsystemBase {
     checkWrist();
   }
 
-  public void setShoulderAdditive() {
-
+  public void setShoulderAdditive(double additive) {
+    setShoulder(shoulderSetpoint + (additive * 0.02));
   }
 
   public void checkWrist() {
@@ -233,6 +234,10 @@ public class Elevator extends SubsystemBase {
     checkWrist();
   }
 
+  public void setWristAdditive(double additive) {
+    setWrist(wristSetpoint + (additive * 0.02));
+  }
+
   /***
    * Tell the end pivot of the claw to go to a target height and extension in MM
    * @param heightMM Height of coral chute
@@ -246,6 +251,8 @@ public class Elevator extends SubsystemBase {
       DriverStation.reportError("Tried to reach an impossible location with arm subsystem!", false);
       return;
     }
+
+    
     
     double relativeHeightMM = heightMM - Constants.Elevator.baseHeightMM;
     double wristRad = Math.toRadians(wristAngleDegrees);
@@ -272,8 +279,9 @@ public class Elevator extends SubsystemBase {
     //Constants.log("Elevator + wrist Y: " + (y + (Math.sin(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
 
     double requiredElevatorExt = (relativeHeightMM - (y + (Math.sin(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
-    //Constants.log("Required elevator height: " + requiredElevatorExt);
-    Constants.log(requiredElevatorExt + Constants.Elevator.baseHeightMM);
+    Constants.log("Elevator extension mm: " + requiredElevatorExt);
+    Constants.log("Shoulder angle radians: " + shoulderRotRadians);
+    Constants.log("Wrist angle degrees: " + wristAngleDegrees);
 
     if (requiredElevatorExt < 0) {
       DriverStation.reportError("Tried to reach an impossible location with arm subsystem!", false);
@@ -301,12 +309,13 @@ public class Elevator extends SubsystemBase {
 
   public void resetEncoders() {
     Constants.log("Resetting encoders...");
-    shoulderMotor.setEncoder(Constants.Shoulder.shoulderStartingRotation);
-    wristMotor.setEncoder(Constants.Wrist.startingPositionRotation);
+    shoulderMotor.setEncoder(Constants.Shoulder.startingRotation);
+    wristMotor.setEncoder(Constants.Wrist.startingRotation);
   }
 
-  public void reconfig() {
-    shoulderMotor.configurePID(SmartDashboard.getNumber("P", Kp), SmartDashboard.getNumber("I", Ki), SmartDashboard.getNumber("D", Kd));
+  public void reconfigure() {
+    shoulder.reconfigure();
+    wrist.reconfigure();
   }
 
   @Override

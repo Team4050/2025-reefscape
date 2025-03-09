@@ -73,8 +73,8 @@ public class RobotContainer {
 
   private PowerDistribution pdh = new PowerDistribution();
 
-  private double elevatorIKTargetX = Constants.Wrist.startingPositionRotation;
-  private double elevatorIKTargetY = Constants.Shoulder.shoulderStartingRotation;
+  private double elevatorIKTargetX = Constants.Wrist.startingRotation;
+  private double elevatorIKTargetY = Constants.Shoulder.startingRotation;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -88,6 +88,9 @@ public class RobotContainer {
 
     Constants.Sensors.calibrate(new Pose3d());
 
+    SmartDashboard.putNumber("IK target height", 772.64);
+    SmartDashboard.putNumber("IK target extension", 350);
+
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
@@ -98,7 +101,7 @@ public class RobotContainer {
               elevatorSubsystem.setElevatorAdditive(-m_secondaryController.getLeftY() / 60);
               elevatorSubsystem.setShoulder(elevatorIKTargetY);
               elevatorSubsystem.setWrist(elevatorIKTargetX);
-              //elevatorSubsystem.goToPosition(elevatorIKTargetY, elevatorIKTargetX, 0);
+              elevatorSubsystem.goToPosition(SmartDashboard.getNumber("IK target height", 0), SmartDashboard.getNumber("IK target extension", 0), 0);
             },
             elevatorSubsystem));
     drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {
@@ -165,7 +168,7 @@ public class RobotContainer {
     //m_driverController.povUp().onTrue(new InstantCommand(() -> {climberSubsystem.set(Constants.Climber.climbedPosition);}, climberSubsystem));
     
 
-    m_secondaryController.a().onTrue(new InstantCommand(() -> {elevatorSubsystem.reconfig();}, elevatorSubsystem));
+    m_secondaryController.a().onTrue(new InstantCommand(() -> {elevatorSubsystem.reconfigure();}, elevatorSubsystem));
     m_secondaryController.x().onTrue(new InstantCommand(() -> {elevatorSubsystem.resetEncoders();}, elevatorSubsystem));
 
     //m_secondaryController.y().onTrue(new SetSubsystemsForL1Scoring());
