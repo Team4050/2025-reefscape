@@ -11,12 +11,17 @@ import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.pathplanner.lib.auto.AutoBuilder;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.util.DriveFeedforwards;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.controller.HolonomicDriveController;
 import edu.wpi.first.math.controller.LinearPlantInversionFeedforward;
 import edu.wpi.first.math.controller.LinearQuadraticRegulator;
 import edu.wpi.first.math.controller.PIDController;
@@ -43,6 +48,7 @@ import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -93,11 +99,13 @@ public class Drivetrain extends SubsystemBase {
   private LinearPlantInversionFeedforward<N3, N3, N4> mecanumFF;
   private Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
 
-  // ******************************************************** Model-based control ******************************************************** //
+  // ******************************************************** PID control ******************************************************** //
   // x in meters, y in meters, theta in radians
-  private ProfiledPIDController xController = new ProfiledPIDController(0, 0, 0, new Constraints(2, 5));
-  private ProfiledPIDController yController = new ProfiledPIDController(0, 0, 0, new Constraints(2, 5));;
-  private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.2, 0.01));;
+  private PIDController xController = new PIDController(0.1, 0, 0);
+  private PIDController yController = new PIDController(0.1, 0, 0);
+  private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(1, 3));
+  private HolonomicDriveController holonomicDriveController;
+  private PPHolonomicDriveController pathPlannerHolonomicDriveController;
 
   // ******************************************************** Networktables ******************************************************** //
   private boolean useNetworkTables;
@@ -203,11 +211,11 @@ public class Drivetrain extends SubsystemBase {
 
     // xhat = Ax + Bu
     // yhat = Cx + Du
-    // u =  
+    // u =
 
-  
+
     double[] dA2 = { //States x states
-      0, 0, 0, 
+      0, 0, 0,
       0, 0, 0,
       0, 0, 0
     };
@@ -216,7 +224,7 @@ public class Drivetrain extends SubsystemBase {
       0, 1, 0,
       0, 0, 1
     };
-    
+
     double[] dC2 = { //Outputs x states
       1, 0, 0,
       0, 1, 0,
@@ -234,7 +242,7 @@ public class Drivetrain extends SubsystemBase {
     Matrix<N4, N3> C2 = new Matrix<N4, N3>(N4.instance, N3.instance, dC2);
     Matrix<N4, N3> D2 = new Matrix<N4, N3>(N4.instance, N3.instance, dD2);
     mecanumFieldRelativeSystem = new LinearSystem<N3, N3, N4>(A2, B2, C2, D2);
-    
+
     Matrix<N3, N1> stateDev = VecBuilder.fill(0.01, 0.01, 0.01);
     Matrix<N4, N1> sensorDev = VecBuilder.fill(0.01, 0.01, 0.1, 0.05);
 
@@ -244,11 +252,67 @@ public class Drivetrain extends SubsystemBase {
     Constants.log("Controller gain: " + mecanumFieldRelativeLQR.getK());
     mecanumFF = new LinearPlantInversionFeedforward<>(mecanumFieldRelativeSystem, 0.02);
     referenceVector = VecBuilder.fill(0.5, 0, 0);
+
+    SmartDashboard.putNumber("Drivetrain X Kp", 0.1);
+    SmartDashboard.putNumber("Drivetrain X Ki", 0);
+    SmartDashboard.putNumber("Drivetrain X Kd", 0);
+
+    SmartDashboard.putNumber("Drivetrain Y Kp", 0.1);
+    SmartDashboard.putNumber("Drivetrain Y Ki", 0);
+    SmartDashboard.putNumber("Drivetrain Y Kd", 0);
+
+    SmartDashboard.putNumber("Drivetrain XY IZone", 0.3048);
+
+    SmartDashboard.putNumber("Drivetrain Angle Kp", 0.3);
+    SmartDashboard.putNumber("Drivetrain Angle Ki", 0);
+    SmartDashboard.putNumber("Drivetrain Angle Kd", 0);
+    SmartDashboard.putNumber("Drivetrain Angle maxV", 1.57079);
+    SmartDashboard.putNumber("Drivetrain Angle IZone", Math.toRadians(20));
+
+    SmartDashboard.putNumber("Drivetrain X Tolerance", 2);
+    SmartDashboard.putNumber("Drivetrain Y Tolerance", 2);
+    SmartDashboard.putNumber("Drivetrain Angle Tolerance", 5);
+
+    holonomicDriveController = new HolonomicDriveController(xController, yController, thetaController);
+
+    pathPlannerHolonomicDriveController = new PPHolonomicDriveController(new PIDConstants(0.1, 0, 0, 0.3048), new PIDConstants(0.3, 0, 0, Math.toRadians(20)));
+
+    AutoBuilder.configure(
+      this::getPoseEstimate,
+      this::resetPoseEstimate,
+      this::getRobotRelativeSpeedsMPS,
+      this::drivePathsetFieldRelativenner,
+      pathPlannerHolonomicDriveController,
+      Constants.Drivetrain.mainConfig,
+      Constants::alliance,
+      this);
   }
 
   public Drivetrain(boolean useNetworkTables, int logInfo, Pose2d initalPoseEstimate) {
     this(useNetworkTables, logInfo);
     poseEstimator.resetPose(initalPoseEstimate);
+  }
+
+  public void reconfigure() {
+    xController = new PIDController(SmartDashboard.getNumber("Drivetrain X Kp", 0.1), SmartDashboard.getNumber("Drivetrain X Ki", 0), SmartDashboard.getNumber("Drivetrain X Kd", 0));
+    yController = new PIDController(SmartDashboard.getNumber("Drivetrain Y Kp", 0.1), SmartDashboard.getNumber("Drivetrain Y Ki", 0), SmartDashboard.getNumber("Drivetrain Y Kd", 0));
+    thetaController = new ProfiledPIDController(SmartDashboard.getNumber("Drivetrain Angle Kp", 0.3), SmartDashboard.getNumber("Drivetrain Angle Ki", 0), SmartDashboard.getNumber("Drivetrain Angle Kd", 0), new Constraints(SmartDashboard.getNumber("Drivetrain Angle maxV", 1.57079), 3.14));
+    holonomicDriveController = new HolonomicDriveController(xController, yController, thetaController);
+    holonomicDriveController.setTolerance(new Pose2d(
+      SmartDashboard.getNumber("Drivetrain X Tolerance", 2) * 0.0254,
+      SmartDashboard.getNumber("Drivetrain Y Tolerance", 2) * 0.0254,
+      new Rotation2d(Math.toRadians(SmartDashboard.getNumber("Drivetrain Angle Tolerance", 5)))));
+
+    pathPlannerHolonomicDriveController = new PPHolonomicDriveController(new PIDConstants(
+      SmartDashboard.getNumber("Drivetrain X Kp", 0.1),
+      SmartDashboard.getNumber("Drivetrain X Ki", 0),
+      SmartDashboard.getNumber("Drivetrain X Kd", 0),
+      SmartDashboard.getNumber("Drivetrain XY IZone", 0.3048)), new PIDConstants(
+      SmartDashboard.getNumber("Drivetrain Angle Kp", 0.1),
+      SmartDashboard.getNumber("Drivetrain Angle Ki", 0),
+      SmartDashboard.getNumber("Drivetrain Angle Kd", 0),
+      SmartDashboard.getNumber("Drivetrain Angle IZone", Math.toRadians(20))
+    ));
   }
 
   private double krakenRadToM(double rads) {
@@ -294,8 +358,12 @@ public class Drivetrain extends SubsystemBase {
     return new MecanumDriveWheelSpeeds(d[0], d[1], d[2], d[3]);
   }
 
+  public ChassisSpeeds getRobotRelativeSpeedsMPS() {
+    return kinematics.toChassisSpeeds(getWheelVelocitiesMPS());
+  }
+
   public ChassisSpeeds getFieldRelativeSpeedsMPS() {
-    var speeds = kinematics.toChassisSpeeds(getWheelVelocitiesMPS());
+    var speeds = getRobotRelativeSpeedsMPS();
     Translation2d d = new Translation2d(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
     d.rotateBy(Constants.Sensors.getImuRotation2d());
     return new ChassisSpeeds(d.getX(), d.getY(), speeds.omegaRadiansPerSecond);
@@ -311,8 +379,20 @@ public class Drivetrain extends SubsystemBase {
     return d;
   }
 
+  /***
+   * Returns the estimated pose
+   * @return
+   */
   public Pose2d getPoseEstimate() {
     return poseEstimator.getEstimatedPosition();
+  }
+
+  /***
+   * Resets the pose estimator's pose
+   * @param pose
+   */
+  public void resetPoseEstimate(Pose2d pose) {
+    poseEstimator.resetPose(pose);
   }
 
   public Pose3d getLastSeenAprilTag() {
@@ -361,19 +441,19 @@ public class Drivetrain extends SubsystemBase {
     RL.set((wheelSpeeds.rearLeftMetersPerSecond));
     RR.set((wheelSpeeds.rearRightMetersPerSecond));
   }
-  
+
   /***
    * Set chassis Voltages
    * @param vx
    * @param vy
    * @param omega
    */
-  public void setV(double vx, double vy, double omega) {
+  public void setVoltage(double vx, double vy, double omega) {
     MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(new ChassisSpeeds(vx, vy, omega));
-    setV(speeds);
+    setVoltage(speeds);
   }
 
-  public void setV(MecanumDriveWheelSpeeds wheelSpeeds) {
+  public void setVoltage(MecanumDriveWheelSpeeds wheelSpeeds) {
     FL.setVoltage((wheelSpeeds.frontLeftMetersPerSecond * Constants.Drivetrain.drivetrainMotor.KvRadPerSecPerVolt));
     FR.setVoltage((wheelSpeeds.frontRightMetersPerSecond * Constants.Drivetrain.drivetrainMotor.KvRadPerSecPerVolt));
     RL.setVoltage((wheelSpeeds.rearLeftMetersPerSecond * Constants.Drivetrain.drivetrainMotor.KvRadPerSecPerVolt));
@@ -395,13 +475,41 @@ public class Drivetrain extends SubsystemBase {
   }
 
   /***
+   * Set the speed of the chassis in robot-relative duty cycle
+   * @param fieldRelativeSpeeds
+   * @return
+   */
+  public void set(ChassisSpeeds robotRelativeSpeeds) {
+    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(robotRelativeSpeeds);
+    set(speeds);
+  }
+
+
+  /***
    * Set the speed of the chassis in field-relative duty cycle
    * @param fieldRelativeSpeeds
    * @return
    */
-  public void set(ChassisSpeeds fieldRelativeSpeeds) {
+  public void setFieldRelative(ChassisSpeeds fieldRelativeSpeeds) {
     Rotation2d rot = new Rotation2d(Constants.Sensors.getIMUYawRadians());
     MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, rot));
+    set(speeds);
+  }
+
+  /***
+   * Use the Holonomic Drive Controller to follow a rajectory
+   * @param targetPose Sampled pose from trajectory
+   * @param targetLinearVelocity Sampled velocity from trajectory
+   */
+  public void driveFieldRelative(Pose2d targetPose, double targetLinearVelocity) {
+    Constants.log("setUsingHDC desired state: " + targetPose.toString());
+    var diff = targetPose.getRotation().rotateBy(getPoseEstimate().getRotation().unaryMinus());
+    var rotationWrappedPose = new Pose2d(getPoseEstimate().getX(), getPoseEstimate().getY(), diff);
+    var speeds = holonomicDriveController.calculate(rotationWrappedPose, targetPose, targetLinearVelocity, Rotation2d.kZero);
+    setFieldRelative(speeds);
+  }
+
+  public void drivePathsetFieldRelativenner(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
     set(speeds);
   }
 
@@ -468,7 +576,7 @@ public class Drivetrain extends SubsystemBase {
       appliedCurrent.set(getAppliedCurrents());
       velocity.set(getMotorVelocitiesRadPS());
       MecanumDriveWheelPositions positions = getWheelPositionsMeters();
-      Pose2d estimate = poseEstimator.getEstimatedPosition();
+      Pose2d estimate = getPoseEstimate();
       position.set(new double[] {estimate.getX(), estimate.getY(), estimate.getRotation().getRadians()});
       xPublisher.set(stateSim.getData());
       xHatPublisher.set(x.getData());

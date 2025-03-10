@@ -19,6 +19,7 @@ import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 import frc.robot.hazard.HazardArm;
@@ -39,6 +40,11 @@ public class Elevator extends SubsystemBase {
   private ArmFeedforward shoulderFF;
   private Constraints shoulderAccelProfile = new Constraints(1, 0.1);
 
+  private SparkMaxConfig followConfig = new SparkMaxConfig();
+  private SparkMaxConfig leadConfig = new SparkMaxConfig();
+  private SparkMaxConfig shoulderConfig = new SparkMaxConfig();
+  private SparkMaxConfig wristConfig = new SparkMaxConfig();
+
   private HazardArm shoulder;
   private HazardArm wrist;
 
@@ -55,11 +61,7 @@ public class Elevator extends SubsystemBase {
   private double Ki = 0.005;
   private double Kd = 0.05;
 
-  public Elevator() {
-    SparkMaxConfig followConfig = new SparkMaxConfig();
-    SparkMaxConfig leadConfig = new SparkMaxConfig();
-    SparkMaxConfig shoulderConfig = new SparkMaxConfig();
-    SparkMaxConfig wristConfig = new SparkMaxConfig();
+  public Elevator(boolean tuningMode) {
 
     followConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
     followConfig.idleMode(IdleMode.kBrake);
@@ -132,29 +134,35 @@ public class Elevator extends SubsystemBase {
     shoulder = new HazardArm(
       shoulderMotor,
       0,
-      0, 
-      Constants.Shoulder.shoulderMotorTorqueNM / Constants.Shoulder.motor.KtNMPerAmp, 
-      1 / Constants.Shoulder.motor.KvRadPerSecPerVolt, 
-      0.25, 
-      0.005, 
-      0.05, 
-      1, 
-      0.1, 
-      getName(), 
-      true);
-    wrist = new HazardArm(
-      wristMotor, 
       0,
-      0, 
-      0, 
-      0, 
-      0.2, 
-      0.00005, 
-      0, 
-      0, 
-      0, 
-      "Wrist", 
-      true);
+      Constants.Shoulder.shoulderMotorTorqueNM / (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit),
+      1 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
+      0.25,
+      0.005,
+      0.05,
+      1,
+      0.1,
+      "Shoulder",
+      tuningMode);
+    wrist = new HazardArm(
+      wristMotor,
+      0,
+      0,
+      0,
+      0,
+      0.2,
+      0.00005,
+      0,
+      0,
+      0,
+      "Wrist",
+      tuningMode);
+
+    if (tuningMode) {
+      SmartDashboard.putNumber("Elevator Kp", 0.4);
+      SmartDashboard.putNumber("Elevator Ki", 0.00001);
+      SmartDashboard.putNumber("Elevator Kd", 0);
+    }
   }
 
   /**
@@ -180,8 +188,8 @@ public class Elevator extends SubsystemBase {
   }
 
   public void set(double position) {
-    //Constants.log("Elevator target position:" + position); 
-    
+    //Constants.log("Elevator target position:" + position);
+
     elevatorSetpoint = position;
     elevatorSetpoint = MathUtil.clamp(elevatorSetpoint, Constants.Elevator.minExtension, Constants.Elevator.maxExtension);
     backMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
@@ -211,8 +219,8 @@ public class Elevator extends SubsystemBase {
   public void checkWrist() {
     Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
     wristMotor.setControl(
-      MathUtil.clamp(wristSetpoint, 
-      shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations, 
+      MathUtil.clamp(wristSetpoint,
+      shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations,
       shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRotations), ControlType.kMAXMotionPositionControl);
   }
 
@@ -240,8 +248,6 @@ public class Elevator extends SubsystemBase {
       return;
     }
 
-    
-    
     double relativeHeightMM = heightMM - Constants.Elevator.baseHeightMM;
     double wristRad = Math.toRadians(wristAngleDegrees);
     double x = Constants.Wrist.chuteCenterXOffsetMM * Math.cos(wristRad) - (Constants.Wrist.chuteCenterYOffsetMM * Math.sin(wristRad));
@@ -302,6 +308,7 @@ public class Elevator extends SubsystemBase {
   }
 
   public void reconfigure() {
+    backMotor.configurePID(SmartDashboard.getNumber("Elevator Kp", 0.4), SmartDashboard.getNumber("Elevator Ki", 0.00001), SmartDashboard.getNumber("Elevator Kd", 0));
     shoulder.reconfigure();
     wrist.reconfigure();
   }

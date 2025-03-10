@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
@@ -22,8 +23,9 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.ReturnAutonomous;
+import frc.robot.commands.ChooseAutonomous;
 import frc.robot.hazard.HazardXbox;
+import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
@@ -37,15 +39,17 @@ import frc.robot.subsystems.Elevator;
 public class RobotContainer {
   // The robot's subsystems and commands are defined here...
   private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0, new Pose2d(15, 4, Rotation2d.k180deg));
-  private final Elevator elevatorSubsystem = new Elevator();
-  //private final Claw clawSubsystem = new Claw();
+  private final Elevator elevatorSubsystem = new Elevator(true);
+  private final Claw clawSubsystem = new Claw();
   private final Climber climberSubsystem = new Climber();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final HazardXbox m_driverController =
       new HazardXbox(OperatorConstants.kDriverControllerPort);
-  private final HazardXbox m_secondaryController = 
+  private final HazardXbox m_secondaryController =
       new HazardXbox(OperatorConstants.kSecondaryControllerPort);
+
+  private final ChooseAutonomous autoChooser = new ChooseAutonomous(drivetrainSubsystem, elevatorSubsystem, clawSubsystem);
 
   private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
 
@@ -67,6 +71,10 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    var layout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
+    for (var i : layout.getTags()) {
+      Constants.log(i.ID + " " + i.pose);
+    }
     // Configure the trigger bindings
     configureBindings();
     configureDashboard();
@@ -99,9 +107,12 @@ public class RobotContainer {
     //clawSubsystem.setDefaultCommand(new RunCommand(() -> {clawSubsystem.set(-m_secondaryController.getRightY());}, clawSubsystem));
   }
 
+  /***
+   * Called whenever teleop or auto is enabled
+   */
   public void init() {
     Constants.log("Enabling...");
-  
+
     //configureDashboard();
     //drivetrainSubsystem.stop();
   }
@@ -152,10 +163,10 @@ public class RobotContainer {
       if (pipeline == 0) {pipeline = 1;}
       else if (pipeline == 1) {pipeline = 0;}
       drivetrainSubsystem.setVisionPipeline(pipeline);}));
-    
+
     //m_driverController.povDown().onTrue(new InstantCommand(()-> {climberSubsystem.set(Constants.Climber.deployedPosition);}, climberSubsystem));
     //m_driverController.povUp().onTrue(new InstantCommand(() -> {climberSubsystem.set(Constants.Climber.climbedPosition);}, climberSubsystem));
-    
+
 
     m_secondaryController.a().onTrue(new InstantCommand(() -> {elevatorSubsystem.reconfigure();}, elevatorSubsystem));
     m_secondaryController.x().onTrue(new InstantCommand(() -> {elevatorSubsystem.resetEncoders();}, elevatorSubsystem));
@@ -193,6 +204,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     // An example command will be run in autonomous
-    return ReturnAutonomous.OrientLimelight(drivetrainSubsystem);
+    return autoChooser.getAuto();
   }
 }

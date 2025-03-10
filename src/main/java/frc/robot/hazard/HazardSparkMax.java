@@ -60,6 +60,12 @@ public class HazardSparkMax {
         this(CAN_ID, type, config, false, publishToMotorTable, NetworkTableInstance.getDefault().getTable("SparkMax " + CAN_ID + " - " + name));
     }
 
+    /***
+     * Reconfigures the spark max with the desired control values
+     * @param p
+     * @param i
+     * @param d
+     */
     public void configurePID(double p, double i, double d) {
       config.closedLoop.pid(p, i, d);
       controller.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
@@ -150,7 +156,7 @@ public class HazardSparkMax {
      * @return
      */
     public double getVelocity() {
-        return integratedEncoder.getVelocity() / 60d; 
+        return integratedEncoder.getVelocity() / 60d;
     }
 
     /***

@@ -26,6 +26,14 @@ import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
  * constants are needed, to reduce verbosity.
  */
 public final class Constants {
+  /***
+   * Returns the alliance side. False for red, true for blue.
+   * @return
+   */
+  public static boolean alliance() {
+    return false;
+  }
+
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
     public static final int kSecondaryControllerPort = 1;
@@ -43,13 +51,13 @@ public final class Constants {
     public static final double wheelRadiusMeters = 0.0762; // 3in
     public static final DCMotor drivetrainMotor = DCMotor.getKrakenX60(1);
     public static final RobotConfig mainConfig = new RobotConfig(
-      61.235, 
+      61.235,
       5.64646, // Current estimate TODO: empirically determine
       new ModuleConfig(Drivetrain.wheelRadiusMeters,
-      8, 
-      1.0, 
-      drivetrainMotor, 
-      80, 
+      8,
+      1.0,
+      drivetrainMotor,
+      80,
       4), 0.5588);
     public static final Transform3d robotToCamera = new Transform3d(0.185, 0, 0.27, new Rotation3d());
     public static final Translation2d COMOffsetFromWheelbaseCenter = new Translation2d(0, 0);

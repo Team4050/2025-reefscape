@@ -10,10 +10,6 @@ import frc.robot.subsystems.Drivetrain;
 
 public final class ReturnAutonomous {
   /** Example static factory for an autonomous command. */
-  public static Command exampleAuto(Drivetrain drivetrain) {
-    return Commands.sequence(new FollowPath(drivetrain));
-  }
-
   public static Command timedMovementTest(Drivetrain drivetrain) {
     return Commands.sequence(
       new MoveTime(drivetrain, 0.2, 0, 0, 0.5),
@@ -21,8 +17,12 @@ public final class ReturnAutonomous {
       new MoveTime(drivetrain, -0.2, -0.2, 0, 0.5));
   }
 
-  public static Command velTest(Drivetrain drivetrain) {
+  public static Command testModelBasedControl(Drivetrain drivetrain) {
     return new TestModelBasedControl(drivetrain);
+  }
+
+  public static Command testModelBasedPathFollowing(Drivetrain drivetrain) {
+    return new FollowPath(drivetrain);
   }
 
   public static Command OrientLimelight(Drivetrain drivetrain) {

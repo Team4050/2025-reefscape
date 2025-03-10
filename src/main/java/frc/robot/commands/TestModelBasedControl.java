@@ -41,7 +41,7 @@ public class TestModelBasedControl extends Command {
   @Override
   public void end(boolean interrupted) {
     // TODO Auto-generated method stub
-    drivetrain.set(new ChassisSpeeds(0, 0, 0));
+    drivetrain.setFieldRelative(new ChassisSpeeds(0, 0, 0));
   }
 
   @Override

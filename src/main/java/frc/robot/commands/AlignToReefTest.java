@@ -54,7 +54,7 @@ public class AlignToReefTest extends Command {
     double omega = omegaController.calculate(rot.getRadians(), 0);
     pidOut.set(new double[] {vx, vy, omega});
     //Constants.log(vx + " " + vy + " " + -omega);
-    drivetrain.set(new ChassisSpeeds(vx, vy, -omega / 2));
+    drivetrain.setFieldRelative(new ChassisSpeeds(vx, vy, -omega / 2));
     super.execute();
   }
 
