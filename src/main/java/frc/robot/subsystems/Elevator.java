@@ -40,11 +40,6 @@ public class Elevator extends SubsystemBase {
   private ArmFeedforward shoulderFF;
   private Constraints shoulderAccelProfile = new Constraints(1, 0.1);
 
-  private SparkMaxConfig followConfig = new SparkMaxConfig();
-  private SparkMaxConfig leadConfig = new SparkMaxConfig();
-  private SparkMaxConfig shoulderConfig = new SparkMaxConfig();
-  private SparkMaxConfig wristConfig = new SparkMaxConfig();
-
   private HazardArm shoulder;
   private HazardArm wrist;
 
@@ -62,6 +57,10 @@ public class Elevator extends SubsystemBase {
   private double Kd = 0.05;
 
   public Elevator(boolean tuningMode) {
+    SparkMaxConfig followConfig = new SparkMaxConfig();
+    SparkMaxConfig leadConfig = new SparkMaxConfig();
+    SparkMaxConfig shoulderConfig = new SparkMaxConfig();
+    SparkMaxConfig wristConfig = new SparkMaxConfig();
 
     followConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
     followConfig.idleMode(IdleMode.kBrake);
