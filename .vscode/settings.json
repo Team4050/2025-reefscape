@@ -58,14 +58,16 @@
     "edu.wpi.first.math.**.struct.*",
   ],
   "editor.formatOnSave": true,
-  "java.format.enabled": false,
+  "java.format.enabled": true,
+  "spotlessGradle.format.enable": true,
   "[gradle][java][xml]": {
     "editor.codeActionsOnSave": {
-      "source.fixAll.spotlessGradle": "explicit"
+      "source.fixAll.spotlessGradle": "explicit",
+      "source.organizeImports": "explicit",
     },
-    "files.trimTrailingWhitespace": false,
+    "files.trimTrailingWhitespace": true,
     "spotlessGradle.diagnostics.enable": true,
     "spotlessGradle.format.enable": true,
     "editor.defaultFormatter": "richardwillis.vscode-spotless-gradle",
-  }
+  },
 }
