@@ -9,6 +9,7 @@ import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.hardware.TalonFX;
+import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -143,22 +144,48 @@ public class Drivetrain extends SubsystemBase {
     RR = new TalonFX(Constants.Drivetrain.RR);
 
     double maxOutput = 1.0; // Increase in proportion to confidence in driver skill
+    NeutralModeValue neutralMode = NeutralModeValue.Coast;
     leftSideConfig = new TalonFXConfiguration();
-    leftSideConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+    leftSideConfig.MotorOutput.NeutralMode = neutralMode;
     leftSideConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
     leftSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput;
     leftSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
-    leftSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 800;
-    leftSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -800;
+
+    leftSideConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    leftSideConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+    leftSideConfig.CurrentLimits.SupplyCurrentLimit = 60; // TODO: If drive performance is significantly impacted, return to 70
+    leftSideConfig.CurrentLimits.StatorCurrentLimit = 160; // TODO: Decrease if motor heat is excessive after drive practice
+
+    leftSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 120;
+    leftSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -120;
+
+    leftSideConfig.Voltage.PeakForwardVoltage = 12;
+    leftSideConfig.Voltage.PeakReverseVoltage = -12;
+
+    leftSideConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+    leftSideConfig.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0.1;
     leftSideConfig.Audio.AllowMusicDurDisable = true;
 
     rightSideConfig = new TalonFXConfiguration();
-    rightSideConfig.MotorOutput.NeutralMode = NeutralModeValue.Coast;
+    rightSideConfig.MotorOutput.NeutralMode = neutralMode;
     rightSideConfig.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
-    rightSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput; // Increase in proportion to confidence in driver skill
+    rightSideConfig.MotorOutput.PeakForwardDutyCycle = maxOutput;
     rightSideConfig.MotorOutput.PeakReverseDutyCycle = -maxOutput;
-    rightSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 800;
-    rightSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -800;
+
+    rightSideConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+    rightSideConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+    rightSideConfig.CurrentLimits.SupplyCurrentLimit = 60; // TODO: If drive performance is significantly impacted, return to 70
+    rightSideConfig.CurrentLimits.StatorCurrentLimit = 160; // TODO: Decrease if motor heat is excessive after drive practice
+
+    rightSideConfig.TorqueCurrent.PeakForwardTorqueCurrent = 120;
+    rightSideConfig.TorqueCurrent.PeakReverseTorqueCurrent = -120;
+
+    rightSideConfig.Voltage.PeakForwardVoltage = 12;
+    rightSideConfig.Voltage.PeakReverseVoltage = -12;
+
+    rightSideConfig.Feedback.FeedbackSensorSource = FeedbackSensorSourceValue.RotorSensor;
+    rightSideConfig.OpenLoopRamps.VoltageOpenLoopRampPeriod = 0.1;
+
     rightSideConfig.Audio.AllowMusicDurDisable = true;
 
     music = new Orchestra();
@@ -195,13 +222,13 @@ public class Drivetrain extends SubsystemBase {
     if (useNetworkTables) {
       drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
       appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | Amps").publish();
-      velocity = drivetrainTable.getDoubleArrayTopic("Wheel encoder velocities | radps").publish();
-      position = drivetrainTable.getDoubleArrayTopic("Wheel positions | meters").publish();
+      velocity = drivetrainTable.getDoubleArrayTopic("Chassis velocities | radps").publish();
+      position = drivetrainTable.getDoubleArrayTopic("Pose estimate").publish();
       xPublisher = drivetrainTable.getDoubleArrayTopic("Simulated state | mps").publish();
       xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered state | mps").publish();
       yPublisher = drivetrainTable.getDoubleArrayTopic("Sensor measurements | mps & radps").publish();
       uPublisher = drivetrainTable.getDoubleArrayTopic("Control vector").publish();
-      referenceVectorPublisher = drivetrainTable.getDoubleArrayTopic("Target pose").publish();
+      referenceVectorPublisher = drivetrainTable.getDoubleArrayTopic("Reference vector").publish();
     }
 
     xController.setTolerance(0.1);
@@ -281,7 +308,7 @@ public class Drivetrain extends SubsystemBase {
       this::getPoseEstimate,
       this::resetPoseEstimate,
       this::getRobotRelativeSpeedsMPS,
-      this::drivePathsetFieldRelativenner,
+      this::drivePathFieldRelative,
       pathPlannerHolonomicDriveController,
       Constants.Drivetrain.mainConfig,
       Constants::alliance,
@@ -453,11 +480,16 @@ public class Drivetrain extends SubsystemBase {
     setVoltage(speeds);
   }
 
+  public void setVoltage(ChassisSpeeds speeds) {
+    MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
+    setVoltage(wheelSpeeds);
+  }
+
   public void setVoltage(MecanumDriveWheelSpeeds wheelSpeeds) {
-    FL.setVoltage((wheelSpeeds.frontLeftMetersPerSecond * Constants.Drivetrain.drivetrainMotor.KvRadPerSecPerVolt));
-    FR.setVoltage((wheelSpeeds.frontRightMetersPerSecond * Constants.Drivetrain.drivetrainMotor.KvRadPerSecPerVolt));
-    RL.setVoltage((wheelSpeeds.rearLeftMetersPerSecond * Constants.Drivetrain.drivetrainMotor.KvRadPerSecPerVolt));
-    RR.setVoltage((wheelSpeeds.rearRightMetersPerSecond * Constants.Drivetrain.drivetrainMotor.KvRadPerSecPerVolt));
+    FL.setVoltage(wheelSpeeds.frontLeftMetersPerSecond);
+    FR.setVoltage(wheelSpeeds.frontRightMetersPerSecond);
+    RL.setVoltage(wheelSpeeds.rearLeftMetersPerSecond);
+    RR.setVoltage(wheelSpeeds.rearRightMetersPerSecond);
   }
 
   /***
@@ -509,8 +541,9 @@ public class Drivetrain extends SubsystemBase {
     setFieldRelative(speeds);
   }
 
-  public void drivePathsetFieldRelativenner(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
-    set(speeds);
+  public void drivePathFieldRelative(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
+    var robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, getPoseEstimate().getRotation());
+    setVoltage(robotRelativeSpeeds);
   }
 
   public void followReference() {

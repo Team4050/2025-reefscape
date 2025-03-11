@@ -13,6 +13,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StringPublisher;
 import frc.robot.Constants;
 
 public class HazardSparkMax {
@@ -27,6 +28,8 @@ public class HazardSparkMax {
     private double setpoint = 0;
 
     private boolean publishToMotorTable;
+    private StringPublisher controlMode;
+    private DoublePublisher dutyCycle;
     private DoublePublisher velocity;
     private DoublePublisher position;
     private DoublePublisher setpointPub;
@@ -84,6 +87,7 @@ public class HazardSparkMax {
             position.set(getPosition());
         }
         setpointPub.set(setpoint);
+        dutyCycle.set(controller.get());
         voltage.set(controller.getAppliedOutput() * controller.getBusVoltage());
         current.set(controller.getOutputCurrent());
     }
@@ -117,6 +121,9 @@ public class HazardSparkMax {
     public void setControl(double value, ControlType type) {
         setpoint = value;
         closedLoop.setReference(value, type);
+        if (publishToMotorTable) {
+            controlMode.set(type.toString());
+        }
     }
 
     /***

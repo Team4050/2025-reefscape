@@ -91,6 +91,8 @@ public class RobotContainer {
     SmartDashboard.putNumber("Shoulder target rotations", 0);
     SmartDashboard.putNumber("Wrist target rotations", 0);
 
+    double[] elevatorStartingXY = elevatorSubsystem.elevatorForwardKinematics();
+
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {

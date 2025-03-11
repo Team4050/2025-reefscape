@@ -71,6 +71,7 @@ public final class Constants {
     public static final double gearboxReduction = 1.0 / 10.0;
     public static final double gearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
+    public static final double startingExtension = 0;
     public static final double minExtension = 0.02;
     public static final double maxExtension = 4.4;
     public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
@@ -88,9 +89,9 @@ public final class Constants {
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static final double startingRotation = -0.25; // -0.23 TODO: find out
-    public static final double shoulderMax = 0.25; //0.46 rotations
-    public static final double shoulderMin = -0.24;
+    public static final double startingRotation = Math.toRadians(-86.4);
+    public static final double shoulderMax = Math.toRadians(90);
+    public static final double shoulderMin = Math.toRadians(-86.4); // -0.24 * 2 * Math.PI
 
     public static final double shoulderArmLengthMM = 302;
     public static final double shoulderMotorTorqueNM = 0.45;
@@ -106,14 +107,14 @@ public final class Constants {
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double startingRotation = -0.1055555;
-    public static final double wristMaxShoulderOffsetRotations = 0.5;
-    public static final double wristMinShoulderOffsetRotations = -0.35;
-    public static final double wristMax = 0.3;//+108 degrees
-    public static final double wristMin = -0.125; //-45 degrees
+    public static final double startingRotation = Math.toRadians(-38);
+    public static final double wristMaxShoulderOffsetRotations = Math.toRadians(90);
+    public static final double wristMinShoulderOffsetRotations = Math.toRadians(-45);
+    public static final double wristMax = Math.toRadians(108);//+108 degrees
+    public static final double wristMin = Math.toRadians(-45); //-45 degrees
 
-    public static final double chuteCenterXOffsetMM = 330; //From Claw - Full Assembly CAD
-    public static final double chuteCenterYOffsetMM = -222; //From Claw - Full Assembly CAD
+    public static final double chuteExitXOffsetMM = 330; //From Claw - Full Assembly CAD
+    public static final double chuteExitYOffsetMM = -222; //From Claw - Full Assembly CAD
 
     public static final double L1Scoring = 0;
     public static final double L2Scoring = startingRotation;
