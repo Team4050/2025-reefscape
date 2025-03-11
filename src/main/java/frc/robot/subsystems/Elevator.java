@@ -74,12 +74,12 @@ public class Elevator extends SubsystemBase {
     leadConfig.idleMode(IdleMode.kBrake);
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
-    leadConfig.closedLoop.pid(0.4, 0.00001, 0);
-    leadConfig.closedLoop.iMaxAccum(0.0005);
-    leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.01);
+    leadConfig.closedLoop.pid(0.3, 0.00001, 0.0001);
+    leadConfig.closedLoop.iMaxAccum(0.01);
+    leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.03);
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
-    leadConfig.closedLoop.maxMotion.maxAcceleration(30, ClosedLoopSlot.kSlot0);
-    leadConfig.closedLoop.maxMotion.maxVelocity(100, ClosedLoopSlot.kSlot0);
+    leadConfig.closedLoop.maxMotion.maxAcceleration(500, ClosedLoopSlot.kSlot0);
+    leadConfig.closedLoop.maxMotion.maxVelocity(500, ClosedLoopSlot.kSlot0);
     leadConfig.closedLoop.feedbackSensor(
         FeedbackSensor.kPrimaryEncoder);
     leadConfig.encoder.positionConversionFactor(
@@ -130,15 +130,17 @@ public class Elevator extends SubsystemBase {
     shoulderPID = new ProfiledPIDController(Kp, Ki, Kd, shoulderAccelProfile); // Unused, backup if arm feedforward is needed
     shoulderFF = new ArmFeedforward(0, Kg, Kv);
 
+    Constants.log("Shoulder NEO Kv: " + (49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt));
+
     shoulder = new HazardArm(
       shoulderMotor,
       0,
+      0,//0.1,
+      0,//1.0,//Constants.Shoulder.shoulderMotorTorqueNM / (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit) + 0.5,
+      0,///49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
       0,
-      Constants.Shoulder.shoulderMotorTorqueNM / (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit),
-      1 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
-      0.25,
-      0.005,
-      0.05,
+      0,
+      0,
       1,
       0.1,
       "Shoulder",
@@ -146,7 +148,7 @@ public class Elevator extends SubsystemBase {
     wrist = new HazardArm(
       wristMotor,
       0,
-      0,
+      0.1,
       0,
       0,
       0.2,
@@ -158,7 +160,7 @@ public class Elevator extends SubsystemBase {
       tuningMode);
 
     if (tuningMode) {
-      SmartDashboard.putNumber("Elevator Kp", 0.4);
+      SmartDashboard.putNumber("Elevator Kp", 0.35);
       SmartDashboard.putNumber("Elevator Ki", 0.00001);
       SmartDashboard.putNumber("Elevator Kd", 0);
     }
@@ -199,6 +201,7 @@ public class Elevator extends SubsystemBase {
   }
 
   public void setElevatorAdditive(double additive) {
+    Constants.log(elevatorSetpoint);
     elevatorSetpoint += additive;
     set(elevatorSetpoint);
   }
@@ -207,7 +210,8 @@ public class Elevator extends SubsystemBase {
     shoulderSetpoint = MathUtil.clamp(position, Constants.Shoulder.shoulderMin, Constants.Shoulder.shoulderMax);
     //Constants.log("Setpoint: " + shoulderSetpoint);
     //Constants.log("Position: " + shoulderMotor.getPosition());
-    shoulderMotor.setControl(shoulderSetpoint, ControlType.kPosition);
+    shoulder.setpoint(position);
+    //shoulderMotor.setControl(shoulderSetpoint, ControlType.kPosition);
     checkWrist();
   }
 
@@ -216,11 +220,10 @@ public class Elevator extends SubsystemBase {
   }
 
   public void checkWrist() {
-    Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
-    wristMotor.setControl(
-      MathUtil.clamp(wristSetpoint,
-      shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations,
-      shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRotations), ControlType.kMAXMotionPositionControl);
+    //Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
+    wrist.setpoint(MathUtil.clamp(wristSetpoint,
+    shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations,
+    shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRotations));
   }
 
   public void setWrist(double position) {
@@ -307,6 +310,7 @@ public class Elevator extends SubsystemBase {
   }
 
   public void reconfigure() {
+    Constants.log(SmartDashboard.getNumber("Elevator Kp", 0.4) + " " + SmartDashboard.getNumber("Elevator Ki", 0.00001) + " " + SmartDashboard.getNumber("Elevator Kd", 0));
     backMotor.configurePID(SmartDashboard.getNumber("Elevator Kp", 0.4), SmartDashboard.getNumber("Elevator Ki", 0.00001), SmartDashboard.getNumber("Elevator Kd", 0));
     shoulder.reconfigure();
     wrist.reconfigure();

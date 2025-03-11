@@ -554,7 +554,7 @@ public class Drivetrain extends SubsystemBase {
     for (PhotonPipelineResult photonPipelineResult : unreadResults) {
       var estimate = aprilTagPoseEstimator.update(photonPipelineResult);
       if (estimate.isPresent()) {
-        Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
+        //Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
         lastAprilTagSeen = aprilTags.getTagPose(estimate.get().targetsUsed.get(0).getFiducialId()).get();
         poseEstimator.addVisionMeasurement(estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
       }

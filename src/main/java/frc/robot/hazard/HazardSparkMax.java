@@ -68,7 +68,7 @@ public class HazardSparkMax {
      */
     public void configurePID(double p, double i, double d) {
       config.closedLoop.pid(p, i, d);
-      controller.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+      controller.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
     }
 
     /***
@@ -84,8 +84,8 @@ public class HazardSparkMax {
             position.set(getPosition());
         }
         setpointPub.set(setpoint);
-        voltage.set(controller.getBusVoltage());
-        current.set(controller.getAppliedOutput());
+        voltage.set(controller.getAppliedOutput() * controller.getBusVoltage());
+        current.set(controller.getOutputCurrent());
     }
 
     /***

@@ -88,17 +88,20 @@ public class RobotContainer {
     SmartDashboard.putNumber("IK target height", 772.64);
     SmartDashboard.putNumber("IK target extension", 350);
 
+    SmartDashboard.putNumber("Shoulder target rotations", 0);
+    SmartDashboard.putNumber("Wrist target rotations", 0);
+
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
-              elevatorIKTargetX -= m_secondaryController.getRightX() / 80;
-              elevatorIKTargetY -= m_secondaryController.getRightY() / 80;
-              Constants.log("Targets: " + elevatorIKTargetX + " " + elevatorIKTargetY);
+              //elevatorIKTargetX -= m_secondaryController.getRightX() / 80;
+              //elevatorIKTargetY -= m_secondaryController.getRightY() / 80;
+              //Constants.log("Targets: " + elevatorIKTargetX + " " + elevatorIKTargetY);
               //Constants.log(elevatorIKTargetY);
               elevatorSubsystem.setElevatorAdditive(-m_secondaryController.getLeftY() / 60);
-              elevatorSubsystem.setShoulder(elevatorIKTargetY);
-              elevatorSubsystem.setWrist(elevatorIKTargetX);
-              elevatorSubsystem.goToPosition(SmartDashboard.getNumber("IK target height", 0), SmartDashboard.getNumber("IK target extension", 0), 0);
+              elevatorSubsystem.setShoulder(Constants.Shoulder.startingRotation);
+              elevatorSubsystem.setWristAdditive(m_secondaryController.getRightX() / 60);//(SmartDashboard.getNumber("Wrist target rotations", 0));
+              //elevatorSubsystem.goToPosition(SmartDashboard.getNumber("IK target height", 0), SmartDashboard.getNumber("IK target extension", 0), 0);
             },
             elevatorSubsystem));
     drivetrainSubsystem.setDefaultCommand(new RunCommand(() -> {

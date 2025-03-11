@@ -8,6 +8,7 @@ import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.Constants;
 
 public class HazardArm {
     private HazardSparkMax motor;
@@ -45,7 +46,7 @@ public class HazardArm {
             fail |= !SmartDashboard.putNumber(name + " Ks", Ks);
             fail |= !SmartDashboard.putNumber(name + " Kg", Kg);
             fail |= !SmartDashboard.putNumber(name + " Kv", Kv);
-            
+
             fail |= !SmartDashboard.putNumber(name + " Kp", Kp);
             fail |= !SmartDashboard.putNumber(name + " Ki", Ki);
             fail |= !SmartDashboard.putNumber(name + " Kd", Kd);
@@ -83,13 +84,16 @@ public class HazardArm {
         double Ks = SmartDashboard.getNumber(name + " Ks", 0);
         double Kg = SmartDashboard.getNumber(name + " Kg", 0);
         double Kv = SmartDashboard.getNumber(name + " Kv", 0);
-        
+
         double Kp = SmartDashboard.getNumber(name + " Kp", 0);
         double Ki = SmartDashboard.getNumber(name + " Ki", 0);
         double Kd = SmartDashboard.getNumber(name + " Kd", 0);
 
         double maxV = SmartDashboard.getNumber(name + " maxV", 0);
         double maxA = SmartDashboard.getNumber(name + " maxA", 0);
+        Constants.log("Feedforwards: " + Ks + " " + Kg + " " + Kv);
+        Constants.log("Control: " + Kp + " " + Ki + " " + Kd);
+        Constants.log("Max V and A" + maxV + " " + maxA);
         feedforward = new ArmFeedforward(Ks, Kg, Kv);
         feedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
         feedback.setIntegratorRange(0.05, 0.05);
