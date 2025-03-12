@@ -8,6 +8,7 @@ import org.photonvision.targeting.PhotonPipelineResult;
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.TorqueCurrentFOC;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.FeedbackSensorSourceValue;
 import com.ctre.phoenix6.signals.InvertedValue;
@@ -492,6 +493,13 @@ public class Drivetrain extends SubsystemBase {
     RR.setVoltage(wheelSpeeds.rearRightMetersPerSecond);
   }
 
+  public void setTorqueCurrents(MecanumDriveWheelSpeeds wheelTorqueCurrents) {
+    FL.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.frontLeftMetersPerSecond));
+    FR.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.frontRightMetersPerSecond));
+    RL.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.rearLeftMetersPerSecond));
+    RR.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.rearRightMetersPerSecond));
+  }
+
   /***
    * Set closed-loop velocity control (Not tuned - do not use)
    * @param speeds
@@ -541,9 +549,21 @@ public class Drivetrain extends SubsystemBase {
     setFieldRelative(speeds);
   }
 
+
+  TorqueCurrentFOC[] controlRequests = new TorqueCurrentFOC[4];
   public void drivePathFieldRelative(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
-    var robotRelativeSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(speeds, getPoseEstimate().getRotation());
-    setVoltage(robotRelativeSpeeds);
+    var FFAmps = feedforwards.torqueCurrentsAmps();
+    var robotRelativeSpeeds = kinematics.toWheelSpeeds(speeds);
+
+    controlRequests[0].withOutput(FFAmps[0] + robotRelativeSpeeds.frontLeftMetersPerSecond);
+    controlRequests[1].withOutput(FFAmps[1] + robotRelativeSpeeds.frontRightMetersPerSecond);
+    controlRequests[2].withOutput(FFAmps[2] + robotRelativeSpeeds.rearLeftMetersPerSecond);
+    controlRequests[3].withOutput(FFAmps[3] + robotRelativeSpeeds.rearRightMetersPerSecond);
+
+    FL.setControl(controlRequests[0]);
+    FR.setControl(controlRequests[1]);
+    RL.setControl(controlRequests[2]);
+    RR.setControl(controlRequests[3]);
   }
 
   public void followReference() {

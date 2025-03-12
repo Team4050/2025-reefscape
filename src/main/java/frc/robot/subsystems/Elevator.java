@@ -78,7 +78,7 @@ public class Elevator extends SubsystemBase {
 
     shoulderConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
     shoulderConfig.idleMode(IdleMode.kBrake);
-    shoulderConfig.inverted(true);
+    shoulderConfig.inverted(false); // Change to gear from belt drive
     shoulderConfig.closedLoop.pidf(0.25, 0.005, 0.05, 0.25);
     shoulderConfig.closedLoop.iMaxAccum(0.085);
     shoulderConfig.closedLoop.outputRange(-0.3, 0.3);
@@ -107,10 +107,10 @@ public class Elevator extends SubsystemBase {
     backMotor = new HazardSparkMax(Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
     frontMotor = new HazardSparkMax(Constants.Elevator.front, MotorType.kBrushless, followConfig, false, false, elevatorTable);
     shoulderMotor = new HazardSparkMax(Constants.Shoulder.CAN, MotorType.kBrushless, shoulderConfig, true, "Shoulder");
-    shoulderMotor.setEncoder(Constants.Shoulder.startingRotation);
+    shoulderMotor.setEncoder(Constants.Shoulder.startingRotation / (2 * Math.PI));
     shoulderSetpoint = Constants.Shoulder.startingRotation;
     wristMotor = new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
-    wristMotor.setEncoder(Constants.Wrist.startingRotation);
+    wristMotor.setEncoder(Constants.Wrist.startingRotationRadians / (2 * Math.PI));
     wristSetpoint = 0;
 
     elevatorPID = new PIDController(0.1, 0, 0.05);//Unused, backup if manual feedforward calculation is needed
@@ -122,26 +122,26 @@ public class Elevator extends SubsystemBase {
       shoulderMotor,
       0,
       0,//0.1,
-      0,//1.0,//Constants.Shoulder.shoulderMotorTorqueNM / (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit) + 0.5,
+      1,//1.0,//Constants.Shoulder.shoulderMotorTorqueNM / (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit) + 0.5,
       0,///49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
-      0,
+      2,
       0,
       0,
       1,
-      0.1,
+      1,
       "Shoulder",
       tuningMode);
-    wrist = new HazardArm(
+    wrist = new HazardArm( //Adjust Kstatic for small movements
       wristMotor,
       0,
-      0.1,
-      0,
-      0,
+      0.001,
+      0.3,
+      0.01,
       0.2,
-      0.00005,
-      0,
-      0,
-      0,
+      0.005,
+      0.05,
+      1,
+      2,
       "Wrist",
       tuningMode);
 
@@ -152,6 +152,10 @@ public class Elevator extends SubsystemBase {
 
       SmartDashboard.putData("Reconfigure controllers", new InstantCommand(() -> { this.reconfigure(); }, this));
     }
+
+    SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
+    SmartDashboard.putNumber("Shoulder setpoint", shoulderSetpoint);
+    SmartDashboard.putNumber("Wrist setpoint", wristSetpoint);
   }
 
   /**
@@ -193,9 +197,11 @@ public class Elevator extends SubsystemBase {
   }
 
   public void setElevatorAdditive(double additive) {
-    Constants.log(elevatorSetpoint);
+    if (additive == 0) return;
+    //Constants.log(elevatorSetpoint);
     elevatorSetpoint += additive;
     set(elevatorSetpoint);
+    SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
   }
 
   /***
@@ -209,14 +215,19 @@ public class Elevator extends SubsystemBase {
   }
 
   public void setShoulderAdditive(double additive) {
+    if (additive == 0) return;
+    //Constants.log(shoulderSetpoint + (additive * 0.02));
     setShoulder(shoulderSetpoint + (additive * 0.02));
+    SmartDashboard.putNumber("Shoulder setpoint", shoulderSetpoint);
   }
 
   public void checkWrist() {
     //Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
+    //Constants.log(wristSetpoint);
     wrist.setpoint(MathUtil.clamp(wristSetpoint,
-    shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations,
-    shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRotations));
+    shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRadians,
+    shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRadians));
+    SmartDashboard.putNumber("Wrist setpoint", elevatorSetpoint);
   }
 
   /***
@@ -225,11 +236,11 @@ public class Elevator extends SubsystemBase {
    */
   public void setWrist(double position) {
     wristSetpoint = MathUtil.clamp(position, Constants.Wrist.wristMin, Constants.Wrist.wristMax);
-    //Constants.log(wristSetpoint);
     checkWrist();
   }
 
   public void setWristAdditive(double additive) {
+    if (additive == 0) return;
     setWrist(wristSetpoint + (additive * 0.02));
   }
 
@@ -239,7 +250,7 @@ public class Elevator extends SubsystemBase {
    * @param extensionMM Center of coral chute
    * @param wristAngleDegrees Wrist angle (0 parallel to floor, chute facing horizontal)
    */
-  public void goToPosition(double heightMM, double extensionMM, double wristAngleDegrees, boolean verboseLogging) {
+  public void goToPosition(double extensionMM, double heightMM, double wristAngleDegrees, boolean verboseLogging) {
     Constants.log("Going to position " + heightMM + " " + extensionMM);
 
     if (heightMM < 200) {
@@ -315,8 +326,8 @@ public class Elevator extends SubsystemBase {
   public void resetEncoders() {
     Constants.log("Resetting encoders...");
     backMotor.setEncoder(Constants.Elevator.minExtension);
-    shoulderMotor.setEncoder(Constants.Shoulder.startingRotation);
-    wristMotor.setEncoder(Constants.Wrist.startingRotation);
+    shoulderMotor.setEncoderRadians(Constants.Shoulder.startingRotation);
+    wristMotor.setEncoderRadians(Constants.Wrist.startingRotationRadians);
   }
 
   public void reconfigure() {

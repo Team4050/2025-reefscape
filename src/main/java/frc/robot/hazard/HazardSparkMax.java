@@ -33,6 +33,7 @@ public class HazardSparkMax {
     private DoublePublisher velocity;
     private DoublePublisher position;
     private DoublePublisher setpointPub;
+    private DoublePublisher setpoint2Pub;
     private DoublePublisher voltage;
     private DoublePublisher current;
 
@@ -51,11 +52,14 @@ public class HazardSparkMax {
         closedLoop = controller.getClosedLoopController();
 
         if (publishToMotorTable) {
-            velocity = table.getDoubleTopic("Velocity RPS").publish();
-            position = table.getDoubleTopic("Position Rotations").publish();
+            velocity = table.getDoubleTopic("Velocity RadPS").publish();
+            position = table.getDoubleTopic("Position Radians").publish();
             setpointPub = table.getDoubleTopic("Control setpoint (Rotations, RPS, Volts)").publish();
-            voltage = table.getDoubleTopic("Voltage Volts").publish();
-            current = table.getDoubleTopic("Current Amps").publish();
+            setpoint2Pub = table.getDoubleTopic("Alternate control setpoint").publish();
+            voltage = table.getDoubleTopic("Stator Voltage").publish();
+            dutyCycle = table.getDoubleTopic("Motor Duty Cycle").publish();
+            current = table.getDoubleTopic("Supplied Current").publish();
+            controlMode = table.getStringTopic("Control Mode").publish();
         }
     }
 
@@ -83,8 +87,8 @@ public class HazardSparkMax {
             velocity.set(getAbsVelocity());
             position.set(getAbsPosition());
         } else {
-            velocity.set(getVelocity());
-            position.set(getPosition());
+            velocity.set(getVelocityRadPS());
+            position.set(getPositionRadians());
         }
         setpointPub.set(setpoint);
         dutyCycle.set(controller.get());
@@ -131,16 +135,24 @@ public class HazardSparkMax {
      * @param value
      */
     public void setSetpointPublishingOnly(double value) {
-        setpoint = value;
+      setpoint2Pub.set(value);
     }
 
     /***
-     * Sets the encoder value
+     * Sets the encoder value in rotations
      * @param value
      */
     public void setEncoder(double value) {
         integratedEncoder.setPosition(value);
     }
+
+        /***
+     * Sets the encoder value in radians
+     * @param value
+     */
+    public void setEncoderRadians(double value) {
+      integratedEncoder.setPosition(value / (2 * Math.PI));
+  }
 
     /***
      * Returns the position of the encoder in rotations

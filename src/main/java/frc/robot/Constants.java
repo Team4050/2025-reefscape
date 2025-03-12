@@ -89,8 +89,8 @@ public final class Constants {
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static final double startingRotation = Math.toRadians(-86.4);
-    public static final double shoulderMax = Math.toRadians(90);
+    public static final double startingRotation = Math.toRadians(-86.4); // -0.3 measured from horizontal
+    public static final double shoulderMax = Math.toRadians(70);
     public static final double shoulderMin = Math.toRadians(-86.4); // -0.24 * 2 * Math.PI
 
     public static final double shoulderArmLengthMM = 302;
@@ -107,9 +107,9 @@ public final class Constants {
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double startingRotation = Math.toRadians(-38);
-    public static final double wristMaxShoulderOffsetRotations = Math.toRadians(90);
-    public static final double wristMinShoulderOffsetRotations = Math.toRadians(-45);
+    public static final double startingRotationRadians = Math.toRadians(-38);
+    public static final double wristMaxShoulderOffsetRadians = Math.toRadians(90);
+    public static final double wristMinShoulderOffsetRadians = Math.toRadians(-45);
     public static final double wristMax = Math.toRadians(108);//+108 degrees
     public static final double wristMin = Math.toRadians(-45); //-45 degrees
 
@@ -117,8 +117,8 @@ public final class Constants {
     public static final double chuteExitYOffsetMM = -222; //From Claw - Full Assembly CAD
 
     public static final double L1Scoring = 0;
-    public static final double L2Scoring = startingRotation;
-    public static final double L3Scoring = startingRotation;
+    public static final double L2Scoring = startingRotationRadians;
+    public static final double L3Scoring = startingRotationRadians;
     public static final double L4Scoring = 0.25;
   }
 
@@ -134,9 +134,9 @@ public final class Constants {
     public static final int currentLimit = 40;
     public static final double climberGearReduction = (12.0 / 54.0) * (1.0 / 49.0); //Sprocket * gearbox 220.5:1 ratio
 
-    public static final double startingPosition = 0;
-    public static final double deployedPosition = -0.5;
-    public static final double climbedPosition = 0.25;
+    public static final double startingPositionRotations = 0;
+    public static final double deployedPositionRotations = -0.5;
+    public static final double climbedPositionRotations = 0.25;
   }
 
   public static void log(Object o) {

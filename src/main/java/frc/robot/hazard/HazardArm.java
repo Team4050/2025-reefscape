@@ -3,7 +3,9 @@ package frc.robot.hazard;
 import com.revrobotics.spark.SparkBase.ControlType;
 
 import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
+import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -13,7 +15,9 @@ import frc.robot.Constants;
 public class HazardArm {
     private HazardSparkMax motor;
     private ArmFeedforward feedforward;
-    private ProfiledPIDController feedback;
+    private TrapezoidProfile velocityCurve;
+    private PIDController feedback;
+    private ProfiledPIDController profiledFeedback;
     private double setpoint = 0;
     private String name;
     private boolean tuneUsingDashboard = false;
@@ -36,10 +40,13 @@ public class HazardArm {
         this.motor = motor;
         this.name = name;
         this.tuneUsingDashboard = tuneUsingDashboard;
+        velocityCurve = new TrapezoidProfile(new Constraints(maxV, maxA));
         feedforward = new ArmFeedforward(Ks, Kg, Kv);
-        feedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
-        feedback.setIntegratorRange(0.05, 0.05);
+        feedback = new PIDController(Kp, Ki, Kd);
+        feedback.setIntegratorRange(-0.2, 0.2);
         feedback.setTolerance(tolerance);
+
+        profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
 
         if (tuneUsingDashboard) {
             Boolean fail = false;
@@ -67,14 +74,17 @@ public class HazardArm {
     }
 
     public boolean atReference() {
-        return feedback.atSetpoint();
+      return feedback.atSetpoint();
     }
 
     public void periodic() {
-        var ff = feedforward.calculate(motor.getPositionRadians(), motor.getVelocityRadPS());
-        var fb = feedback.calculate(motor.getPositionRadians(), new State(setpoint, 0));
-        motor.setControl(ff + fb, ControlType.kVoltage);
-        motor.publishToNetworkTables();
+      var currentState = new State(motor.getPositionRadians(), motor.getVelocityRadPS());
+      var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
+      var ff = feedforward.calculate(setpoint, v.velocity);
+      var fb = feedback.calculate(motor.getPositionRadians(), setpoint);
+      var pfb = profiledFeedback.calculate(setpoint, currentState);
+      motor.setControl(ff + fb, ControlType.kVoltage);
+      motor.publishToNetworkTables();
     }
 
     /***
@@ -95,7 +105,7 @@ public class HazardArm {
         Constants.log("Control: " + Kp + " " + Ki + " " + Kd);
         Constants.log("Max V and A" + maxV + " " + maxA);
         feedforward = new ArmFeedforward(Ks, Kg, Kv);
-        feedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
+        feedback = new PIDController(Kp, Ki, Kd);
         feedback.setIntegratorRange(0.05, 0.05);
     }
 }

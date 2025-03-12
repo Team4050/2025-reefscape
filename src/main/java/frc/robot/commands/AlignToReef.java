@@ -38,6 +38,7 @@ public class AlignToReef extends Command {
             new PIDController(0.1, 0, 0),
             new ProfiledPIDController(0.3, 0, 0,
             new Constraints(1, 3)));
+
         Pose2d initial = drivetrain.getPoseEstimate();
         Pose2d tagPosition = drivetrain.getLastSeenAprilTag().toPose2d();
         Translation2d offset = new Translation2d(0.5, 0.3).rotateBy(tagPosition.getRotation());
@@ -45,6 +46,7 @@ public class AlignToReef extends Command {
             offset = new Translation2d(0.5, -0.3).rotateBy(tagPosition.getRotation());
         }
         reefPolePosition = tagPosition.getTranslation().plus(offset);
+        Constants.log("Target position (xya): " + reefPolePosition.getX() + " " + reefPolePosition.getY() + " " + reefPolePosition.getAngle().getDegrees());
         var waypoints = new ArrayList<PathPoint>();
         waypoints.add(new PathPoint(initial.getTranslation()));
         waypoints.add(new PathPoint(reefPolePosition));
