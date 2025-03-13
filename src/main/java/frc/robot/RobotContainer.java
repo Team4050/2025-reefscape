@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.commands.AlignToReefTest;
 import frc.robot.commands.ChooseAutonomous;
 import frc.robot.hazard.HazardXbox;
 import frc.robot.subsystems.Claw;
@@ -57,7 +58,7 @@ public class RobotContainer {
   private PowerDistribution pdh = new PowerDistribution();
 
   private double elevatorIKTargetX = Constants.Wrist.startingRotationRadians;
-  private double elevatorIKTargetY = Constants.Shoulder.startingRotation;
+  private double elevatorIKTargetY = Constants.Shoulder.startingRotationRadians;
 
   private String IKtargetX = "IK target extension";
   private String IKtargetY = "IK target height";
@@ -148,8 +149,8 @@ public class RobotContainer {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
-    //m_driverController.leftTrigger().onTrue(new AlignToReef(false));
-    //m_driverController.rightTrigger().onTrue(new AlignToReef(true));
+    m_driverController.leftTrigger().onTrue(new AlignToReefTest(drivetrainSubsystem, false));
+    m_driverController.rightTrigger().onTrue(new AlignToReefTest(drivetrainSubsystem, true));
     m_driverController.b().onTrue(
         new InstantCommand(
             () -> {

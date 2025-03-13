@@ -7,6 +7,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
@@ -24,11 +25,13 @@ public class AlignToReefTest extends Command {
   private PIDController yController = new PIDController(0.1, 0, 0);
   private ProfiledPIDController omegaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.2, 0.01));
   private Pose2d target = new Pose2d(14.58, 4.05, Rotation2d.k180deg);
+  private boolean right = false;
 
   private DoubleArrayPublisher pidOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
 
-  AlignToReefTest(Drivetrain drivetrain) {
+  public AlignToReefTest(Drivetrain drivetrain, boolean right) {
     this.drivetrain = drivetrain;
+    this.right = right;
     xController.setTolerance(0.1);
     yController.setTolerance(0.1);
     omegaController.setTolerance(0.2);
@@ -38,6 +41,13 @@ public class AlignToReefTest extends Command {
   public void initialize() {
     // TODO Auto-generated method stub
     super.initialize();
+    Pose2d tagPosition = drivetrain.getLastSeenAprilTag().toPose2d();
+    Translation2d offset = new Translation2d(0.5, 0.3).rotateBy(tagPosition.getRotation());
+    if (right) {
+        offset = new Translation2d(0.5, -0.3).rotateBy(tagPosition.getRotation());
+    }
+    target = new Pose2d(tagPosition.getTranslation().plus(offset), tagPosition.getRotation().plus(Rotation2d.k180deg));
+    Constants.log("Target position (xya): " + target.getX() + " " + target.getY() + " " + target.getRotation().getDegrees());
     Pose2d p = drivetrain.getPoseEstimate();//Constants.Sensors.vision.getPose().toPose2d();
     Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
     timer.start();

@@ -8,6 +8,7 @@ import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.networktables.DoublePublisher;
@@ -32,6 +33,7 @@ public class HazardSparkMax {
     private DoublePublisher dutyCycle;
     private DoublePublisher velocity;
     private DoublePublisher position;
+    private DoublePublisher absolutePosition;
     private DoublePublisher setpointPub;
     private DoublePublisher setpoint2Pub;
     private DoublePublisher voltage;
@@ -47,6 +49,7 @@ public class HazardSparkMax {
         integratedEncoder = controller.getEncoder();
         if (useExternalEncoder) {
             externalEncoder = controller.getAbsoluteEncoder();
+            Constants.log(CAN_ID + " Absolute encoder starting at " + externalEncoder.getPosition());
         }
 
         closedLoop = controller.getClosedLoopController();
@@ -54,6 +57,7 @@ public class HazardSparkMax {
         if (publishToMotorTable) {
             velocity = table.getDoubleTopic("Velocity RadPS").publish();
             position = table.getDoubleTopic("Position Radians").publish();
+            absolutePosition = table.getDoubleTopic("Absotlute POsition Radians").publish();
             setpointPub = table.getDoubleTopic("Control setpoint (Rotations, RPS, Volts)").publish();
             setpoint2Pub = table.getDoubleTopic("Alternate control setpoint").publish();
             voltage = table.getDoubleTopic("Stator Voltage").publish();
@@ -67,6 +71,10 @@ public class HazardSparkMax {
         this(CAN_ID, type, config, false, publishToMotorTable, NetworkTableInstance.getDefault().getTable("SparkMax " + CAN_ID + " - " + name));
     }
 
+    public HazardSparkMax(int CAN_ID, MotorType type, SparkMaxConfig config, boolean useExternalEncoder, boolean publishToMotorTable, String name) {
+      this(CAN_ID, type, config, useExternalEncoder, publishToMotorTable, NetworkTableInstance.getDefault().getTable("SparkMax " + CAN_ID + " - " + name));
+    }
+
     /***
      * Reconfigures the spark max with the desired control values
      * @param p
@@ -78,17 +86,23 @@ public class HazardSparkMax {
       controller.configure(config, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
     }
 
+    public void setBrakeMode(boolean brake) {
+      if (brake) {
+        config.idleMode(IdleMode.kBrake);
+      } else {
+        config.idleMode(IdleMode.kCoast);
+      }
+    }
+
     /***
      * Publishes motor information to the network table
      */
     public void publishToNetworkTables() {
         if (!publishToMotorTable) return;
+        velocity.set(getVelocityRadPS());
+        position.set(getPositionRadians());
         if (useExternalEncoder) {
-            velocity.set(getAbsVelocity());
-            position.set(getAbsPosition());
-        } else {
-            velocity.set(getVelocityRadPS());
-            position.set(getPositionRadians());
+          absolutePosition.set(getAbsPositionRadians());
         }
         setpointPub.set(setpoint);
         dutyCycle.set(controller.get());
@@ -101,11 +115,11 @@ public class HazardSparkMax {
      */
     public void logEncoderState() {
         if (useExternalEncoder) {
-            Constants.log(CAN_ID + " Position: " + externalEncoder.getPosition());
-            Constants.log(CAN_ID + " Velocity: " + externalEncoder.getVelocity());
+            Constants.log(CAN_ID + " Position: " + getAbsPositionRadians());
+            Constants.log(CAN_ID + " Velocity: " + getAbsVelocity());
         } else {
-            Constants.log(CAN_ID + " Position: " + integratedEncoder.getPosition());
-            Constants.log(CAN_ID + " Velocity: " + integratedEncoder.getVelocity());
+            Constants.log(CAN_ID + " Position: " + getPositionRadians());
+            Constants.log(CAN_ID + " Velocity: " + getVelocityRadPS());
         }
     }
 
@@ -183,7 +197,7 @@ public class HazardSparkMax {
      * @return
      */
     public double getVelocityRadPS() {
-        return integratedEncoder.getVelocity() * 2 * Math.PI;
+        return integratedEncoder.getVelocity() * (2.0 * Math.PI) / 60d;
     }
 
     /***
@@ -194,11 +208,24 @@ public class HazardSparkMax {
         return externalEncoder.getPosition();
     }
 
+    public double getAbsPositionRadians() {
+      double deg = externalEncoder.getPosition();
+      if (deg > 180) {
+        deg -= 360;
+      }
+      return Math.toRadians(deg);
+    }
+
     /***
      * Returns the absolute velocity of the encoder in rotations per second
      * @return
      */
     public double getAbsVelocity() {
         return externalEncoder.getVelocity() / 60d;
+    }
+
+    public double getAbsVelocityRadPS() {
+      double deg = externalEncoder.getVelocity() / 60d;
+      return Math.toRadians(deg);
     }
 }

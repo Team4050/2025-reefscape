@@ -10,7 +10,7 @@ public class MoveScoringMechanismTo {
     public static Command StartingConfig(Elevator elevator, Claw claw) {
         return new InstantCommand(() -> {
             elevator.set(0);
-            elevator.setShoulder(Constants.Shoulder.startingRotation);
+            elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
             elevator.setWrist(Constants.Wrist.startingRotationRadians);}, elevator, claw);
     }
 
@@ -18,11 +18,11 @@ public class MoveScoringMechanismTo {
         return new InstantCommand(() -> {
             if (claw.algaeMode) {
                 elevator.set(0);
-                elevator.setShoulder(Constants.Shoulder.startingRotation);
+                elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
                 elevator.setWrist(Constants.Wrist.startingRotationRadians);
             } else {
                 elevator.set(0);
-                elevator.setShoulder(Constants.Shoulder.startingRotation);
+                elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
                 elevator.setWrist(Constants.Wrist.startingRotationRadians);
             }
         }, elevator, claw);
@@ -32,11 +32,11 @@ public class MoveScoringMechanismTo {
         return new InstantCommand(() -> {
             if (claw.algaeMode) {
                 elevator.set(Constants.Elevator.L2Scoring);
-                elevator.setShoulder(Constants.Shoulder.startingRotation);
+                elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
                 elevator.setWrist(Constants.Wrist.startingRotationRadians);
             } else {
                 elevator.set(0);
-                elevator.setShoulder(Constants.Shoulder.startingRotation);
+                elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
                 elevator.setWrist(Constants.Wrist.startingRotationRadians);
             }
         }, elevator, claw);
@@ -60,11 +60,11 @@ public class MoveScoringMechanismTo {
         return new InstantCommand(() -> {
             if (claw.algaeMode) {
                 elevator.set(0);
-                elevator.setShoulder(Constants.Shoulder.startingRotation);
+                elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
                 elevator.setWrist(Constants.Wrist.startingRotationRadians);
             } else {
                 elevator.set(0);
-                elevator.setShoulder(Constants.Shoulder.startingRotation);
+                elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
                 elevator.setWrist(Constants.Wrist.startingRotationRadians);
             }
         }, elevator, claw);
@@ -73,14 +73,14 @@ public class MoveScoringMechanismTo {
     public static Command Processor(Elevator elevator, Claw claw) {
         return new InstantCommand(() -> {
             elevator.set(0);
-            elevator.setShoulder(Constants.Shoulder.startingRotation);
+            elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
             elevator.setWrist(Constants.Wrist.startingRotationRadians);}, elevator, claw);
     }
 
     public static Command FeedingConfig(Elevator elevator, Claw claw) {
         return new InstantCommand(() -> {
             elevator.set(0);
-            elevator.setShoulder(Constants.Shoulder.startingRotation);
+            elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
             elevator.setWrist(Constants.Wrist.startingRotationRadians);}, elevator, claw);
     }
 
@@ -93,7 +93,7 @@ public class MoveScoringMechanismTo {
     public static Command Horizontal(Elevator elevator, Claw claw) {
         return new InstantCommand(() -> {
             elevator.set(0);
-            elevator.setShoulder(Constants.Shoulder.startingRotation);
+            elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
             elevator.setWrist(Constants.Wrist.startingRotationRadians);}, elevator, claw);
     }
 }

@@ -35,7 +35,7 @@ public class SetSubsystemsForStartingConfig extends Command {
     @Override
     public void execute() {
         elevator.set(0);
-        elevator.setShoulder(Constants.Shoulder.startingRotation);
+        elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
         elevator.setWrist(Constants.Wrist.startingRotationRadians);
     }
 

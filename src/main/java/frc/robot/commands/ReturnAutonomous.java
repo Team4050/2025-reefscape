@@ -26,7 +26,7 @@ public final class ReturnAutonomous {
   }
 
   public static Command OrientLimelight(Drivetrain drivetrain) {
-    return new AlignToReefTest(drivetrain);
+    return new AlignToReefTest(drivetrain, false);
   }
 
   private ReturnAutonomous() {

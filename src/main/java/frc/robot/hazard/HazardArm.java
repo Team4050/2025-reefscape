@@ -21,6 +21,8 @@ public class HazardArm {
     private double setpoint = 0;
     private String name;
     private boolean tuneUsingDashboard = false;
+    private boolean useAbsoluteEncoder = false;
+    private boolean stop = false;
 
     /***
      * Constructor. All anglular units are in radians, all control units are in volts
@@ -36,9 +38,10 @@ public class HazardArm {
      * @param name
      * @param tuneUsingDashboard
      */
-    public HazardArm(HazardSparkMax motor, double tolerance, double Ks, double Kg, double Kv, double Kp, double Ki, double Kd, double maxV, double maxA, String name, boolean tuneUsingDashboard) {
+    public HazardArm(HazardSparkMax motor, double tolerance, boolean useAbsoluteEncoder, double Ks, double Kg, double Kv, double Kp, double Ki, double Kd, double maxV, double maxA, String name, boolean tuneUsingDashboard) {
         this.motor = motor;
         this.name = name;
+        this.useAbsoluteEncoder = useAbsoluteEncoder;
         this.tuneUsingDashboard = tuneUsingDashboard;
         velocityCurve = new TrapezoidProfile(new Constraints(maxV, maxA));
         feedforward = new ArmFeedforward(Ks, Kg, Kv);
@@ -73,17 +76,53 @@ public class HazardArm {
         motor.setSetpointPublishingOnly(setpoint);
     }
 
+    public void stop() {
+      Constants.log("Arm stopped");
+      stop = true;
+    }
+
     public boolean atReference() {
       return feedback.atSetpoint();
     }
 
+    public void setBrake(boolean brake) {
+      motor.setBrakeMode(brake);
+    }
+
+    public double getPositionRadians() {
+      if (useAbsoluteEncoder) {
+        return motor.getAbsPositionRadians();
+      }
+      return motor.getPositionRadians();
+    }
+
+    public double getVelocityRadPS() {
+      return motor.getVelocityRadPS();
+    }
+
     public void periodic() {
-      var currentState = new State(motor.getPositionRadians(), motor.getVelocityRadPS());
+      if (stop) {
+        motor.set(0);
+        return;
+      }
+      double motorPosition = motor.getPositionRadians();
+      if (useAbsoluteEncoder) {
+        //Constants.log(name);
+        motorPosition = motor.getAbsPositionRadians();
+        //Constants.log(Math.toDegrees(motorPosition));
+      }
+      var currentState = new State(motorPosition, motor.getVelocityRadPS());
       var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
+      //Constants.log(name + " Velocity curve values: " + v.velocity + " " + v.position);
       var ff = feedforward.calculate(setpoint, v.velocity);
-      var fb = feedback.calculate(motor.getPositionRadians(), setpoint);
+      var fb = feedback.calculate(motorPosition, setpoint);
       var pfb = profiledFeedback.calculate(setpoint, currentState);
-      motor.setControl(ff + fb, ControlType.kVoltage);
+      if (ff + fb < -5 || ff + fb > 5) {
+        Constants.log("OVERCORRECT - DISABLE: " + ff + " " + fb);
+        motor.setControl(0, ControlType.kVoltage);
+      } else {
+        motor.setControl(ff + fb, ControlType.kVoltage);
+      }
       motor.publishToNetworkTables();
     }
 

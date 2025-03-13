@@ -50,18 +50,25 @@ public final class Constants {
     public static final double NEOKvRPSPerV = 473d / 60d;
     public static final double wheelRadiusMeters = 0.0762; // 3in
     public static final DCMotor drivetrainMotor = DCMotor.getKrakenX60(1);
-    public static final RobotConfig mainConfig = new RobotConfig(
-      61.235,
-      5.64646, // Current estimate TODO: empirically determine
-      new ModuleConfig(Drivetrain.wheelRadiusMeters,
-      8,
-      1.0,
-      drivetrainMotor,
-      80,
-      4), 0.5588);
-    public static final Transform3d robotToCamera = new Transform3d(0.185, 0, 0.27, new Rotation3d());
+    public static final Transform3d robotToCamera = new Transform3d(0.0352, -0.1, 0.02, new Rotation3d(new Rotation2d(Math.toRadians(-25.4))));
     public static final Translation2d COMOffsetFromWheelbaseCenter = new Translation2d(0, 0);
     public static final double chassisTopPlateHeightMM = 167.64;
+    public static final RobotConfig mainConfig = new RobotConfig(
+      60,//61.235,
+      5.64646, // Current estimate TODO: empirically determine
+      new ModuleConfig(Drivetrain.wheelRadiusMeters,
+      12,
+      1.0,
+      drivetrainMotor,
+      moduleGearReduction,
+      60,
+      4),
+      new Translation2d[] {
+        new Translation2d(0.2794, 0.2794).minus(COMOffsetFromWheelbaseCenter),
+        new Translation2d(0.2794, -0.2794).minus(COMOffsetFromWheelbaseCenter),
+        new Translation2d(-0.2794, 0.2794).minus(COMOffsetFromWheelbaseCenter),
+        new Translation2d(-0.2794, -0.2794).minus(COMOffsetFromWheelbaseCenter)
+      });
   }
 
   public static class Elevator {
@@ -85,21 +92,22 @@ public final class Constants {
 
   public static class Shoulder {
     public static final int CAN = 8;
-    public static final int currentLimit = 40;
+    public static final int currentLimit = 30;
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static final double startingRotation = Math.toRadians(-86.4); // -0.3 measured from horizontal
+    public static final double encoderOffset = 95.76 / 360.0; // Decreasing offset will raise rotational zero upwards
+    public static final double startingRotationRadians = Math.toRadians(-85); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(70);
-    public static final double shoulderMin = Math.toRadians(-86.4); // -0.24 * 2 * Math.PI
+    public static final double shoulderMin = Math.toRadians(-78); // -0.24 * 2 * Math.PI
 
     public static final double shoulderArmLengthMM = 302;
     public static final double shoulderMotorTorqueNM = 0.45;
 
     public static final double L1Scoring = 0;
-    public static final double L2Scoring = -0.22; //~0.22
-    public static final double L3Scoring = 0.22;
-    public static final double L4Scoring = 0.25;
+    public static final double L2Scoring = 0; //~-0.22
+    public static final double L3Scoring = 0; // 0.22
+    public static final double L4Scoring = Math.toRadians(70);
   }
 
   public static class Wrist {
@@ -119,7 +127,7 @@ public final class Constants {
     public static final double L1Scoring = 0;
     public static final double L2Scoring = startingRotationRadians;
     public static final double L3Scoring = startingRotationRadians;
-    public static final double L4Scoring = 0.25;
+    public static final double L4Scoring = Math.toRadians(95);
   }
 
   public static class Coral {

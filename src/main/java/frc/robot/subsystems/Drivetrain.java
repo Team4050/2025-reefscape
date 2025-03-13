@@ -1,5 +1,7 @@
 package frc.robot.subsystems;
 
+import static edu.wpi.first.units.Units.Amps;
+
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
@@ -16,6 +18,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.util.DriveFeedforwards;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
@@ -33,6 +36,7 @@ import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
@@ -51,6 +55,7 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -108,6 +113,7 @@ public class Drivetrain extends SubsystemBase {
   private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(1, 3));
   private HolonomicDriveController holonomicDriveController;
   private PPHolonomicDriveController pathPlannerHolonomicDriveController;
+  private TorqueCurrentFOC[] controlRequests = new TorqueCurrentFOC[4];
 
   // ******************************************************** Networktables ******************************************************** //
   private boolean useNetworkTables;
@@ -144,7 +150,7 @@ public class Drivetrain extends SubsystemBase {
     RL = new TalonFX(Constants.Drivetrain.RL);
     RR = new TalonFX(Constants.Drivetrain.RR);
 
-    double maxOutput = 1.0; // Increase in proportion to confidence in driver skill
+    double maxOutput = 0.5; // Increase in proportion to confidence in driver skill
     NeutralModeValue neutralMode = NeutralModeValue.Coast;
     leftSideConfig = new TalonFXConfiguration();
     leftSideConfig.MotorOutput.NeutralMode = neutralMode;
@@ -220,10 +226,15 @@ public class Drivetrain extends SubsystemBase {
     motorAppliedCurrent[2] = RL.getStatorCurrent();
     motorAppliedCurrent[3] = RR.getStatorCurrent();
 
+    controlRequests[0] = new TorqueCurrentFOC(0);
+    controlRequests[1] = new TorqueCurrentFOC(0);
+    controlRequests[2] = new TorqueCurrentFOC(0);
+    controlRequests[3] = new TorqueCurrentFOC(0);
+
     if (useNetworkTables) {
       drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
       appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | Amps").publish();
-      velocity = drivetrainTable.getDoubleArrayTopic("Chassis velocities | radps").publish();
+      velocity = drivetrainTable.getDoubleArrayTopic("Chassis velocities | mps").publish();
       position = drivetrainTable.getDoubleArrayTopic("Pose estimate").publish();
       xPublisher = drivetrainTable.getDoubleArrayTopic("Simulated state | mps").publish();
       xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered state | mps").publish();
@@ -303,7 +314,7 @@ public class Drivetrain extends SubsystemBase {
 
     holonomicDriveController = new HolonomicDriveController(xController, yController, thetaController);
 
-    pathPlannerHolonomicDriveController = new PPHolonomicDriveController(new PIDConstants(0.1, 0, 0, 0.3048), new PIDConstants(0.3, 0, 0, Math.toRadians(20)));
+    pathPlannerHolonomicDriveController = new PPHolonomicDriveController(new PIDConstants(0.6, 0, 0, 0.3048), new PIDConstants(0.3, 0, 0, Math.toRadians(20)));
 
     AutoBuilder.configure(
       this::getPoseEstimate,
@@ -445,6 +456,10 @@ public class Drivetrain extends SubsystemBase {
     Constants.log("Drivetrain - Set limelight pipeline index to " + index);
   }
 
+  public Command pathfindToPose(Pose2d pose) {
+    return AutoBuilder.pathfindToPose(pose, new PathConstraints(12, 6, Math.PI, Math.PI));
+  }
+
   /***
    * Set the chassis speed relative to the current robot orientation
    * @param fwdSpeed
@@ -494,10 +509,15 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public void setTorqueCurrents(MecanumDriveWheelSpeeds wheelTorqueCurrents) {
-    FL.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.frontLeftMetersPerSecond));
-    FR.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.frontRightMetersPerSecond));
-    RL.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.rearLeftMetersPerSecond));
-    RR.setControl(new TorqueCurrentFOC(wheelTorqueCurrents.rearRightMetersPerSecond));
+    controlRequests[0].withOutput(wheelTorqueCurrents.frontLeftMetersPerSecond);
+    controlRequests[1].withOutput(wheelTorqueCurrents.frontRightMetersPerSecond);
+    controlRequests[2].withOutput(wheelTorqueCurrents.rearLeftMetersPerSecond);
+    controlRequests[3].withOutput(wheelTorqueCurrents.rearRightMetersPerSecond);
+
+    FL.setControl(controlRequests[0]);
+    FR.setControl(controlRequests[1]);
+    RL.setControl(controlRequests[2]);
+    RR.setControl(controlRequests[2]);
   }
 
   /***
@@ -545,12 +565,11 @@ public class Drivetrain extends SubsystemBase {
     Constants.log("setUsingHDC desired state: " + targetPose.toString());
     var diff = targetPose.getRotation().rotateBy(getPoseEstimate().getRotation().unaryMinus());
     var rotationWrappedPose = new Pose2d(getPoseEstimate().getX(), getPoseEstimate().getY(), diff);
-    var speeds = holonomicDriveController.calculate(rotationWrappedPose, targetPose, targetLinearVelocity, Rotation2d.kZero);
+    var speeds = holonomicDriveController.calculate(rotationWrappedPose, targetPose, targetLinearVelocity, targetPose.getRotation());
+    Constants.log(speeds);
     setFieldRelative(speeds);
   }
 
-
-  TorqueCurrentFOC[] controlRequests = new TorqueCurrentFOC[4];
   public void drivePathFieldRelative(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
     var FFAmps = feedforwards.torqueCurrentsAmps();
     var robotRelativeSpeeds = kinematics.toWheelSpeeds(speeds);
@@ -559,6 +578,8 @@ public class Drivetrain extends SubsystemBase {
     controlRequests[1].withOutput(FFAmps[1] + robotRelativeSpeeds.frontRightMetersPerSecond);
     controlRequests[2].withOutput(FFAmps[2] + robotRelativeSpeeds.rearLeftMetersPerSecond);
     controlRequests[3].withOutput(FFAmps[3] + robotRelativeSpeeds.rearRightMetersPerSecond);
+
+    Constants.log("Torque current FL: " + controlRequests[0].getOutputMeasure().in(Amps));
 
     FL.setControl(controlRequests[0]);
     FR.setControl(controlRequests[1]);
@@ -599,6 +620,7 @@ public class Drivetrain extends SubsystemBase {
 
   private Vector<N3> u = VecBuilder.fill(0, 0, 0);
   private int loop = 0;
+  private Transform3d lastCamToTag = new Transform3d();
   @Override
   public void periodic() {
     //Vector<N3> xN = (Vector<N3>) mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 0.02);
@@ -609,7 +631,12 @@ public class Drivetrain extends SubsystemBase {
       if (estimate.isPresent()) {
         //Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
         lastAprilTagSeen = aprilTags.getTagPose(estimate.get().targetsUsed.get(0).getFiducialId()).get();
+
+        lastCamToTag = lastCamToTag.div(2).plus(estimate.get().targetsUsed.get(0).getBestCameraToTarget().div(2));
+        //Constants.log("Current best cam to target: " + estimate.get().targetsUsed.get(0).getBestCameraToTarget());
+        //Constants.log("Average best cam to target: " + lastCamToTag);
         poseEstimator.addVisionMeasurement(estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
+
       }
     }
 
@@ -627,7 +654,8 @@ public class Drivetrain extends SubsystemBase {
 
     if (useNetworkTables) {
       appliedCurrent.set(getAppliedCurrents());
-      velocity.set(getMotorVelocitiesRadPS());
+      ChassisSpeeds velocityField = getFieldRelativeSpeedsMPS();
+      velocity.set(new double[] {velocityField.vxMetersPerSecond, velocityField.vyMetersPerSecond, velocityField.omegaRadiansPerSecond});
       MecanumDriveWheelPositions positions = getWheelPositionsMeters();
       Pose2d estimate = getPoseEstimate();
       position.set(new double[] {estimate.getX(), estimate.getY(), estimate.getRotation().getRadians()});
