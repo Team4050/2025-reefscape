@@ -8,6 +8,8 @@ import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
@@ -20,6 +22,8 @@ public class HazardArm {
     private ProfiledPIDController profiledFeedback;
     private double setpoint = 0;
     private String name;
+    private DoublePublisher voltagePIDOutput;
+    private DoublePublisher velocityFFtarget;
     private boolean tuneUsingDashboard = false;
     private boolean useAbsoluteEncoder = false;
     private boolean stop = false;
@@ -46,10 +50,17 @@ public class HazardArm {
         velocityCurve = new TrapezoidProfile(new Constraints(maxV, maxA));
         feedforward = new ArmFeedforward(Ks, Kg, Kv);
         feedback = new PIDController(Kp, Ki, Kd);
-        feedback.setIntegratorRange(-0.2, 0.2);
+        feedback.setIntegratorRange(-5, 5);
         feedback.setTolerance(tolerance);
 
         profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
+        profiledFeedback.setIntegratorRange(-1.5, 1.5);
+        profiledFeedback.setTolerance(tolerance);
+        double motorPosition = motor.getPositionRadians();
+        if (useAbsoluteEncoder) {
+          motorPosition = motor.getAbsPositionRadians();
+        }
+        profiledFeedback.reset(motorPosition, 0);
 
         if (tuneUsingDashboard) {
             Boolean fail = false;
@@ -65,6 +76,9 @@ public class HazardArm {
             fail |= !SmartDashboard.putNumber(name + " maxA", maxA);
             if (fail) { DriverStation.reportError("Failed to push all tuning values to the dashboard!", true); };
         }
+
+        voltagePIDOutput = NetworkTableInstance.getDefault().getTable(name).getDoubleTopic("PID Output").publish();
+        velocityFFtarget = NetworkTableInstance.getDefault().getTable(name).getDoubleTopic("Velocity feedforward").publish();
     }
 
     /***
@@ -79,6 +93,11 @@ public class HazardArm {
     public void stop() {
       Constants.log("Arm stopped");
       stop = true;
+    }
+
+    public void unstop() {
+      Constants.log("Arm reenabled");
+      stop = false;
     }
 
     public boolean atReference() {
@@ -107,21 +126,23 @@ public class HazardArm {
       }
       double motorPosition = motor.getPositionRadians();
       if (useAbsoluteEncoder) {
-        //Constants.log(name);
         motorPosition = motor.getAbsPositionRadians();
-        //Constants.log(Math.toDegrees(motorPosition));
       }
       var currentState = new State(motorPosition, motor.getVelocityRadPS());
       var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
-      //Constants.log(name + " Velocity curve values: " + v.velocity + " " + v.position);
+      //Constants.log("Arm FF target velocity: " + v.velocity);
       var ff = feedforward.calculate(setpoint, v.velocity);
       var fb = feedback.calculate(motorPosition, setpoint);
-      var pfb = profiledFeedback.calculate(setpoint, currentState);
-      if (ff + fb < -5 || ff + fb > 5) {
-        Constants.log("OVERCORRECT - DISABLE: " + ff + " " + fb);
+      var pfb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
+      SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
+      SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
+      if (ff + pfb < -5 || ff + pfb > 5) {
+        Constants.log("OVERCORRECT - DISABLE ff: " + ff + " pfb: " + pfb + "acc error: " + profiledFeedback.getAccumulatedError());
         motor.setControl(0, ControlType.kVoltage);
+        voltagePIDOutput.set(0);
       } else {
-        motor.setControl(ff + fb, ControlType.kVoltage);
+        motor.setControl(ff + pfb, ControlType.kVoltage);
+        voltagePIDOutput.set(ff + pfb);
       }
       motor.publishToNetworkTables();
     }
@@ -143,8 +164,11 @@ public class HazardArm {
         Constants.log("Feedforwards: " + Ks + " " + Kg + " " + Kv);
         Constants.log("Control: " + Kp + " " + Ki + " " + Kd);
         Constants.log("Max V and A" + maxV + " " + maxA);
-        feedforward = new ArmFeedforward(Ks, Kg, Kv);
-        feedback = new PIDController(Kp, Ki, Kd);
-        feedback.setIntegratorRange(0.05, 0.05);
+        feedforward.setKs(Ks);
+        feedforward.setKg(Kg);
+        feedforward.setKv(Kv);
+        feedback.setPID(Kp, Ki, Kd);
+        profiledFeedback.setPID(Kp, Ki, Kd);
+        profiledFeedback.setConstraints(new Constraints(maxV, maxA));
     }
 }

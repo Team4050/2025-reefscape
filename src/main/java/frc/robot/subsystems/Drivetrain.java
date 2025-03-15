@@ -127,6 +127,22 @@ public class Drivetrain extends SubsystemBase {
   private DoubleArrayPublisher xHatPublisher;
   private DoubleArrayPublisher uPublisher;
 
+  private String dashboardPosKp = "Drivetrain XY Kp";
+  private String dashboardPosKi = "Drivetrain XY Ki";
+  private String dashboardPosKd = "Drivetrain XY Kd";
+  private String dashboardPosIZone = "Drivetrain XY IZone";
+
+  private String dashboardRotKp = "Drivetrain Angle Kp";
+  private String dashboardRotKi = "Drivetrain Angle Ki";
+  private String dashboardRotKd = "Drivetrain Angle Kd";
+  private String dashboardRotIZone = "Drivetrain XY IZone";
+
+  private String dashobardPathMaxV = "Drive path max velocity (m/s)";
+  private String dashboardPathMaxA = "Drive path max accel (m/s^2)";
+
+  private String dashboardPosTolerance = "Drivetrain position tolerance (inches)";
+  private String dashboardRotTolerance = "Drivetrain rotation tolerance (degrees)";
+
   // ******************************************************** Networktables ******************************************************** //
   private int loggingLoop = -1;
 
@@ -151,7 +167,7 @@ public class Drivetrain extends SubsystemBase {
     RR = new TalonFX(Constants.Drivetrain.RR);
 
     double maxOutput = 0.5; // Increase in proportion to confidence in driver skill
-    NeutralModeValue neutralMode = NeutralModeValue.Coast;
+    NeutralModeValue neutralMode = NeutralModeValue.Brake;
     leftSideConfig = new TalonFXConfiguration();
     leftSideConfig.MotorOutput.NeutralMode = neutralMode;
     leftSideConfig.MotorOutput.Inverted = InvertedValue.Clockwise_Positive;
@@ -292,29 +308,25 @@ public class Drivetrain extends SubsystemBase {
     mecanumFF = new LinearPlantInversionFeedforward<>(mecanumFieldRelativeSystem, 0.02);
     referenceVector = VecBuilder.fill(0.5, 0, 0);
 
-    SmartDashboard.putNumber("Drivetrain X Kp", 0.1);
-    SmartDashboard.putNumber("Drivetrain X Ki", 0);
-    SmartDashboard.putNumber("Drivetrain X Kd", 0);
+    SmartDashboard.putNumber(dashboardPosKp, 0.6);
+    SmartDashboard.putNumber(dashboardPosKi, 0);
+    SmartDashboard.putNumber(dashboardPosKd, 0);
+    SmartDashboard.putNumber(dashboardPosIZone, 0.3048);
+    SmartDashboard.putNumber(dashobardPathMaxV, 12);
+    SmartDashboard.putNumber(dashboardPathMaxA, 6);
 
-    SmartDashboard.putNumber("Drivetrain Y Kp", 0.1);
-    SmartDashboard.putNumber("Drivetrain Y Ki", 0);
-    SmartDashboard.putNumber("Drivetrain Y Kd", 0);
+    SmartDashboard.putNumber(dashboardRotKp, 0.3);
+    SmartDashboard.putNumber(dashboardRotKi, 0);
+    SmartDashboard.putNumber(dashboardRotKd, 0);
+    SmartDashboard.putNumber(dashboardRotIZone, Math.toRadians(20));
+    SmartDashboard.putNumber(dashboardPathMaxA, 90);
 
-    SmartDashboard.putNumber("Drivetrain XY IZone", 0.3048);
-
-    SmartDashboard.putNumber("Drivetrain Angle Kp", 0.3);
-    SmartDashboard.putNumber("Drivetrain Angle Ki", 0);
-    SmartDashboard.putNumber("Drivetrain Angle Kd", 0);
-    SmartDashboard.putNumber("Drivetrain Angle maxV", 1.57079);
-    SmartDashboard.putNumber("Drivetrain Angle IZone", Math.toRadians(20));
-
-    SmartDashboard.putNumber("Drivetrain X Tolerance", 2);
-    SmartDashboard.putNumber("Drivetrain Y Tolerance", 2);
-    SmartDashboard.putNumber("Drivetrain Angle Tolerance", 5);
+    SmartDashboard.putNumber(dashboardPosTolerance, 2);
+    SmartDashboard.putNumber(dashboardRotTolerance, 5);
 
     holonomicDriveController = new HolonomicDriveController(xController, yController, thetaController);
 
-    pathPlannerHolonomicDriveController = new PPHolonomicDriveController(new PIDConstants(0.6, 0, 0, 0.3048), new PIDConstants(0.3, 0, 0, Math.toRadians(20)));
+    pathPlannerHolonomicDriveController = new PPHolonomicDriveController(new PIDConstants(0.4, 0, 0, 0.3048), new PIDConstants(0.3, 0, 0, Math.toRadians(20)));
 
     AutoBuilder.configure(
       this::getPoseEstimate,
@@ -329,7 +341,9 @@ public class Drivetrain extends SubsystemBase {
 
   public Drivetrain(boolean useNetworkTables, int logInfo, Pose2d initalPoseEstimate) {
     this(useNetworkTables, logInfo);
-    poseEstimator.resetPose(initalPoseEstimate);
+    Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
+    poseEstimator.resetPosition(Rotation2d.kZero, getWheelPositionsMeters(), initalPoseEstimate);
+    Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
   }
 
   public void reconfigure() {
@@ -343,14 +357,14 @@ public class Drivetrain extends SubsystemBase {
       new Rotation2d(Math.toRadians(SmartDashboard.getNumber("Drivetrain Angle Tolerance", 5)))));
 
     pathPlannerHolonomicDriveController = new PPHolonomicDriveController(new PIDConstants(
-      SmartDashboard.getNumber("Drivetrain X Kp", 0.1),
-      SmartDashboard.getNumber("Drivetrain X Ki", 0),
-      SmartDashboard.getNumber("Drivetrain X Kd", 0),
-      SmartDashboard.getNumber("Drivetrain XY IZone", 0.3048)), new PIDConstants(
-      SmartDashboard.getNumber("Drivetrain Angle Kp", 0.1),
-      SmartDashboard.getNumber("Drivetrain Angle Ki", 0),
-      SmartDashboard.getNumber("Drivetrain Angle Kd", 0),
-      SmartDashboard.getNumber("Drivetrain Angle IZone", Math.toRadians(20))
+      SmartDashboard.getNumber(dashboardPosKp, 0.1),
+      SmartDashboard.getNumber(dashboardPosKi, 0),
+      SmartDashboard.getNumber(dashboardPosKd, 0),
+      SmartDashboard.getNumber(dashboardPosIZone, 0.3048)), new PIDConstants(
+      SmartDashboard.getNumber(dashboardRotKp, 0.1),
+      SmartDashboard.getNumber(dashboardRotKi, 0),
+      SmartDashboard.getNumber(dashboardRotKd, 0),
+      SmartDashboard.getNumber(dashboardRotIZone, Math.toRadians(20))
     ));
   }
 
@@ -457,7 +471,7 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public Command pathfindToPose(Pose2d pose) {
-    return AutoBuilder.pathfindToPose(pose, new PathConstraints(12, 6, Math.PI, Math.PI));
+    return AutoBuilder.pathfindToPose(pose, new PathConstraints(12, 2, Math.PI, Math.PI));
   }
 
   /***

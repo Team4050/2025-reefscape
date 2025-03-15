@@ -3,6 +3,7 @@ package frc.robot.commands;
 import java.util.HashSet;
 import java.util.Set;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -21,20 +22,39 @@ import frc.robot.subsystems.Drivetrain;
 public class AlignToReefTest extends Command {
   private Drivetrain drivetrain;
   private Timer timer = new Timer();
-  private PIDController xController = new PIDController(0.1, 0, 0);
-  private PIDController yController = new PIDController(0.1, 0, 0);
-  private ProfiledPIDController omegaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.2, 0.01));
+  private double Kp = 0.3;
+  private double Ki = 0.05;
+  private double Kd = 0.03;
+  private double Ks = 0.03;
+  private PIDController xController = new PIDController(Kp, Ki, Kd);
+  private PIDController yController = new PIDController(Kp, Ki, Kd);
+  private ProfiledPIDController xProController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.25, 0.5));
+  private ProfiledPIDController yProController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.25, 0.5));
+  private ProfiledPIDController omegaController = new ProfiledPIDController(0.3, 0.001, 0, new Constraints(0.2, 0.01));
   private Pose2d target = new Pose2d(14.58, 4.05, Rotation2d.k180deg);
   private boolean right = false;
+  private boolean algae = false;
 
   private DoubleArrayPublisher pidOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
 
-  public AlignToReefTest(Drivetrain drivetrain, boolean right) {
+  public AlignToReefTest(Drivetrain drivetrain, boolean right, boolean algaeMode) {
     this.drivetrain = drivetrain;
     this.right = right;
-    xController.setTolerance(0.1);
-    yController.setTolerance(0.1);
-    omegaController.setTolerance(0.2);
+    this.algae = algaeMode;
+    xController.setTolerance(0.0508);
+    xController.setIntegratorRange(-2, 2);
+
+    xProController.setTolerance(0.0508);
+    xProController.setIntegratorRange(-2, 2);
+
+    yController.setTolerance(0.0508);
+    yController.setIntegratorRange(-2, 2);
+
+    yProController.setTolerance(0.0508);
+    yProController.setIntegratorRange(-2, 2);
+
+    omegaController.setTolerance(Math.toRadians(2));
+    omegaController.setIntegratorRange(-2, 2);
   }
 
   @Override
@@ -42,14 +62,23 @@ public class AlignToReefTest extends Command {
     // TODO Auto-generated method stub
     super.initialize();
     Pose2d tagPosition = drivetrain.getLastSeenAprilTag().toPose2d();
-    Translation2d offset = new Translation2d(0.5, 0.3).rotateBy(tagPosition.getRotation());
-    if (right) {
-        offset = new Translation2d(0.5, -0.3).rotateBy(tagPosition.getRotation());
+    Translation2d offset;
+    if (algae) {
+      offset = new Translation2d(0.6, 0);
+    } else {
+      if (right) {
+        offset = new Translation2d(0.6, 0.2).rotateBy(tagPosition.getRotation());
+      } else {
+        offset = new Translation2d(0.6, -0.2).rotateBy(tagPosition.getRotation());
+      }
     }
+
     target = new Pose2d(tagPosition.getTranslation().plus(offset), tagPosition.getRotation().plus(Rotation2d.k180deg));
     Constants.log("Target position (xya): " + target.getX() + " " + target.getY() + " " + target.getRotation().getDegrees());
-    Pose2d p = drivetrain.getPoseEstimate();//Constants.Sensors.vision.getPose().toPose2d();
-    Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
+    Pose2d p = drivetrain.getPoseEstimate();
+    Constants.log("Initial starting position: " + p.getX()  + " " + p.getY() + " " + p.getRotation().getDegrees());
+    //Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
+    timer.reset();
     timer.start();
   }
 
@@ -60,18 +89,30 @@ public class AlignToReefTest extends Command {
     Pose2d p = drivetrain.getPoseEstimate();
     double vx = xController.calculate(p.getX(), target.getX());
     double vy = yController.calculate(p.getY(), target.getY());
+
+    double vpx = xProController.calculate(p.getX(), target.getX());
+    double vpy = yProController.calculate(p.getY(), target.getY());
+
     Rotation2d rot = target.getRotation().minus(p.getRotation());
     double omega = omegaController.calculate(rot.getRadians(), 0);
-    pidOut.set(new double[] {vx, vy, omega});
     //Constants.log(vx + " " + vy + " " + -omega);
-    drivetrain.setFieldRelative(new ChassisSpeeds(vx, vy, -omega / 2));
+    MathUtil.clamp(vx, -0.2, 0.2);
+    MathUtil.clamp(vy, -0.2, 0.2);
+    MathUtil.clamp(vpx, -0.2, 0.2);
+    MathUtil.clamp(vpy, -0.2, 0.2);
+    MathUtil.clamp(omega, -0.4, 0.4);
+    double KstaticX = Math.signum(vpx) * Ks;
+    double KstaticY = Math.signum(vpy) * Ks;
+    double KstaticZ = Math.signum(omega) * Ks;
+    pidOut.set(new double[] {vpx + KstaticX, vpy + KstaticY, omega + KstaticZ});
+    drivetrain.setFieldRelative(new ChassisSpeeds(vpx + KstaticX, vpy + KstaticY, -(omega + KstaticZ)));
     super.execute();
   }
 
   @Override
   public boolean isFinished() {
     // TODO Auto-generated method stub
-    return xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint();
+    return (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint()) || timer.hasElapsed(5);
   }
 
   @Override

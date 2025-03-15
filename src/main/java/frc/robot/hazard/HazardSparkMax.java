@@ -123,6 +123,67 @@ public class HazardSparkMax {
         }
     }
 
+        /***
+     * Returns the position of the encoder in rotations
+     * @return
+     */
+    public double getPosition() {
+      return integratedEncoder.getPosition();
+  }
+
+  /***
+   * Returns the position of the encoder in radians
+   * @return
+   */
+  public double getPositionRadians() {
+      return integratedEncoder.getPosition() * 2 * Math.PI;
+  }
+
+  /***
+   * Returns the velocity of the encoder in rotations per second
+   * @return
+   */
+  public double getVelocity() {
+      return integratedEncoder.getVelocity() / 60d;
+  }
+
+  /***
+   * Returns the velocity of the encoder in radians per second
+   * @return
+   */
+  public double getVelocityRadPS() {
+      return integratedEncoder.getVelocity() * (2.0 * Math.PI) / 60d;
+  }
+
+  /***
+   * Returns the position of the absolute encoder in rotations
+   * @return
+   */
+  public double getAbsPosition() {
+      return externalEncoder.getPosition();
+  }
+
+  public double getAbsPositionRadians() {
+    double deg = externalEncoder.getPosition();
+    if (deg > 180) {
+      deg -= 360;
+    }
+    return Math.toRadians(deg);
+  }
+
+  /***
+   * Returns the absolute velocity of the encoder in rotations per second
+   * @return
+   */
+  public double getAbsVelocity() {
+      return externalEncoder.getVelocity() / 60d;
+  }
+
+  public double getAbsVelocityRadPS() {
+    double deg = externalEncoder.getVelocity() / 60d;
+    return Math.toRadians(deg);
+  }
+
     /***
      * Sets the duty cycle of the controller. Calls SparkMax.set();
      * @param speed
@@ -157,6 +218,7 @@ public class HazardSparkMax {
      * @param value
      */
     public void setEncoder(double value) {
+      Constants.log("Setting encoder rotations to " + value);
         integratedEncoder.setPosition(value);
     }
 
@@ -165,67 +227,7 @@ public class HazardSparkMax {
      * @param value
      */
     public void setEncoderRadians(double value) {
+      Constants.log("Setting encoder radians to " + value);
       integratedEncoder.setPosition(value / (2 * Math.PI));
   }
-
-    /***
-     * Returns the position of the encoder in rotations
-     * @return
-     */
-    public double getPosition() {
-        return integratedEncoder.getPosition();
-    }
-
-    /***
-     * Returns the position of the encoder in radians
-     * @return
-     */
-    public double getPositionRadians() {
-        return integratedEncoder.getPosition() * 2 * Math.PI;
-    }
-
-    /***
-     * Returns the velocity of the encoder in rotations per second
-     * @return
-     */
-    public double getVelocity() {
-        return integratedEncoder.getVelocity() / 60d;
-    }
-
-    /***
-     * Returns the velocity of the encoder in radians per second
-     * @return
-     */
-    public double getVelocityRadPS() {
-        return integratedEncoder.getVelocity() * (2.0 * Math.PI) / 60d;
-    }
-
-    /***
-     * Returns the position of the absolute encoder in rotations
-     * @return
-     */
-    public double getAbsPosition() {
-        return externalEncoder.getPosition();
-    }
-
-    public double getAbsPositionRadians() {
-      double deg = externalEncoder.getPosition();
-      if (deg > 180) {
-        deg -= 360;
-      }
-      return Math.toRadians(deg);
-    }
-
-    /***
-     * Returns the absolute velocity of the encoder in rotations per second
-     * @return
-     */
-    public double getAbsVelocity() {
-        return externalEncoder.getVelocity() / 60d;
-    }
-
-    public double getAbsVelocityRadPS() {
-      double deg = externalEncoder.getVelocity() / 60d;
-      return Math.toRadians(deg);
-    }
 }
