@@ -8,6 +8,8 @@ import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -16,6 +18,7 @@ public class Claw extends SubsystemBase {
   private SparkMaxConfig clawConfig = new SparkMaxConfig();
   private SparkAnalogSensor breakbeam;
   public boolean algaeMode = false;
+  private DoublePublisher clawSpeedPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Speed").publish();
 
   public Claw() {
     clawMotor = new SparkMax(Constants.Coral.CAN, MotorType.kBrushless);
@@ -36,7 +39,8 @@ public class Claw extends SubsystemBase {
    * @param speed
    */
   public void set(double speed) {
-    Constants.driverLog("Setting claw speed to " + speed);
+    //Constants.driverLog("Setting claw speed to " + speed + " algae mode " + algaeMode);
+    clawSpeedPublisher.set(speed);
     clawMotor.set(speed);
   }
 
@@ -62,9 +66,6 @@ public class Claw extends SubsystemBase {
   @Override
   public void periodic() {
     // TODO Auto-generated method stub
-    if (algaeMode) {
-      clawMotor.set(-0.3);
-    }
     super.periodic();
   }
 }

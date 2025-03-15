@@ -35,9 +35,9 @@ public class AutoScore extends Command {
     public void execute() {
       if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference()) || true) {
         if (elevator.isScoringL4 || claw.algaeMode) {
-          claw.set(-1);
+          claw.set(-0.1);
         } else {
-          claw.set(1);
+          claw.set(0.1);
         }
         if (!timer.isRunning() && !claw.hasCoral()) {
           SmartDashboard.putString("Autoscoring status", "Scoring...");

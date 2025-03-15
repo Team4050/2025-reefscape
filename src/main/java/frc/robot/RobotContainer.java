@@ -165,7 +165,21 @@ public class RobotContainer {
     Constants.log("IMU angle 3: " + Constants.Sensors.imu.getAngle());
 
     clawSubsystem.setDefaultCommand(new RunCommand(() -> {
-      clawSubsystem.set(0);
+      if (m_secondaryController.povLeft().getAsBoolean()) {
+        if (clawSubsystem.algaeMode) {
+          clawSubsystem.set(-0.3);
+        } else {
+          clawSubsystem.set(0.1);
+        }
+      } else if (m_secondaryController.povRight().getAsBoolean()) {
+        if (clawSubsystem.algaeMode) {
+          clawSubsystem.set(0.3);
+        } else {
+          clawSubsystem.set(-0.1);
+        }
+      } else {
+        clawSubsystem.set(0);
+      }
     }, clawSubsystem));
 
     Constants.Sensors.imu.setGyroAngleZ(180);
@@ -277,21 +291,6 @@ public class RobotContainer {
 
     m_secondaryController.leftTrigger().onTrue(MoveScoringMechanismTo.Transport(elevatorSubsystem, clawSubsystem));
     m_secondaryController.rightTrigger().onTrue(new AutoScore(elevatorSubsystem, clawSubsystem));
-
-    m_secondaryController.povRight().whileTrue(new RunCommand(() -> {
-      if (clawSubsystem.algaeMode) {
-        clawSubsystem.set(0.3);
-      } else {
-        clawSubsystem.set(-0.1);
-      }
-    }, clawSubsystem));
-    m_secondaryController.povLeft().whileTrue(new RunCommand(() -> {
-      if (clawSubsystem.algaeMode) {
-        clawSubsystem.set(-0.3);
-      } else {
-        clawSubsystem.set(0.1);
-      }
-    }, clawSubsystem));
 
     m_secondaryController.povUp().whileTrue(new RunCommand(() -> {
       elevatorSubsystem.setElevatorAdditive(0.02 * elevatorManualControlScalar);
