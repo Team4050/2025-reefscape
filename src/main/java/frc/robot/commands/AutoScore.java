@@ -29,6 +29,9 @@ public class AutoScore extends Command {
         timeout.reset();
         timeout.start();
         super.initialize();
+        if (claw.algaeMode) {
+          MoveScoringMechanismTo.L3(elevator, claw);
+        }
     }
 
     @Override

@@ -28,12 +28,16 @@ public class AlignToReefTest extends Command {
   private double Ks = 0.03;
   private PIDController xController = new PIDController(Kp, Ki, Kd);
   private PIDController yController = new PIDController(Kp, Ki, Kd);
-  private ProfiledPIDController xProController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.25, 0.5));
-  private ProfiledPIDController yProController = new ProfiledPIDController(0.3, 0, 0, new Constraints(0.25, 0.5));
-  private ProfiledPIDController omegaController = new ProfiledPIDController(0.3, 0.001, 0, new Constraints(0.2, 0.01));
+  private ProfiledPIDController xProController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(0.25, 0.4));
+  private ProfiledPIDController yProController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(0.25, 0.4));
+  private ProfiledPIDController omegaController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(0.2, 0.2));
   private Pose2d target = new Pose2d(14.58, 4.05, Rotation2d.k180deg);
   private boolean right = false;
   private boolean algae = false;
+
+  private static double feedbackLimit = 0.15;
+  private static double tolerance = 2 * (2.54 / 100);
+  private static double maxIntegral = 2;
 
   private DoubleArrayPublisher pidOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
 
@@ -41,20 +45,20 @@ public class AlignToReefTest extends Command {
     this.drivetrain = drivetrain;
     this.right = right;
     this.algae = algaeMode;
-    xController.setTolerance(0.0508);
-    xController.setIntegratorRange(-2, 2);
+    xController.setTolerance(tolerance);
+    xController.setIntegratorRange(-maxIntegral, maxIntegral);
 
-    xProController.setTolerance(0.0508);
-    xProController.setIntegratorRange(-2, 2);
+    xProController.setTolerance(tolerance);
+    xProController.setIntegratorRange(-maxIntegral, maxIntegral);
 
-    yController.setTolerance(0.0508);
-    yController.setIntegratorRange(-2, 2);
+    yController.setTolerance(tolerance);
+    yController.setIntegratorRange(-maxIntegral, maxIntegral);
 
-    yProController.setTolerance(0.0508);
-    yProController.setIntegratorRange(-2, 2);
+    yProController.setTolerance(tolerance);
+    yProController.setIntegratorRange(-maxIntegral, maxIntegral);
 
     omegaController.setTolerance(Math.toRadians(2));
-    omegaController.setIntegratorRange(-2, 2);
+    omegaController.setIntegratorRange(-maxIntegral, maxIntegral);
   }
 
   @Override
@@ -95,15 +99,17 @@ public class AlignToReefTest extends Command {
 
     Rotation2d rot = target.getRotation().minus(p.getRotation());
     double omega = omegaController.calculate(rot.getRadians(), 0);
-    //Constants.log(vx + " " + vy + " " + -omega);
-    MathUtil.clamp(vx, -0.2, 0.2);
-    MathUtil.clamp(vy, -0.2, 0.2);
-    MathUtil.clamp(vpx, -0.2, 0.2);
-    MathUtil.clamp(vpy, -0.2, 0.2);
-    MathUtil.clamp(omega, -0.4, 0.4);
+
+    vx = MathUtil.clamp(vx, -feedbackLimit, feedbackLimit);
+    vy = MathUtil.clamp(vy, -feedbackLimit, feedbackLimit);
+    vpx = MathUtil.clamp(vpx, -feedbackLimit, feedbackLimit);
+    vpy = MathUtil.clamp(vpy, -feedbackLimit, feedbackLimit);
+    omega = MathUtil.clamp(omega, -feedbackLimit, feedbackLimit);
+
     double KstaticX = Math.signum(vpx) * Ks;
     double KstaticY = Math.signum(vpy) * Ks;
     double KstaticZ = Math.signum(omega) * Ks;
+
     pidOut.set(new double[] {vpx + KstaticX, vpy + KstaticY, omega + KstaticZ});
     drivetrain.setFieldRelative(new ChassisSpeeds(vpx + KstaticX, vpy + KstaticY, -(omega + KstaticZ)));
     super.execute();

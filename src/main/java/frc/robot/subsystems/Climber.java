@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkLowLevel.MotorType;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -13,6 +14,7 @@ public class Climber extends SubsystemBase {
 
   public Climber() {
     SparkMaxConfig config = new SparkMaxConfig();
+    config.idleMode(IdleMode.kBrake);
     motor = new HazardSparkMax(Constants.Climber.climber, MotorType.kBrushless, config, true, "Climber");
   }
 
@@ -22,10 +24,17 @@ public class Climber extends SubsystemBase {
    */
   public void set(double position) {
     targetPosition = position;
-    motor.set(0); //TODO: follow position
+    motor.set(position); //TODO: follow position
   }
 
   public void setAdditive(double additive) {
     set(targetPosition + additive);
+  }
+
+  @Override
+  public void periodic() {
+    motor.publishToNetworkTables();
+    // TODO Auto-generated method stub
+    super.periodic();
   }
 }

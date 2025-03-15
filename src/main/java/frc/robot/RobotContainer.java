@@ -22,7 +22,6 @@ import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.AutoScore;
 import frc.robot.commands.ChooseAutonomous;
 import frc.robot.commands.MoveScoringMechanismTo;
 import frc.robot.hazard.HazardXbox;
@@ -91,6 +90,8 @@ public class RobotContainer {
     //Constants.log("Claw camera description:" + clawCamera.getDescription());
     //clawCamera.setVideoMode(new VideoMode(PixelFormat.kMJPEG, 320, 320, 30));
 
+    pdh.setSwitchableChannel(true); // For radio PoE
+
     var layout = AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
     for (var i : layout.getTags()) {
       Constants.log(i.ID + " " + i.pose);
@@ -130,7 +131,13 @@ public class RobotContainer {
             elevatorSubsystem));
 
     climberSubsystem.setDefaultCommand(new RunCommand(() -> {
-      climberSubsystem.set(0);
+      if (m_driverController.povUp().getAsBoolean()) {
+        climberSubsystem.set(0.5);
+      } else if (m_driverController.povDown().getAsBoolean()) {
+        climberSubsystem.set(-0.5);
+      } else {
+        climberSubsystem.set(0);
+      }
     }, climberSubsystem));
 
     drivetrainTargetX = drivetrainSubsystem.getPoseEstimate().getX();
@@ -271,8 +278,8 @@ public class RobotContainer {
       drivetrainSubsystem.setVisionPipeline(pipeline);
     }));
 
-    m_driverController.povDown().onTrue(new InstantCommand(()-> { climberSubsystem.set(Constants.Climber.deployedPositionRotations); }, climberSubsystem));
-    m_driverController.povUp().onTrue(new InstantCommand(() -> { climberSubsystem.set(Constants.Climber.climbedPositionRotations); }, climberSubsystem));
+    //m_driverController.povDown().onTrue(new InstantCommand(()-> { climberSubsystem.set(Constants.Climber.deployedPositionRotations); }, climberSubsystem));
+    //m_driverController.povUp().onTrue(new InstantCommand(() -> { climberSubsystem.set(Constants.Climber.climbedPositionRotations); }, climberSubsystem));
 
     /********************************************************** Secondary **************************************************************************/
 
@@ -290,7 +297,7 @@ public class RobotContainer {
     }
 
     m_secondaryController.leftTrigger().onTrue(MoveScoringMechanismTo.Transport(elevatorSubsystem, clawSubsystem));
-    m_secondaryController.rightTrigger().onTrue(new AutoScore(elevatorSubsystem, clawSubsystem));
+    //m_secondaryController.rightTrigger().onTrue();
 
     m_secondaryController.povUp().whileTrue(new RunCommand(() -> {
       elevatorSubsystem.setElevatorAdditive(0.02 * elevatorManualControlScalar);

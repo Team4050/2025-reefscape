@@ -19,15 +19,24 @@ public class MoveScoringMechanismTo {
     public static Command Transport(Elevator elevator, Claw claw) {
       Constants.log("Moving to trasport config");
       return new InstantCommand(() -> {
-        if (claw.algaeMode) {
-          elevator.set(Constants.Elevator.transport);
-          elevator.setShoulder(Constants.Shoulder.transport);
-          elevator.setWrist(Constants.Wrist.algaeTransport);
-        } else {
-          elevator.set(Constants.Elevator.transport);
-          elevator.setShoulder(Constants.Shoulder.transport);
-          elevator.setWrist(Constants.Wrist.transport);
-        }
+        elevator.set(Constants.Elevator.transport);
+        elevator.setShoulder(Constants.Shoulder.transport);
+        elevator.setWrist(Constants.Wrist.transport);
+      }, elevator, claw);
+    }
+
+    public static Command Climbing(Elevator elevator, Claw claw) {
+      return new InstantCommand(() -> {
+
+      }, elevator, claw);
+    }
+
+    public static Command AlgaeTransport(Elevator elevator, Claw claw) {
+      Constants.log("Moving to algae trasport config");
+      return new InstantCommand(() -> {
+        elevator.set(Constants.Elevator.transport);
+        elevator.setShoulder(Constants.Shoulder.transport);
+        elevator.setWrist(Constants.Wrist.algaeTransport);
       }, elevator, claw);
     }
 
