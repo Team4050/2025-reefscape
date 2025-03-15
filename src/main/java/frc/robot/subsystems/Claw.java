@@ -19,6 +19,7 @@ public class Claw extends SubsystemBase {
   private SparkAnalogSensor breakbeam;
   public boolean algaeMode = false;
   private DoublePublisher clawSpeedPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Speed").publish();
+  private DoublePublisher breakbeamPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Breakbeam").publish();
 
   public Claw() {
     clawMotor = new SparkMax(Constants.Coral.CAN, MotorType.kBrushless);
@@ -31,7 +32,7 @@ public class Claw extends SubsystemBase {
   }
 
   public boolean hasCoral() {
-    return breakbeam.getVoltage() < 1;
+    return breakbeam.getVoltage() < 1.5;
   }
 
   /***
@@ -66,6 +67,7 @@ public class Claw extends SubsystemBase {
   @Override
   public void periodic() {
     // TODO Auto-generated method stub
+    breakbeamPublisher.set(breakbeam.getVoltage());
     super.periodic();
   }
 }

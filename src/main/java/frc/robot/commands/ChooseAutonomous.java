@@ -22,6 +22,7 @@ public class ChooseAutonomous {
         Command startingLineToTag = AutoBuilder.buildAuto("Move to tag");
         Command crossedFingers = AutoBuilder.buildAuto("Crossed fingers");
         autoChooser = new SendableChooser<Command>();
+        autoChooser.setDefaultOption("Move out of starting line", new MoveTime(drivetrain, 0, 0, 0, 0.5));
         autoChooser.addOption("Time-based test", Commands.sequence(
             new MoveTime(drivetrain, 0.2, 0, 0, 0.5),
             new MoveTime(drivetrain, 0, 0.2, 0, 0.5),

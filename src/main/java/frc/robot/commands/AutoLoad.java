@@ -7,23 +7,23 @@ import frc.robot.Constants;
 import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Elevator;
 
-public class AutoScore extends Command {
-  private Elevator elevator;
+public class AutoLoad extends Command {
+    private Elevator elevator;
     private Claw claw;
     private Timer timeout;
     private Timer timer;
 
-    public AutoScore(Elevator elevator, Claw claw) {
+    public AutoLoad(Elevator elevator, Claw claw) {
       this.elevator = elevator;
         this.claw = claw;
         timer = new Timer();
         timeout = new Timer();
-        SmartDashboard.putString("Autoscoring status", "Inactive");
+        SmartDashboard.putString("Autofeeding status", "Inactive");
     }
 
     @Override
     public void initialize() {
-      SmartDashboard.putString("Autoscoring status", "Waiting for arm...");
+      SmartDashboard.putString("Autofeeding status", "Waiting for arm...");
         timer.reset();
         timer.start();
         timeout.reset();

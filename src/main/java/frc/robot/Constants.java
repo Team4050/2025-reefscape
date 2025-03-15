@@ -84,10 +84,12 @@ public final class Constants {
     public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
     public static final double baseHeightMM = 812.800 + Drivetrain.chassisTopPlateHeightMM; //From Elevator - Full Assembly CAD
 
-    public static final double transport = 0.1;
+    public static final double transport = 0.129;
     public static final double L1Scoring = 1;
-    public static final double L2Scoring = 3.28; //~2.77
+    public static final double L2Scoring = 3.8; //~2.77
+    public static final double L2AlgaeRemoval = 2.2;
     public static final double L3Scoring = 2.4;
+    public static final double L3AlgaeRemoval = 1.145;
     public static final double L4Scoring = 3.53;
     public static final double climb = 0.5;
   }
@@ -103,15 +105,17 @@ public final class Constants {
     public static final double shoulderMax = Math.toRadians(90);
     public static final double shoulderHardStopMax = Math.toRadians(140);
     public static final double shoulderMin = Math.toRadians(-78); // -0.24 * 2 * Math.PI
-    public static final double shoulderHardStopMin = Math.toRadians(-82);
+    public static final double shoulderHardStopMin = Math.toRadians(-86);
 
     public static final double shoulderArmLengthMM = 302;
     public static final double shoulderMotorTorqueNM = 0.45;
 
     public static final double transport = Math.toRadians(-75);
     public static final double L1Scoring = Math.toRadians(-66.5);
-    public static final double L2Scoring = Math.toRadians(-64.5);
+    public static final double L2Scoring = Math.toRadians(-52.5);
+    public static final double L2AlgaeRemoval = Math.toRadians(-52.5);
     public static final double L3Scoring = Math.toRadians(78);
+    public static final double L3AlgaeRemoval = Math.toRadians(64.8);
     public static final double L4Scoring = Math.toRadians(62);
     public static final double climb = Math.toRadians(-60);
   }
@@ -121,20 +125,23 @@ public final class Constants {
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double startingRotationRadians = Math.toRadians(-41);
+    public static final double wristRotationOffset = Math.toRadians(-30);
+    public static final double startingRotationRadians = Math.toRadians(-41) + wristRotationOffset;
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
-    public static final double wristMax = Math.toRadians(145);//+108 degrees
-    public static final double wristMin = Math.toRadians(-45); //-45 degrees
+    public static final double wristMax = Math.toRadians(145) + wristRotationOffset;//+108 degrees
+    public static final double wristMin = Math.toRadians(-45) + wristRotationOffset; //-45 degrees
 
     public static final double chuteExitXOffsetMM = 330; //From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; //From Claw - Full Assembly CAD
 
-    public static final double transport = startingRotationRadians;
+    public static final double transport = Math.toRadians(-20) + wristRotationOffset;
+    public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
     public static final double L1Scoring = startingRotationRadians;
-    public static final double L2Scoring = Math.toRadians(-19);
-    public static final double L3Scoring = Math.toRadians(-18);
-    public static final double L4Scoring = Math.toRadians(120);
+    public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset;
+    public static final double L3Scoring = Math.toRadians(-18) + wristRotationOffset;
+    public static final double L3AlgaeRemoval = Math.toRadians(-20) + wristRotationOffset;
+    public static final double L4Scoring = Math.toRadians(120) + wristRotationOffset;
     public static final double climb = startingRotationRadians;
   }
 

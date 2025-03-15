@@ -148,7 +148,7 @@ public class Elevator extends SubsystemBase {
       0.00,
       1.2,
       0.05,
-      0.05,
+      0.08,
       1,
       2,
       "Wrist",

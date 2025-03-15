@@ -17,13 +17,22 @@ public class MoveScoringMechanismTo {
     }
 
     public static Command Transport(Elevator elevator, Claw claw) {
+      Constants.log("Moving to trasport config");
       return new InstantCommand(() -> {
-        elevator.set(Constants.Elevator.transport);
-        elevator.setShoulder(Constants.Shoulder.transport);
-        elevator.setWrist(Constants.Wrist.transport); }, elevator, claw);
+        if (claw.algaeMode) {
+          elevator.set(Constants.Elevator.transport);
+          elevator.setShoulder(Constants.Shoulder.transport);
+          elevator.setWrist(Constants.Wrist.algaeTransport);
+        } else {
+          elevator.set(Constants.Elevator.transport);
+          elevator.setShoulder(Constants.Shoulder.transport);
+          elevator.setWrist(Constants.Wrist.transport);
+        }
+      }, elevator, claw);
     }
 
     public static Command L1(Elevator elevator, Claw claw) {
+      Constants.log("Going to L1");
         return new InstantCommand(() -> {
             if (claw.algaeMode) {
               Constants.log("Cannot remove algae from L1! Possible misinput?");
@@ -37,9 +46,10 @@ public class MoveScoringMechanismTo {
 
     public static Command L2(Elevator elevator, Claw claw) {
         return new InstantCommand(() -> {
+          Constants.log("Going to L2");
             if (claw.algaeMode) {
-                elevator.set(Constants.Elevator.L2Scoring + (algaeRemoveOffsetMM / Constants.Elevator.gearboxRotationsToHeightMM));
-                elevator.setShoulder(Constants.Shoulder.L2Scoring);
+                elevator.set(Constants.Elevator.L2AlgaeRemoval);
+                elevator.setShoulder(Constants.Shoulder.L2AlgaeRemoval);
                 elevator.setWrist(Constants.Wrist.L2Scoring);
             } else {
                 elevator.set(Constants.Elevator.L2Scoring);
@@ -51,10 +61,11 @@ public class MoveScoringMechanismTo {
 
     public static Command L3(Elevator elevator, Claw claw) {
         return new InstantCommand(() -> {
+          Constants.log("Going to L3");
             if (claw.algaeMode) {
-                elevator.set(Constants.Elevator.L3Scoring + (algaeRemoveOffsetMM / Constants.Elevator.gearboxRotationsToHeightMM));
-                elevator.setShoulder(Constants.Shoulder.L3Scoring);
-                elevator.setWrist(Constants.Wrist.L3Scoring);
+                elevator.set(Constants.Elevator.L3AlgaeRemoval);
+                elevator.setShoulder(Constants.Shoulder.L3AlgaeRemoval);
+                elevator.setWrist(Constants.Wrist.L3AlgaeRemoval);
             } else {
                 elevator.set(Constants.Elevator.L3Scoring);
                 elevator.setShoulder(Constants.Shoulder.L3Scoring);
@@ -65,6 +76,7 @@ public class MoveScoringMechanismTo {
 
     public static Command L4(Elevator elevator, Claw claw) {
         return new InstantCommand(() -> {
+          Constants.log("Going to L4");
             if (claw.algaeMode) {
               Constants.log("Cannot remove algae from L4! Possible misinput?");
             } else {

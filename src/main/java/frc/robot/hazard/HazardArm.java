@@ -136,7 +136,7 @@ public class HazardArm {
       var pfb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
       SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
       SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
-      if (ff + pfb < -5 || ff + pfb > 5) {
+      if (ff + pfb < -6 || ff + pfb > 6) {
         Constants.log("OVERCORRECT - DISABLE ff: " + ff + " pfb: " + pfb + "acc error: " + profiledFeedback.getAccumulatedError());
         motor.setControl(0, ControlType.kVoltage);
         voltagePIDOutput.set(0);
