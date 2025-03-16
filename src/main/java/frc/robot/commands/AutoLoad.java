@@ -12,6 +12,8 @@ public class AutoLoad extends Command {
     private Claw claw;
     private Timer timeout;
     private Timer timer;
+    private boolean algaeMode = false;
+    private boolean cancel = false;
 
     public AutoLoad(Elevator elevator, Claw claw) {
       this.elevator = elevator;
@@ -23,33 +25,39 @@ public class AutoLoad extends Command {
 
     @Override
     public void initialize() {
-      SmartDashboard.putString("Autoloading status", "Waiting for arm...");
+      SmartDashboard.putString("Autoloading status", "Feeding");
+
         timer.reset();
-        timer.start();
         timeout.reset();
         timeout.start();
+        algaeMode = claw.algaeMode;
+        if (algaeMode) {
+          timer.start();
+        } else {
+          if (claw.hasCoral()) {
+            SmartDashboard.putString("Autoloading status", "Already loaded");
+            cancel = true;
+          }
+        }
         super.initialize();
     }
 
     @Override
     public void execute() {
-      if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference()) || true) {
-        if (elevator.isScoringL4 || claw.algaeMode) {
-          claw.set(-0.1);
-        } else {
-          claw.set(0.1);
-        }
-        if (!timer.isRunning() && !claw.hasCoral()) {
-          SmartDashboard.putString("Autoloading status", "Scoring...");
+      if (cancel) return;
+      if (algaeMode) {
+        claw.set(0.1);
+        if (claw.hasCoral()) {
           timer.start();
         }
+      } else {
+        claw.set(-0.3);
       }
-      super.execute();
     }
 
     @Override
     public boolean isFinished() {
-      return (!claw.algaeMode && timer.hasElapsed(0.75)) || (claw.algaeMode && timer.hasElapsed(2)) || timeout.hasElapsed(6);
+      return cancel || (!algaeMode && claw.hasCoral() && timer.hasElapsed(0.5)) || (algaeMode && timer.hasElapsed(2)) || timeout.hasElapsed(6);
     }
 
     @Override

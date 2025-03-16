@@ -12,6 +12,8 @@ public class AutoScore extends Command {
     private Claw claw;
     private Timer timeout;
     private Timer timer;
+    private boolean algaeMode = false;
+    private boolean cancel = false;
 
     public AutoScore(Elevator elevator, Claw claw) {
       this.elevator = elevator;
@@ -25,19 +27,25 @@ public class AutoScore extends Command {
     public void initialize() {
       SmartDashboard.putString("Autoscoring status", "Waiting for arm...");
         timer.reset();
-        timer.start();
         timeout.reset();
         timeout.start();
+        algaeMode = claw.algaeMode;
         super.initialize();
-        if (claw.algaeMode) {
-          MoveScoringMechanismTo.L3(elevator, claw);
+        if (algaeMode) {
+          if (claw.hasCoral()) {
+            Constants.driverLog("Attempted to score algae with coral loaded!");
+            cancel = true;
+            return;
+          }
+          MoveScoringMechanismTo.Transport(elevator, claw).execute();
         }
     }
 
     @Override
     public void execute() {
+      if (cancel) return;
       if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference()) || true) {
-        if (elevator.isScoringL4 || claw.algaeMode) {
+        if (elevator.isScoringL4 || algaeMode) {
           claw.set(-0.1);
         } else {
           claw.set(0.1);
@@ -52,7 +60,7 @@ public class AutoScore extends Command {
 
     @Override
     public boolean isFinished() {
-      return (!claw.algaeMode && timer.hasElapsed(0.75)) || (claw.algaeMode && timer.hasElapsed(2)) || timeout.hasElapsed(6);
+      return cancel || (!algaeMode && timer.hasElapsed(0.75)) || (algaeMode && timer.hasElapsed(2)) || timeout.hasElapsed(6);
     }
 
     @Override
