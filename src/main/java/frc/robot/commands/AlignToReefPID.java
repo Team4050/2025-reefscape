@@ -1,12 +1,14 @@
 package frc.robot.commands;
 
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -19,7 +21,7 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
 
-public class AlignToReefTest extends Command {
+public class AlignToReefPID extends Command {
   private Drivetrain drivetrain;
   private Timer timer = new Timer();
   private double Kp = 0.3;
@@ -35,13 +37,15 @@ public class AlignToReefTest extends Command {
   private boolean right = false;
   private boolean algae = false;
 
+  private boolean cancel = false;
+
   private static double feedbackLimit = 0.15;
   private static double tolerance = 2 * (2.54 / 100);
   private static double maxIntegral = 2;
 
   private DoubleArrayPublisher pidOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
 
-  public AlignToReefTest(Drivetrain drivetrain, boolean right, boolean algaeMode) {
+  public AlignToReefPID(Drivetrain drivetrain, boolean right, boolean algaeMode) {
     this.drivetrain = drivetrain;
     this.right = right;
     this.algae = algaeMode;
@@ -65,19 +69,25 @@ public class AlignToReefTest extends Command {
   public void initialize() {
     // TODO Auto-generated method stub
     super.initialize();
-    Pose2d tagPosition = drivetrain.getLastSeenAprilTag().toPose2d();
+    Optional<Pose3d> tag = drivetrain.getLastSeenAprilTag();
+    if (tag.isEmpty()) {
+      cancel = true;
+      return;
+    }
+    Pose2d tagPose = tag.get().toPose2d();
+
     Translation2d offset;
     if (algae) {
       offset = new Translation2d(0.6, 0);
     } else {
       if (right) {
-        offset = new Translation2d(0.6, 0.2).rotateBy(tagPosition.getRotation());
+        offset = new Translation2d(0.6, 0.2).rotateBy(tagPose.getRotation());
       } else {
-        offset = new Translation2d(0.6, -0.2).rotateBy(tagPosition.getRotation());
+        offset = new Translation2d(0.6, -0.2).rotateBy(tagPose.getRotation());
       }
     }
 
-    target = new Pose2d(tagPosition.getTranslation().plus(offset), tagPosition.getRotation().plus(Rotation2d.k180deg));
+    target = new Pose2d(tagPose.getTranslation().plus(offset), tagPose.getRotation().plus(Rotation2d.k180deg));
     Constants.log("Target position (xya): " + target.getX() + " " + target.getY() + " " + target.getRotation().getDegrees());
     Pose2d p = drivetrain.getPoseEstimate();
     Constants.log("Initial starting position: " + p.getX()  + " " + p.getY() + " " + p.getRotation().getDegrees());
@@ -88,6 +98,7 @@ public class AlignToReefTest extends Command {
 
   @Override
   public void execute() {
+    if (cancel) return;
     // TODO Auto-generated method stub
     //Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
     Pose2d p = drivetrain.getPoseEstimate();
@@ -118,7 +129,9 @@ public class AlignToReefTest extends Command {
   @Override
   public boolean isFinished() {
     // TODO Auto-generated method stub
-    return (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint()) || timer.hasElapsed(5);
+    if (cancel) Constants.log("Auto-align cancelled, no visible tag");
+    if (drivetrain.invalidPose) Constants.log("Disabled auto-align, invalid drivetrain pose");
+    return cancel || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint()) || timer.hasElapsed(5) || drivetrain.invalidPose;
   }
 
   @Override

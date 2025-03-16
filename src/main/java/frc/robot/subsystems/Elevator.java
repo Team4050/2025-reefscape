@@ -238,7 +238,6 @@ public class Elevator extends SubsystemBase {
     if (additive == 0) return;
     //Constants.log(shoulderSetpoint + (additive * 0.02));
     setShoulder(shoulderSetpoint + (additive * 0.02));
-    SmartDashboard.putNumber("Shoulder setpoint", shoulderSetpoint);
   }
 
   public void checkWrist() {
@@ -388,11 +387,11 @@ public class Elevator extends SubsystemBase {
     if (shoulder.getPositionRadians() > 0 && wrist.getPositionRadians() > 0) isScoringL4 = true; else isScoringL4 = false;
     shoulder.periodic();
     wrist.periodic();
-    loop++;
+    /*loop++;
     if (loop > 100) {
       Constants.log("Shoulder absolute position degrees: " + Math.toDegrees(shoulder.getPositionRadians()));
       loop = 0;
-    }
+    }*/
     if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax || shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin)
     {
       Constants.log("Shoulder going past hard stop");

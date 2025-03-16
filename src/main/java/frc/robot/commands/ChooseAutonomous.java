@@ -28,7 +28,7 @@ public class ChooseAutonomous {
             new MoveTime(drivetrain, 0, 0.2, 0, 0.5),
             new MoveTime(drivetrain, -0.2, -0.2, 0, 0.5)));
         autoChooser.addOption("Model-based control test", new TestModelBasedControl(drivetrain));
-        autoChooser.addOption("Teleop Limelight align", new AlignToReefTest(drivetrain, false, false));
+        autoChooser.addOption("Teleop Limelight align", new AlignToReefPID(drivetrain, false, false));
         autoChooser.addOption("Crossed fingers", crossedFingers);
         autoChooser.addOption("Starting line to tag", startingLineToTag);
         SmartDashboard.putData(autoChooser);

@@ -2,10 +2,13 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Amps;
 
+import java.util.Optional;
+
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
+import org.photonvision.targeting.PhotonTrackedTarget;
 
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
@@ -79,7 +82,8 @@ public class Drivetrain extends SubsystemBase {
 
   private PhotonCamera chassisCam = new PhotonCamera("Limelight");
   private PhotonPoseEstimator aprilTagPoseEstimator = new PhotonPoseEstimator(aprilTags, PoseStrategy.AVERAGE_BEST_TARGETS, Constants.Drivetrain.robotToCamera);
-  private Pose3d lastAprilTagSeen = new Pose3d();
+  public boolean invalidPose = false;
+  private int lastAprilTagSeen = 0;
 
   // ******************************************************** Math & Control ******************************************************** //
   double rh = Math.sqrt(2) / 2;
@@ -108,9 +112,9 @@ public class Drivetrain extends SubsystemBase {
 
   // ******************************************************** PID control ******************************************************** //
   // x in meters, y in meters, theta in radians
-  private PIDController xController = new PIDController(0.1, 0, 0);
-  private PIDController yController = new PIDController(0.1, 0, 0);
-  private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0, 0, new Constraints(1, 3));
+  private PIDController xController = new PIDController(0.3, 0.05, 0.03);
+  private PIDController yController = new PIDController(0.3, 0.05, 0.03);
+  private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0.05, 0.03, new Constraints(0.25, 0.5));
   private HolonomicDriveController holonomicDriveController;
   private PPHolonomicDriveController pathPlannerHolonomicDriveController;
   private TorqueCurrentFOC[] controlRequests = new TorqueCurrentFOC[4];
@@ -448,8 +452,8 @@ public class Drivetrain extends SubsystemBase {
     poseEstimator.resetPose(pose);
   }
 
-  public Pose3d getLastSeenAprilTag() {
-    return lastAprilTagSeen;
+  public Optional<Pose3d> getLastSeenAprilTag() {
+    return aprilTags.getTagPose(lastAprilTagSeen);
   }
 
   public Vector<N4> getY() {
@@ -576,7 +580,7 @@ public class Drivetrain extends SubsystemBase {
    * @param targetLinearVelocity Sampled velocity from trajectory
    */
   public void driveFieldRelative(Pose2d targetPose, double targetLinearVelocity) {
-    Constants.log("setUsingHDC desired state: " + targetPose.toString());
+    Constants.log("Holonomic drive desired state: " + targetPose.toString());
     var diff = targetPose.getRotation().rotateBy(getPoseEstimate().getRotation().unaryMinus());
     var rotationWrappedPose = new Pose2d(getPoseEstimate().getX(), getPoseEstimate().getY(), diff);
     var speeds = holonomicDriveController.calculate(rotationWrappedPose, targetPose, targetLinearVelocity, targetPose.getRotation());
@@ -644,17 +648,39 @@ public class Drivetrain extends SubsystemBase {
       var estimate = aprilTagPoseEstimator.update(photonPipelineResult);
       if (estimate.isPresent()) {
         //Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
-        lastAprilTagSeen = aprilTags.getTagPose(estimate.get().targetsUsed.get(0).getFiducialId()).get();
+        lastAprilTagSeen = estimate.get().targetsUsed.get(0).getFiducialId();
 
         lastCamToTag = lastCamToTag.div(2).plus(estimate.get().targetsUsed.get(0).getBestCameraToTarget().div(2));
         //Constants.log("Current best cam to target: " + estimate.get().targetsUsed.get(0).getBestCameraToTarget());
         //Constants.log("Average best cam to target: " + lastCamToTag);
-        poseEstimator.addVisionMeasurement(estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
+        String message = "Saw tags";
+        for (PhotonTrackedTarget t : (PhotonTrackedTarget[])estimate.get().targetsUsed.toArray()) {
+          message += (" " + t .fiducialId);
+        }
+        Constants.logStringToFile(message);
 
+        var pose = estimate.get().estimatedPose;
+        Constants.limelightDataLogEntry.append(new double[] {
+          pose.getX(),
+          pose.getY(),
+          pose.getZ(),
+          pose.getRotation().getQuaternion().getW(),
+          pose.getRotation().getQuaternion().getX(),
+          pose.getRotation().getQuaternion().getY(),
+          pose.getRotation().getQuaternion().getZ()});
+        poseEstimator.addVisionMeasurement(estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
       }
     }
 
     poseEstimator.update(Constants.Sensors.getImuRotation2d(), getWheelPositionsMeters());
+    var pose = getPoseEstimate();
+    Constants.estimatedPositionLogEntry.append(new double[] {pose.getX(), pose.getY(), pose.getRotation().getDegrees()});
+    if (pose.getX() < 0 || pose.getX() > 17.5 || pose.getY() < 0 || pose.getY() > 8) {
+      Constants.log("Invalid pose estimate");
+      invalidPose = true;
+    } else {
+      invalidPose = false;
+    }
 
     Vector<N4> y = getY();
     mecanumFieldRelativeKalmanFilter.predict(u, 0.02);

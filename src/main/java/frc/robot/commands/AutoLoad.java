@@ -18,12 +18,12 @@ public class AutoLoad extends Command {
         this.claw = claw;
         timer = new Timer();
         timeout = new Timer();
-        SmartDashboard.putString("Autofeeding status", "Inactive");
+        SmartDashboard.putString("Autoloading status", "Inactive");
     }
 
     @Override
     public void initialize() {
-      SmartDashboard.putString("Autofeeding status", "Waiting for arm...");
+      SmartDashboard.putString("Autoloading status", "Waiting for arm...");
         timer.reset();
         timer.start();
         timeout.reset();
@@ -40,7 +40,7 @@ public class AutoLoad extends Command {
           claw.set(0.1);
         }
         if (!timer.isRunning() && !claw.hasCoral()) {
-          SmartDashboard.putString("Autoscoring status", "Scoring...");
+          SmartDashboard.putString("Autoloading status", "Scoring...");
           timer.start();
         }
       }
@@ -56,10 +56,10 @@ public class AutoLoad extends Command {
     public void end(boolean interrupted) {
       claw.set(0);
       if (timeout.hasElapsed(6)) {
-        SmartDashboard.putString("Autoscoring status", "Timed out!");
-        Constants.driverLog("Auto scoring request timed out!");
+        SmartDashboard.putString("Autoloading status", "Timed out!");
+        Constants.driverLog("Auto loading request timed out!");
       } else {
-        SmartDashboard.putString("Autoscoring status", "Inactive");
+        SmartDashboard.putString("Autoloading status", "Inactive");
       }
       super.end(interrupted);
     }

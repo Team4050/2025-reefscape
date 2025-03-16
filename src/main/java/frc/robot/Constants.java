@@ -13,9 +13,13 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.util.datalog.DoubleArrayLogEntry;
+import edu.wpi.first.util.datalog.StringLogEntry;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.CalibrationTime;
 import edu.wpi.first.wpilibj.ADIS16470_IMU.IMUAxis;
+import edu.wpi.first.wpilibj.DataLogManager;
 
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
@@ -159,6 +163,27 @@ public final class Constants {
     public static final double startingPositionRotations = 0;
     public static final double deployedPositionRotations = -0.5;
     public static final double climbedPositionRotations = 0.25;
+  }
+
+  public static DataLog matchLog;
+  public static DoubleArrayLogEntry estimatedPositionLogEntry;
+  public static DoubleArrayLogEntry limelightDataLogEntry;
+  public static StringLogEntry eventsEntry;
+
+  public static void setupDataLog() {
+    matchLog = DataLogManager.getLog();
+    Constants.log("Setting up data log " + DataLogManager.getLogDir());
+    estimatedPositionLogEntry = new DoubleArrayLogEntry(matchLog, "EstPosition");
+    limelightDataLogEntry = new DoubleArrayLogEntry(matchLog, "Limelight");
+    eventsEntry = new StringLogEntry(matchLog, "Events");
+  }
+
+  public static void flushLog() {
+    matchLog.flush();
+  }
+
+  public static void logStringToFile(String str) {
+    eventsEntry.append(str);
   }
 
   public static void log(Object o) {
