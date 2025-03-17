@@ -17,6 +17,7 @@ public class Claw extends SubsystemBase {
   private SparkMax clawMotor;
   private SparkMaxConfig clawConfig = new SparkMaxConfig();
   private SparkAnalogSensor breakbeam;
+  public boolean coralLoaded = true;
   public boolean algaeMode = false;
   private DoublePublisher clawSpeedPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Speed").publish();
   private DoublePublisher breakbeamPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Breakbeam").publish();

@@ -44,17 +44,25 @@ public class Climber extends SubsystemBase {
     set(targetPosition + additive * 0.02);
   }
 
+  public boolean ratcheted() {
+    return motor.getPosition() > Constants.Climber.climbedPositionRotations;
+  }
+
   @Override
   public void periodic() {
-    var dif = targetPosition - motor.getPosition();
-    if (Math.abs(dif) > 0.01) {
-      if (targetPosition < motor.getPosition()) {
-        motor.set(-0.6);
-      } else if (targetPosition > motor.getPosition()) {
-        motor.set(0.6);
-      }
-    } else {
+    if (ratcheted()) {
       motor.set(0);
+    } else {
+      var dif = targetPosition - motor.getPosition();
+      if (Math.abs(dif) > 0.01) {
+        if (targetPosition < motor.getPosition()) {
+          motor.set(-0.6);
+        } else if (targetPosition > motor.getPosition()) {
+          motor.set(0.6);
+        }
+      } else {
+        motor.set(0);
+      }
     }
 
     motor.publishToNetworkTables();

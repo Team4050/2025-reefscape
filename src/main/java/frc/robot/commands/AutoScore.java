@@ -4,20 +4,17 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
-import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Elevator;
 
 public class AutoScore extends Command {
   private Elevator elevator;
-    private Claw claw;
     private Timer timeout;
     private Timer timer;
     private boolean algaeMode = false;
     private boolean cancel = false;
 
-    public AutoScore(Elevator elevator, Claw claw) {
+    public AutoScore(Elevator elevator) {
       this.elevator = elevator;
-        this.claw = claw;
         timer = new Timer();
         timeout = new Timer();
         SmartDashboard.putString("Autoscoring status", "Inactive");
@@ -29,15 +26,15 @@ public class AutoScore extends Command {
         timer.reset();
         timeout.reset();
         timeout.start();
-        algaeMode = claw.algaeMode;
+        algaeMode = elevator.algaeMode;
         super.initialize();
         if (algaeMode) {
-          if (claw.hasCoral()) {
+          if (elevator.hasCoral()) {
             Constants.driverLog("Attempted to score algae with coral loaded!");
             cancel = true;
             return;
           }
-          MoveScoringMechanismTo.Transport(elevator, claw).execute();
+          MoveScoringMechanismTo.Transport(elevator).execute();
         }
     }
 
@@ -46,11 +43,11 @@ public class AutoScore extends Command {
       if (cancel) return;
       if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference()) || true) {
         if (elevator.isScoringL4 || algaeMode) {
-          claw.set(-0.1);
+          elevator.setClaw(-0.1);
         } else {
-          claw.set(0.1);
+          elevator.setClaw(0.1);
         }
-        if (!timer.isRunning() && !claw.hasCoral()) {
+        if (!timer.isRunning() && !elevator.hasCoral()) {
           SmartDashboard.putString("Autoscoring status", "Scoring...");
           timer.start();
         }
@@ -65,7 +62,7 @@ public class AutoScore extends Command {
 
     @Override
     public void end(boolean interrupted) {
-      claw.set(0);
+      elevator.setClaw(0);
       if (timeout.hasElapsed(6)) {
         SmartDashboard.putString("Autoscoring status", "Timed out!");
         Constants.driverLog("Auto scoring request timed out!");

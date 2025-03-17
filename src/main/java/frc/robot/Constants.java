@@ -11,6 +11,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -32,6 +33,7 @@ import edu.wpi.first.wpilibj.DataLogManager;
  */
 public final class Constants {
   public static Pose2d startingPose = new Pose2d(16.6, 4, new Rotation2d(Math.toRadians(180)));
+  public static boolean tuningMode = false;
 
   /***
    * Returns the alliance side. False for red, true for blue.
@@ -141,6 +143,7 @@ public final class Constants {
 
     public static final double chuteExitXOffsetMM = 330; //From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; //From Claw - Full Assembly CAD
+    public static final Transform2d chuteExitTransform = new Transform2d(405.073737, 0, null);
 
     public static final double transport = Math.toRadians(-65);
     public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;

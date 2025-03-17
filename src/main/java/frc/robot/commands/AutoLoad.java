@@ -4,21 +4,18 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.Constants;
-import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Elevator;
 
 public class AutoLoad extends Command {
     private Elevator elevator;
-    private Claw claw;
     private Timer timeout;
     private Timer timer;
     private boolean sensed = false;
     private boolean algaeMode = false;
     private boolean cancel = false;
 
-    public AutoLoad(Elevator elevator, Claw claw) {
+    public AutoLoad(Elevator elevator) {
       this.elevator = elevator;
-        this.claw = claw;
         timer = new Timer();
         timeout = new Timer();
         SmartDashboard.putString("Autoloading status", "Inactive");
@@ -29,12 +26,12 @@ public class AutoLoad extends Command {
       SmartDashboard.putString("Autoloading status", "Feeding");
       cancel = false;
       timeout.restart();
-        algaeMode = claw.algaeMode;
+        algaeMode = elevator.algaeMode;
         if (algaeMode) {
           SmartDashboard.putString("Autoloading status", "Feeding algae");
           timer.start();
         } else {
-          if (claw.hasCoral()) {
+          if (elevator.hasCoral()) {
             SmartDashboard.putString("Autoloading status", "Already loaded");
             cancel = true;
           }
@@ -46,14 +43,14 @@ public class AutoLoad extends Command {
     public void execute() {
       if (cancel) return;
       if (!algaeMode) {
-        claw.set(0.1);
-        if (!sensed && claw.hasCoral()) {
+        elevator.setClaw(0.1);
+        if (!sensed && elevator.hasCoral()) {
           Constants.log("Timer started");
           timer.restart();
           sensed = true;
         }
       } else {
-        claw.set(-0.3);
+        elevator.setClaw(-0.3);
       }
     }
 
@@ -67,7 +64,7 @@ public class AutoLoad extends Command {
     public void end(boolean interrupted) {
       sensed = false;
       timer.stop();
-      claw.set(0);
+      elevator.setClaw(0);
       if (timeout.hasElapsed(6)) {
         SmartDashboard.putString("Autoloading status", "Timed out!");
         Constants.driverLog("Auto loading request timed out!");

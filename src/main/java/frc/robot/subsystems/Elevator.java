@@ -1,6 +1,9 @@
 package frc.robot.subsystems;
 
+import static frc.robot.Constants.tuningMode;
+
 import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.SparkAnalogSensor;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
@@ -11,6 +14,7 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.networktables.BooleanPublisher;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
@@ -24,42 +28,58 @@ import frc.robot.hazard.HazardArm;
 import frc.robot.hazard.HazardSparkMax;
 
 public class Elevator extends SubsystemBase {
+  /****************************************************************** States ******************************************************************/
   public boolean isScoringL4 = false;
+  public boolean coralLoaded = false;
+  public boolean algaeMode = false;
+  public boolean coralStored = false;
+  //public boolean algaeStored = false; //No sensor to know if we are holding algae
 
+  /****************************************************************** Motors ******************************************************************/
   private HazardSparkMax leadMotor;
   private HazardSparkMax followerMotor;
   private HazardSparkMax shoulderMotor;
   private HazardSparkMax wristMotor;
-
-  //private SparkMax elevatorWrist; // Not in CAN yet
-  //private SparkClosedLoopController wristMotorController;
-  private PIDController elevatorPID;
-  private ElevatorFeedforward elevatorFF;
-
-  private HazardArm shoulder;
-  private HazardArm wrist;
-
-  private double elevatorSetpoint = 0;
-  private double shoulderSetpoint = 0;
-  private double wristSetpoint = 0;
-
-  private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
-  private DoublePublisher setpointPublisher = elevatorTable.getDoubleTopic("Elevator setpoint").publish();
-  private DoubleArrayPublisher kinematicsPublisher = elevatorTable.getDoubleArrayTopic("Elevator kinematics").publish();
+  private HazardSparkMax clawMotor;
 
   private SparkMaxConfig followConfig = new SparkMaxConfig();
   private SparkMaxConfig leadConfig = new SparkMaxConfig();
   private SparkMaxConfig shoulderConfig = new SparkMaxConfig();
   private SparkMaxConfig wristConfig = new SparkMaxConfig();
+  private SparkMaxConfig clawConfig = new SparkMaxConfig();
 
-  public Elevator(boolean tuningMode) {
+  /****************************************************************** Sensors ******************************************************************/
+  private SparkAnalogSensor breakbeam;
+
+
+  /****************************************************************** Control ******************************************************************/
+  private HazardArm shoulder;
+  private HazardArm wrist;
+  private PIDController elevatorPID;
+  private ElevatorFeedforward elevatorFF;
+
+  private double elevatorSetpoint = 0;
+  private double shoulderSetpoint = 0;
+  private double wristSetpoint = 0;
+
+  private double shoulderWristLoad = 0.1;
+  private double shoulderCoralLoad = 0.02;
+  private double shoulderDynamicKg = 0;
+
+  /****************************************************************** NetworkTables & logging ******************************************************************/
+  private DoublePublisher clawSpeedPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Speed").publish();
+  private DoublePublisher breakbeamPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Breakbeam").publish();
+
+  private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
+  private BooleanPublisher coralPublisher = elevatorTable.getBooleanTopic("Has coral?").publish();
+  private DoublePublisher setpointPublisher = elevatorTable.getDoubleTopic("Elevator setpoint").publish();
+  private DoublePublisher shoulderKgPublisher = elevatorTable.getDoubleTopic("Dyanmic Kg").publish();
+  private DoubleArrayPublisher kinematicsPublisher = elevatorTable.getDoubleArrayTopic("Elevator kinematics").publish();
+
+  public Elevator() {
     followConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
     followConfig.idleMode(IdleMode.kBrake);
     followConfig.follow(Constants.Elevator.front, true);
-    /*followConfig.absoluteEncoder.positionConversionFactor( //TODO: Change position conversion factor on sparkMaxes for convenience
-        Constants.Elevator.gearboxReduction);
-    followConfig.absoluteEncoder.velocityConversionFactor(
-        Constants.Elevator.gearboxReduction);*/
 
     leadConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
     leadConfig.idleMode(IdleMode.kBrake);
@@ -109,10 +129,17 @@ public class Elevator extends SubsystemBase {
     wristConfig.encoder.positionConversionFactor(Constants.Wrist.gearboxReduction);
     wristConfig.encoder.velocityConversionFactor(Constants.Wrist.gearboxReduction);
 
+    clawConfig.idleMode(IdleMode.kBrake);
+    clawConfig.inverted(true);
+    clawConfig.smartCurrentLimit(Constants.Coral.currentLimit);
+
     leadMotor = new HazardSparkMax(Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
     followerMotor = new HazardSparkMax(Constants.Elevator.front, MotorType.kBrushless, followConfig, false, false, elevatorTable);
     shoulderMotor = new HazardSparkMax(Constants.Shoulder.CAN, MotorType.kBrushless, shoulderConfig, true,  true, "Shoulder");
     wristMotor = new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
+    clawMotor = new HazardSparkMax(Constants.Coral.CAN, MotorType.kBrushless, clawConfig, true, "Rollers");
+
+    breakbeam = clawMotor.getMotor().getAnalog();
 
     shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
     wristSetpoint = Constants.Wrist.startingRotationRadians;
@@ -137,8 +164,7 @@ public class Elevator extends SubsystemBase {
       0.05,
       1,
       1,
-      "Shoulder",
-      tuningMode);
+      "Shoulder");
     wrist = new HazardArm( //Adjust Kstatic for small movements
       wristMotor,
       0,
@@ -151,27 +177,37 @@ public class Elevator extends SubsystemBase {
       0.08,
       1,
       2,
-      "Wrist",
-      tuningMode);
+      "Wrist");
 
     shoulder.setpoint(shoulderSetpoint);
     wrist.setpoint(wristSetpoint);
 
-    if (tuningMode) {
-      SmartDashboard.putNumber("Elevator Kp", 0.35);
-      SmartDashboard.putNumber("Elevator Ki", 0.00001);
-      SmartDashboard.putNumber("Elevator Kd", 0);
-
-      SmartDashboard.putData("Reconfigure controllers", new InstantCommand(() -> { this.reconfigure(); }, this));
-    }
-
-    SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
-    SmartDashboard.putNumber("Shoulder setpoint", shoulderSetpoint);
-    SmartDashboard.putNumber("Wrist setpoint", wristSetpoint);
+    setupDashboard();
   }
 
   public void init() {
     shoulder.unstop();
+  }
+
+  public void setupDashboard() {
+    if (tuningMode) {
+      wrist.pushTuningValues();
+      shoulder.pushTuningValues();
+
+      SmartDashboard.putNumber("Elevator Kp", 0.35);
+      SmartDashboard.putNumber("Elevator Ki", 0.00001);
+      SmartDashboard.putNumber("Elevator Kd", 0);
+
+      SmartDashboard.putData("Reconfigure PID controllers", new InstantCommand(() -> { this.reconfigure(); }));
+    }
+
+    SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
+  }
+
+  /****************************************************************** Getters ******************************************************************/
+
+  public boolean hasCoral() {
+    return breakbeam.getVoltage() < 1.5;
   }
 
   /**
@@ -196,6 +232,57 @@ public class Elevator extends SubsystemBase {
     return r * 2 * Math.PI;
   }
 
+  public double calculateArmKg() {
+    double coralKg = 0;
+    if (coralStored) {
+      coralKg = shoulderCoralLoad;
+    }
+    return Math.cos(wrist.getPositionRadians()) * (shoulderWristLoad + coralKg);
+  }
+
+  public double getElevatorHeightMM() {
+    return leadMotor.getPosition() * Constants.Elevator.gearboxRotationsToHeightMM;
+  }
+
+  public double[] elevatorForwardKinematics() {
+    double x, y;
+    x = (Math.cos(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM) + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM) - (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM);
+    y = Constants.Elevator.baseHeightMM + (elevatorSetpoint * Constants.Elevator.gearboxRotationsToHeightMM) + (Math.sin(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM) + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM) + (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM);
+    return new double[] {x, y};
+  }
+
+  /***
+   * Returns the difference between the right encoder and left encoder positions
+   * @return Right pos - Left pos
+   */
+  public double getEncoderDiff() {
+    return leadMotor.getPosition() - followerMotor.getPosition();
+  }
+
+  public boolean atElevatorReference() {
+    return Math.abs(leadMotor.getPosition() - elevatorSetpoint) < 0.05;
+  }
+
+  public boolean atShoulderReference() {
+    return Math.abs(shoulder.getPositionRadians() - shoulderSetpoint) < 0.035; // 2 degrees tolerance // 0.087 = 5 degrees
+  }
+
+  public boolean atWristReference() {
+    return Math.abs(wrist.getPositionRadians() - wristSetpoint) < 0.035; // 2 degrees tolerance
+  }
+
+
+  /****************************************************************** Setters ******************************************************************/
+
+
+      /***
+   * Sets the algae mode
+   * @param mode
+   */
+  public void setAlgaeMode(boolean mode) {
+    algaeMode = mode;
+  }
+
   /***
    * Set the elevator target
    * @param position target position in rotations
@@ -208,10 +295,6 @@ public class Elevator extends SubsystemBase {
     leadMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
   }
 
-  public double getElevatorHeightMM() {
-    return leadMotor.getPosition() * Constants.Elevator.gearboxRotationsToHeightMM;
-  }
-
   public void setElevatorHeightMM(double heightMM) {
     set(heightMM / Constants.Elevator.gearboxRotationsToHeightMM);
   }
@@ -221,7 +304,6 @@ public class Elevator extends SubsystemBase {
     //Constants.log(elevatorSetpoint);
     elevatorSetpoint += additive;
     set(elevatorSetpoint);
-    SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
   }
 
   /***
@@ -246,7 +328,6 @@ public class Elevator extends SubsystemBase {
     wrist.setpoint(MathUtil.clamp(wristSetpoint,
     shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRadians,
     shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRadians));
-    SmartDashboard.putNumber("Wrist setpoint", elevatorSetpoint);
   }
 
   /***
@@ -261,6 +342,10 @@ public class Elevator extends SubsystemBase {
   public void setWristAdditive(double additive) {
     if (additive == 0) return;
     setWrist(wristSetpoint + (additive * 0.02));
+  }
+
+  public void setClaw(double speed) {
+    clawMotor.set(speed);
   }
 
   /***
@@ -327,33 +412,6 @@ public class Elevator extends SubsystemBase {
     setElevatorHeightMM(elevatorSetpoint);
   }
 
-  public double[] elevatorForwardKinematics() {
-    double x, y;
-    x = (Math.cos(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM) + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM) - (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM);
-    y = Constants.Elevator.baseHeightMM + (elevatorSetpoint * Constants.Elevator.gearboxRotationsToHeightMM) + (Math.sin(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM) + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM) + (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM);
-    return new double[] {x, y};
-  }
-
-  /***
-   * Returns the difference between the right encoder and left encoder positions
-   * @return Right pos - Left pos
-   */
-  public double getEncoderDiff() {
-    return leadMotor.getPosition() - followerMotor.getPosition();
-  }
-
-  public boolean atElevatorReference() {
-    return Math.abs(leadMotor.getPosition() - elevatorSetpoint) < 0.05;
-  }
-
-  public boolean atShoulderReference() {
-    return Math.abs(shoulder.getPositionRadians() - shoulderSetpoint) < 0.035; // 2 degrees tolerance // 0.087 = 5 degrees
-  }
-
-  public boolean atWristReference() {
-    return Math.abs(wrist.getPositionRadians() - wristSetpoint) < 0.035; // 2 degrees tolerance
-  }
-
   public void resetEncoders() {
     Constants.log("Resetting encoders...");
     leadMotor.setEncoder(Constants.Elevator.minExtension);
@@ -382,9 +440,27 @@ public class Elevator extends SubsystemBase {
   }
 
   private int loop = 0;
+
   @Override
   public void periodic() {
     if (shoulder.getPositionRadians() > 0 && wrist.getPositionRadians() > 0) isScoringL4 = true; else isScoringL4 = false;
+
+    if (hasCoral() && !coralStored) {
+      Constants.log("Acquired coral");
+      wrist.setLoad(0.04);
+      coralStored = true;
+      coralPublisher.set(coralStored);
+    } else if (!hasCoral() && coralStored) {
+      Constants.log("Ejected coral");
+      wrist.setLoad(0);
+      coralStored = false;
+      coralPublisher.set(coralStored);
+    }
+
+    shoulderDynamicKg = calculateArmKg();
+    shoulderKgPublisher.set(0.56 + shoulderDynamicKg);
+
+    shoulder.setLoad(shoulderDynamicKg);
     shoulder.periodic();
     wrist.periodic();
     /*loop++;
@@ -409,6 +485,7 @@ public class Elevator extends SubsystemBase {
     shoulderMotor.publishToNetworkTables();
     wristMotor.publishToNetworkTables();
     setpointPublisher.set(elevatorSetpoint);
+    breakbeamPublisher.set(breakbeam.getVoltage());
     kinematicsPublisher.set(new double[] {elevatorSetpoint, shoulderSetpoint, wristSetpoint});
   }
 

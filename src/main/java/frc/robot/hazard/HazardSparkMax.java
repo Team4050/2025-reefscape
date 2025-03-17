@@ -126,6 +126,10 @@ public class HazardSparkMax {
         }
     }
 
+    public SparkMax getMotor() {
+      return controller;
+    }
+
         /***
      * Returns the position of the encoder in rotations
      * @return

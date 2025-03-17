@@ -35,7 +35,6 @@ import frc.robot.commands.AutoScore;
 import frc.robot.commands.ChooseAutonomous;
 import frc.robot.commands.MoveScoringMechanismTo;
 import frc.robot.hazard.HazardXbox;
-import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
@@ -48,12 +47,11 @@ import frc.robot.subsystems.Elevator;
  */
 public class RobotContainer {
   private boolean drivetrainFieldOrientedMode = false;
-  private boolean elevatorTuningMode = false;
 
   // The robot's subsystems and commands are defined here...
   private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0);
-  private final Elevator elevatorSubsystem = new Elevator(elevatorTuningMode);
-  private final Claw clawSubsystem = new Claw();
+  private final Elevator elevatorSubsystem = new Elevator();
+  //private final Claw clawSubsystem = new Claw();
   private final Climber climberSubsystem = new Climber();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
@@ -62,7 +60,7 @@ public class RobotContainer {
   private final HazardXbox m_secondaryController =
       new HazardXbox(OperatorConstants.kSecondaryControllerPort);
 
-  private final ChooseAutonomous autoChooser = new ChooseAutonomous(drivetrainSubsystem, elevatorSubsystem, clawSubsystem);
+  private final ChooseAutonomous autoChooser = new ChooseAutonomous(drivetrainSubsystem, elevatorSubsystem);
 
   private NetworkTableInstance netTables = NetworkTableInstance.getDefault();
   private DoubleArrayPublisher imuDataPublisher = netTables.getTable("IMU").getDoubleArrayTopic("Yaw, Yaw velocity").publish();
@@ -135,11 +133,25 @@ public class RobotContainer {
               elevatorIKTargetY -= m_secondaryController.getRightY() * 10 * 0.02;
               SmartDashboard.putNumber(IKtargetX, elevatorIKTargetX);
               SmartDashboard.putNumber(IKtargetY, elevatorIKTargetY);
-              //double elevatorExt = m_secondaryController.povUp().getAsBoolean() ? 0.02 : 0;
-              //elevatorExt = m_secondaryController.povDown().getAsBoolean() ? -0.02 : elevatorExt;
-              //elevatorSubsystem.setElevatorAdditive(elevatorExt);
+
               elevatorSubsystem.setWristAdditive(m_secondaryController.getLeftX());
               elevatorSubsystem.setShoulderAdditive(-m_secondaryController.getLeftY());
+
+              if (m_secondaryController.povLeft().getAsBoolean()) {
+                if (elevatorSubsystem.algaeMode) {
+                  elevatorSubsystem.setClaw(-0.3);
+                } else {
+                  elevatorSubsystem.setClaw(0.1);
+                }
+              } else if (m_secondaryController.povRight().getAsBoolean()) {
+                if (elevatorSubsystem.algaeMode) {
+                  elevatorSubsystem.setClaw(0.3);
+                } else {
+                  elevatorSubsystem.setClaw(-0.1);
+                }
+              } else {
+                elevatorSubsystem.setClaw(0);
+              }
             },
             elevatorSubsystem));
 
@@ -176,24 +188,6 @@ public class RobotContainer {
     }, drivetrainSubsystem));
 
     Constants.log("IMU angle 3: " + Constants.Sensors.imu.getAngle());
-
-    clawSubsystem.setDefaultCommand(new RunCommand(() -> {
-      if (m_secondaryController.povLeft().getAsBoolean()) {
-        if (clawSubsystem.algaeMode) {
-          clawSubsystem.set(-0.3);
-        } else {
-          clawSubsystem.set(0.1);
-        }
-      } else if (m_secondaryController.povRight().getAsBoolean()) {
-        if (clawSubsystem.algaeMode) {
-          clawSubsystem.set(0.3);
-        } else {
-          clawSubsystem.set(-0.1);
-        }
-      } else {
-        clawSubsystem.set(0);
-      }
-    }, clawSubsystem));
 
     Constants.Sensors.imu.setGyroAngleZ(180);
     Constants.log("IMU angle 4: " + Constants.Sensors.imu.getAngle());
@@ -248,8 +242,8 @@ public class RobotContainer {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
-    m_driverController.leftTrigger().onTrue(new AlignToReefPID(drivetrainSubsystem, false, clawSubsystem.algaeMode));
-    m_driverController.rightTrigger().onTrue(new AlignToReefPID(drivetrainSubsystem, true, clawSubsystem.algaeMode));
+    m_driverController.leftTrigger().onTrue(new AlignToReefPID(drivetrainSubsystem, false, elevatorSubsystem.algaeMode));
+    m_driverController.rightTrigger().onTrue(new AlignToReefPID(drivetrainSubsystem, true, elevatorSubsystem.algaeMode));
     m_driverController.b().onTrue(new InstantCommand(() -> {
       drivetrainFieldOrientedMode = !drivetrainFieldOrientedMode;
       Constants.log("Drivetrain FOC Mode " + drivetrainFieldOrientedMode);
@@ -263,20 +257,7 @@ public class RobotContainer {
       Constants.log("Driving from " + current.getX() + " " + current.getY() + ", heading of " + current.getRotation().getDegrees() + ", to " + drivetrainTargetX + " " + drivetrainTargetY + ", target heading of " + drivetrainTargetAngle);
       drivetrainSubsystem.pathfindToPose(target).schedule();
     }, drivetrainSubsystem));
-    /*m_driverController.b().onTrue(
-        new InstantCommand(
-            () -> {
-              Constants.log("Setting elevator position to max...");
-              elevatorSubsystem.set(Constants.Elevator.maxExtension);
-            }));
-    m_driverController.a().onTrue(
-            new InstantCommand(
-                () -> {
-                  Constants.log("Setting elevator position to min...");
-                  elevatorSubsystem.set(Constants.Elevator.minExtension);
-                }));*/
-    m_driverController.leftBumper().onTrue(new InstantCommand(() -> { elevatorSubsystem.recalibrateArmAbsoluteEncoder(); }));
-    //m_driverController.rightBumper().onTrue(new InstantCommand(() -> { Constants.Sensors.resetIMU(); }));
+
     m_driverController.x().onTrue(new InstantCommand(() -> { elevatorSubsystem.logEncoders(); }, elevatorSubsystem));
     m_driverController.y().onTrue(new InstantCommand(() -> {
       if (pipeline == 0) { pipeline = 1; }
@@ -293,23 +274,22 @@ public class RobotContainer {
 
     /********************************************************** Secondary **************************************************************************/
 
-    m_secondaryController.leftBumper().onTrue(new InstantCommand(() -> {clawSubsystem.setAlgaeMode(true);})).onFalse(new InstantCommand(() -> {clawSubsystem.setAlgaeMode(false);}));
-    m_secondaryController.rightBumper().onTrue(new AutoLoad(elevatorSubsystem, clawSubsystem));
+    m_secondaryController.leftBumper().onTrue(new InstantCommand(() -> {elevatorSubsystem.setAlgaeMode(true);})).onFalse(new InstantCommand(() -> {elevatorSubsystem.setAlgaeMode(false);}));
+    m_secondaryController.rightBumper().onTrue(new AutoLoad(elevatorSubsystem));
 
-    if (elevatorTuningMode) {
+    if (Constants.tuningMode && false) {
       m_secondaryController.b().onTrue(new InstantCommand(() -> { elevatorSubsystem.goToPosition(elevatorIKTargetX, elevatorIKTargetY, SmartDashboard.getNumber(wristTarget, 0), true);}, elevatorSubsystem));
       m_secondaryController.a().onTrue(new InstantCommand(() -> { elevatorSubsystem.reconfigure(); }, elevatorSubsystem));
-      //m_secondaryController.x().onTrue(new InstantCommand(() -> { elevatorSubsystem.resetEncoders(); }, elevatorSubsystem));
     } else {
-      m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));
-      m_secondaryController.b().onTrue(MoveScoringMechanismTo.L2(elevatorSubsystem, clawSubsystem));
-      m_secondaryController.a().onTrue(MoveScoringMechanismTo.L3(elevatorSubsystem, clawSubsystem));
-      m_secondaryController.x().onTrue(MoveScoringMechanismTo.L4(elevatorSubsystem, clawSubsystem));
+      m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem));
+      m_secondaryController.b().onTrue(MoveScoringMechanismTo.L2(elevatorSubsystem));
+      m_secondaryController.a().onTrue(MoveScoringMechanismTo.L3(elevatorSubsystem));
+      m_secondaryController.x().onTrue(MoveScoringMechanismTo.L4(elevatorSubsystem));
     }
 
-    BooleanSupplier isAlgaeMode = () -> { return clawSubsystem.algaeMode; };
-    m_secondaryController.leftTrigger().onTrue(new ConditionalCommand(MoveScoringMechanismTo.AlgaeTransport(elevatorSubsystem, clawSubsystem), MoveScoringMechanismTo.Transport(elevatorSubsystem, clawSubsystem), isAlgaeMode));
-    m_secondaryController.rightTrigger().onTrue(new AutoScore(elevatorSubsystem, clawSubsystem));
+    BooleanSupplier isAlgaeMode = () -> { return elevatorSubsystem.algaeMode; };
+    m_secondaryController.leftTrigger().onTrue(new ConditionalCommand(MoveScoringMechanismTo.AlgaeTransport(elevatorSubsystem), MoveScoringMechanismTo.Transport(elevatorSubsystem), isAlgaeMode));
+    m_secondaryController.rightTrigger().onTrue(new AutoScore(elevatorSubsystem));
 
     m_secondaryController.povUp().whileTrue(new RunCommand(() -> {
       elevatorSubsystem.setElevatorAdditive(0.02 * elevatorManualControlScalar);
@@ -323,8 +303,8 @@ public class RobotContainer {
       elevatorSubsystem.setElevatorHeightMM(elevatorSubsystem.getElevatorHeightMM());
     }, elevatorSubsystem));
 
-    //m_secondaryController.start().onTrue(new SetSubsystemsToClimbingConfig());
-    //m_secondaryController.back().onTrue(new SetSubsystemsToClimbingConfig());
+    m_secondaryController.start().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem));
+    m_secondaryController.back().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem));
   }
 
   private void configureDashboard() {

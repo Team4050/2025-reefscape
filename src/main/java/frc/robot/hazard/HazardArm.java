@@ -2,8 +2,8 @@ package frc.robot.hazard;
 
 import com.revrobotics.spark.SparkBase.ControlType;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
@@ -15,12 +15,20 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.Constants;
 
 public class HazardArm {
+  public boolean manualControl = false;
+
     private HazardSparkMax motor;
     private ArmFeedforward feedforward;
     private TrapezoidProfile velocityCurve;
-    private PIDController feedback;
-    private ProfiledPIDController profiledFeedback;
+    private ProfiledPIDController feedback;
     private double setpoint = 0;
+    private boolean limitRotation = true;
+    private double softLimitMin = Double.NEGATIVE_INFINITY;
+    private double softLimitMax = Double.POSITIVE_INFINITY;
+    private double hardLimitMin = Double.NEGATIVE_INFINITY;
+    private double hardLimitMax = Double.POSITIVE_INFINITY;
+    private double Kg = 0;
+    private double dynamicLoadKg = 0;
     private String name;
     private DoublePublisher voltagePIDOutput;
     private DoublePublisher velocityFFtarget;
@@ -42,43 +50,37 @@ public class HazardArm {
      * @param name
      * @param tuneUsingDashboard
      */
-    public HazardArm(HazardSparkMax motor, double tolerance, boolean useAbsoluteEncoder, double Ks, double Kg, double Kv, double Kp, double Ki, double Kd, double maxV, double maxA, String name, boolean tuneUsingDashboard) {
+    public HazardArm(HazardSparkMax motor, double tolerance, boolean useAbsoluteEncoder, double Ks, double Kg, double Kv, double Kp, double Ki, double Kd, double maxV, double maxA, String name) {
         this.motor = motor;
         this.name = name;
         this.useAbsoluteEncoder = useAbsoluteEncoder;
-        this.tuneUsingDashboard = tuneUsingDashboard;
+        this.Kg = Kg;
         velocityCurve = new TrapezoidProfile(new Constraints(maxV, maxA));
         feedforward = new ArmFeedforward(Ks, Kg, Kv);
-        feedback = new PIDController(Kp, Ki, Kd);
-        feedback.setIntegratorRange(-5, 5);
+        feedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
+        feedback.setIntegratorRange(-1.5, 1.5);
+        feedback.setIZone(Math.toRadians(10));
         feedback.setTolerance(tolerance);
-
-        profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
-        profiledFeedback.setIntegratorRange(-1.5, 1.5);
-        profiledFeedback.setTolerance(tolerance);
         double motorPosition = motor.getPositionRadians();
         if (useAbsoluteEncoder) {
           motorPosition = motor.getAbsPositionRadians();
         }
-        profiledFeedback.reset(motorPosition, 0);
-
-        if (tuneUsingDashboard) {
-            Boolean fail = false;
-            fail |= !SmartDashboard.putNumber(name + " Ks", Ks);
-            fail |= !SmartDashboard.putNumber(name + " Kg", Kg);
-            fail |= !SmartDashboard.putNumber(name + " Kv", Kv);
-
-            fail |= !SmartDashboard.putNumber(name + " Kp", Kp);
-            fail |= !SmartDashboard.putNumber(name + " Ki", Ki);
-            fail |= !SmartDashboard.putNumber(name + " Kd", Kd);
-
-            fail |= !SmartDashboard.putNumber(name + " maxV", maxV);
-            fail |= !SmartDashboard.putNumber(name + " maxA", maxA);
-            if (fail) { DriverStation.reportError("Failed to push all tuning values to the dashboard!", true); };
-        }
+        feedback.reset(motorPosition, 0);
 
         voltagePIDOutput = NetworkTableInstance.getDefault().getTable(name).getDoubleTopic("PID Output").publish();
         velocityFFtarget = NetworkTableInstance.getDefault().getTable(name).getDoubleTopic("Velocity feedforward").publish();
+    }
+
+    public HazardArm(HazardSparkMax motor, double tolerance, boolean useAbsoluteEncoder, double Ks, double Kg, double Kv, double Kp, double Ki, double Kd, double maxV, double maxA, String name, double[] softLimits) {
+      this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, maxV, maxA, name);
+      softLimitMin = softLimits[0];
+      softLimitMax = softLimits[1];
+    }
+
+    public HazardArm(HazardSparkMax motor, double tolerance, boolean useAbsoluteEncoder, double Ks, double Kg, double Kv, double Kp, double Ki, double Kd, double maxV, double maxA, String name, double[] softLimits, double[] hardLimits) {
+      this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, maxV, maxA, name, softLimits);
+      hardLimitMin = hardLimits[0];
+      hardLimitMax = hardLimits[1];
     }
 
     /***
@@ -86,7 +88,7 @@ public class HazardArm {
      * @param value
      */
     public void setpoint(double value) {
-        setpoint = value;
+        setpoint = MathUtil.clamp(value, softLimitMin, softLimitMax);
         motor.setSetpointPublishingOnly(setpoint);
     }
 
@@ -94,9 +96,10 @@ public class HazardArm {
      * Sets a new Kg value (coral/no coral)
      * @param Kg
      */
-    public void setLoad(double Kg) {
-      Constants.log("Wrist load changed from " + feedforward.getKg() + " to " + Kg);
-      feedforward.setKg(Kg);
+    public void setLoad(double value) {
+      dynamicLoadKg = value;
+      //Constants.log(name + " load changed from " + dynamicLoadKg + " to " + dynamicLoadKg);
+      feedforward.setKg(Kg + dynamicLoadKg);
     }
 
     public void stop() {
@@ -137,23 +140,45 @@ public class HazardArm {
       if (useAbsoluteEncoder) {
         motorPosition = motor.getAbsPositionRadians();
       }
-      var currentState = new State(motorPosition, motor.getVelocityRadPS());
-      var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
-      //Constants.log("Arm FF target velocity: " + v.velocity);
-      var ff = feedforward.calculate(setpoint, v.velocity);
-      var fb = feedback.calculate(motorPosition, setpoint);
-      var pfb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
-      SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
-      SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
-      if (ff + pfb < -6 || ff + pfb > 6) {
-        Constants.log("OVERCORRECT - DISABLE ff: " + ff + " pfb: " + pfb + "acc error: " + profiledFeedback.getAccumulatedError());
-        motor.setControl(0, ControlType.kVoltage);
-        voltagePIDOutput.set(0);
-      } else {
-        motor.setControl(ff + pfb, ControlType.kVoltage);
-        voltagePIDOutput.set(ff + pfb);
+      if (!manualControl) {
+        var currentState = new State(motorPosition, motor.getVelocityRadPS());
+        var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
+        var ff = feedforward.calculate(setpoint, v.velocity);
+        var fb = feedback.calculate(motorPosition, new State(setpoint, 0));
+        SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
+        SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
+        if (ff + fb < -6 || ff + fb > 6) {
+          Constants.log("OVERCORRECT - DISABLE ff: " + ff + " pfb: " + fb + "acc error: " + feedback.getAccumulatedError());
+          motor.setControl(0, ControlType.kVoltage);
+          velocityFFtarget.set(currentState.velocity);
+          voltagePIDOutput.set(0);
+        } else {
+          motor.setControl(ff + fb, ControlType.kVoltage);
+          velocityFFtarget.set(currentState.velocity);
+          voltagePIDOutput.set(ff + fb);
+        }
+        if (motorPosition < hardLimitMin || motorPosition > hardLimitMax) {
+          Constants.log(name + "hard limit reached, disabled");
+          stop = true;
+        }
       }
+
       motor.publishToNetworkTables();
+    }
+
+    public void pushTuningValues() {
+      boolean fail = false;
+      fail |= !SmartDashboard.putNumber(name + " Ks", feedforward.getKs());
+      fail |= !SmartDashboard.putNumber(name + " Kg", feedforward.getKg());
+      fail |= !SmartDashboard.putNumber(name + " Kv", feedforward.getKv());
+
+      fail |= !SmartDashboard.putNumber(name + " Kp", feedback.getP());
+      fail |= !SmartDashboard.putNumber(name + " Ki", feedback.getI());
+      fail |= !SmartDashboard.putNumber(name + " Kd", feedback.getD());
+
+      fail |= !SmartDashboard.putNumber(name + " maxV", feedback.getConstraints().maxVelocity);
+      fail |= !SmartDashboard.putNumber(name + " maxA", feedback.getConstraints().maxAcceleration);
+      if (fail) { DriverStation.reportError("Failed to push all tuning values to the dashboard!", true); };
     }
 
     /***
@@ -174,10 +199,10 @@ public class HazardArm {
         Constants.log("Control: " + Kp + " " + Ki + " " + Kd);
         Constants.log("Max V and A" + maxV + " " + maxA);
         feedforward.setKs(Ks);
-        feedforward.setKg(Kg);
+        this.Kg = Kg;
+        feedforward.setKg(Kg + dynamicLoadKg);
         feedforward.setKv(Kv);
         feedback.setPID(Kp, Ki, Kd);
-        profiledFeedback.setPID(Kp, Ki, Kd);
-        profiledFeedback.setConstraints(new Constraints(maxV, maxA));
+        feedback.setConstraints(new Constraints(maxV, maxA));
     }
 }

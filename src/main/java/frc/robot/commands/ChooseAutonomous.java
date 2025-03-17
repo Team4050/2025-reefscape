@@ -9,7 +9,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
-import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
 
@@ -17,8 +16,8 @@ public class ChooseAutonomous {
     private List<Command> autos;
     private SendableChooser<Command> autoChooser;
 
-    public ChooseAutonomous(Drivetrain drivetrain, Elevator elevator, Claw claw) {
-        NamedCommands.registerCommand("Score L4", MoveScoringMechanismTo.L4(elevator, claw));
+    public ChooseAutonomous(Drivetrain drivetrain, Elevator elevator) {
+        NamedCommands.registerCommand("Score L4", MoveScoringMechanismTo.L4(elevator));
         Command startingLineToTag = AutoBuilder.buildAuto("Move to tag");
         Command crossedFingers = AutoBuilder.buildAuto("Crossed fingers");
         autoChooser = new SendableChooser<Command>();
