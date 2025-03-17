@@ -8,7 +8,6 @@ import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
 import org.photonvision.targeting.PhotonPipelineResult;
-import org.photonvision.targeting.PhotonTrackedTarget;
 
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
@@ -39,7 +38,6 @@ import edu.wpi.first.math.estimator.MecanumDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics;
@@ -51,12 +49,14 @@ import edu.wpi.first.math.numbers.N4;
 import edu.wpi.first.math.system.LinearSystem;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
+import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -84,6 +84,7 @@ public class Drivetrain extends SubsystemBase {
   private PhotonPoseEstimator aprilTagPoseEstimator = new PhotonPoseEstimator(aprilTags, PoseStrategy.AVERAGE_BEST_TARGETS, Constants.Drivetrain.robotToCamera);
   public boolean invalidPose = false;
   private int lastAprilTagSeen = 0;
+  private Timer timeSinceTagSeen = new Timer();
 
   // ******************************************************** Math & Control ******************************************************** //
   double rh = Math.sqrt(2) / 2;
@@ -96,7 +97,7 @@ public class Drivetrain extends SubsystemBase {
     new Translation2d(0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(-0.2794, 0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(-0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter));
-  private MecanumDrivePoseEstimator poseEstimator = new MecanumDrivePoseEstimator(kinematics, Rotation2d.kZero, new MecanumDriveWheelPositions(), Pose2d.kZero, VecBuilder.fill(0.1, 0.1, 0.1), VecBuilder.fill(0.45, 0.45, 0.45));
+  private MecanumDrivePoseEstimator poseEstimator;
 
   // ******************************************************** Model-based control ******************************************************** //
   private Vector<N3> referenceVector;
@@ -122,6 +123,7 @@ public class Drivetrain extends SubsystemBase {
   // ******************************************************** Networktables ******************************************************** //
   private boolean useNetworkTables;
   private NetworkTable drivetrainTable;
+  private DoublePublisher timerPublisher;
   private DoubleArrayPublisher appliedCurrent;
   private DoubleArrayPublisher position;
   private DoubleArrayPublisher velocity;
@@ -253,6 +255,7 @@ public class Drivetrain extends SubsystemBase {
 
     if (useNetworkTables) {
       drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
+      timerPublisher = drivetrainTable.getDoubleTopic("Time since tag detection").publish();
       appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | Amps").publish();
       velocity = drivetrainTable.getDoubleArrayTopic("Chassis velocities | mps").publish();
       position = drivetrainTable.getDoubleArrayTopic("Pose estimate").publish();
@@ -312,6 +315,10 @@ public class Drivetrain extends SubsystemBase {
     mecanumFF = new LinearPlantInversionFeedforward<>(mecanumFieldRelativeSystem, 0.02);
     referenceVector = VecBuilder.fill(0.5, 0, 0);
 
+    var rot = Constants.Sensors.getImuRotation2d();
+    Constants.log("Drivetrain - Initial IMU angle: " + rot);
+    poseEstimator = new MecanumDrivePoseEstimator(kinematics, rot, new MecanumDriveWheelPositions(), Constants.startingPose, VecBuilder.fill(0.1, 0.1, 0.1), VecBuilder.fill(0.45, 0.45, 0.45));
+
     SmartDashboard.putNumber(dashboardPosKp, 0.6);
     SmartDashboard.putNumber(dashboardPosKi, 0);
     SmartDashboard.putNumber(dashboardPosKd, 0);
@@ -341,12 +348,14 @@ public class Drivetrain extends SubsystemBase {
       Constants.Drivetrain.mainConfig,
       Constants::alliance,
       this);
+
+    timeSinceTagSeen.start();
   }
 
   public Drivetrain(boolean useNetworkTables, int logInfo, Pose2d initalPoseEstimate) {
     this(useNetworkTables, logInfo);
     Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
-    poseEstimator.resetPosition(Rotation2d.kZero, getWheelPositionsMeters(), initalPoseEstimate);
+    poseEstimator.resetPosition(Constants.Sensors.getImuRotation2d(), getWheelPositionsMeters(), initalPoseEstimate);
     Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
   }
 
@@ -454,6 +463,10 @@ public class Drivetrain extends SubsystemBase {
 
   public Optional<Pose3d> getLastSeenAprilTag() {
     return aprilTags.getTagPose(lastAprilTagSeen);
+  }
+
+  public double getTimeSinceLastSeenTag() {
+    return timeSinceTagSeen.get();
   }
 
   public Vector<N4> getY() {
@@ -568,9 +581,11 @@ public class Drivetrain extends SubsystemBase {
    * @param fieldRelativeSpeeds
    * @return
    */
-  public void setFieldRelative(ChassisSpeeds fieldRelativeSpeeds) {
-    Rotation2d rot = new Rotation2d(Constants.Sensors.getIMUYawRadians());
-    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, rot));
+  public void setFieldRelative(ChassisSpeeds fieldRelativeSpeeds, ChassisSpeeds robotRelativeFeedforward) {
+    Rotation2d rot = getPoseEstimate().getRotation();
+    var combined = ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, rot);
+    var ff = new ChassisSpeeds(Math.signum(combined.vxMetersPerSecond) * 0.03, Math.signum(combined.vyMetersPerSecond) * 0.05, Math.signum(combined.omegaRadiansPerSecond) * 0.003);
+    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(combined.plus(ff));
     set(speeds);
   }
 
@@ -585,7 +600,7 @@ public class Drivetrain extends SubsystemBase {
     var rotationWrappedPose = new Pose2d(getPoseEstimate().getX(), getPoseEstimate().getY(), diff);
     var speeds = holonomicDriveController.calculate(rotationWrappedPose, targetPose, targetLinearVelocity, targetPose.getRotation());
     Constants.log(speeds);
-    setFieldRelative(speeds);
+    setFieldRelative(speeds, new ChassisSpeeds());
   }
 
   public void drivePathFieldRelative(ChassisSpeeds speeds, DriveFeedforwards feedforwards) {
@@ -638,26 +653,31 @@ public class Drivetrain extends SubsystemBase {
 
   private Vector<N3> u = VecBuilder.fill(0, 0, 0);
   private int loop = 0;
-  private Transform3d lastCamToTag = new Transform3d();
   @Override
   public void periodic() {
     //Vector<N3> xN = (Vector<N3>) mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0), VecBuilder.fill(1, -1, 1, -1), 0.02);
 
     var unreadResults = chassisCam.getAllUnreadResults();
+    double closestMeters = 100;
     for (PhotonPipelineResult photonPipelineResult : unreadResults) {
       var estimate = aprilTagPoseEstimator.update(photonPipelineResult);
       if (estimate.isPresent()) {
         //Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
-        lastAprilTagSeen = estimate.get().targetsUsed.get(0).getFiducialId();
+        for (int i = 0; i < estimate.get().targetsUsed.size(); i++) {
+          double distanceToTag = estimate.get().targetsUsed.get(i).bestCameraToTarget.getTranslation().getNorm();
+          if (distanceToTag < closestMeters) {
+            closestMeters = distanceToTag;
+            timeSinceTagSeen.reset();
+            lastAprilTagSeen = estimate.get().targetsUsed.get(i).getFiducialId();
+          }
+        }
 
-        lastCamToTag = lastCamToTag.div(2).plus(estimate.get().targetsUsed.get(0).getBestCameraToTarget().div(2));
-        //Constants.log("Current best cam to target: " + estimate.get().targetsUsed.get(0).getBestCameraToTarget());
-        //Constants.log("Average best cam to target: " + lastCamToTag);
         String message = "Saw tags";
-        for (PhotonTrackedTarget t : (PhotonTrackedTarget[])estimate.get().targetsUsed.toArray()) {
+        /*for (PhotonTrackedTarget t : (PhotonTrackedTarget[])estimate.get().targetsUsed.toArray()) {
           message += (" " + t .fiducialId);
         }
-        Constants.logStringToFile(message);
+        message += timeSinceLastTag.get();
+        Constants.logStringToFile(message);*/
 
         var pose = estimate.get().estimatedPose;
         Constants.limelightDataLogEntry.append(new double[] {
@@ -674,7 +694,7 @@ public class Drivetrain extends SubsystemBase {
 
     poseEstimator.update(Constants.Sensors.getImuRotation2d(), getWheelPositionsMeters());
     var pose = getPoseEstimate();
-    Constants.estimatedPositionLogEntry.append(new double[] {pose.getX(), pose.getY(), pose.getRotation().getDegrees()});
+    //Constants.estimatedPositionLogEntry.append(new double[] {pose.getX(), pose.getY(), pose.getRotation().getDegrees()});
     if (pose.getX() < 0 || pose.getX() > 17.5 || pose.getY() < 0 || pose.getY() > 8) {
       Constants.log("Invalid pose estimate");
       invalidPose = true;
@@ -693,6 +713,7 @@ public class Drivetrain extends SubsystemBase {
     super.periodic();
 
     if (useNetworkTables) {
+      timerPublisher.set(timeSinceTagSeen.get());
       appliedCurrent.set(getAppliedCurrents());
       ChassisSpeeds velocityField = getFieldRelativeSpeedsMPS();
       velocity.set(new double[] {velocityField.vxMetersPerSecond, velocityField.vyMetersPerSecond, velocityField.omegaRadiansPerSecond});

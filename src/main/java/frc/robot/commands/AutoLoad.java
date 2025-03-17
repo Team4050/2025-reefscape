@@ -12,6 +12,7 @@ public class AutoLoad extends Command {
     private Claw claw;
     private Timer timeout;
     private Timer timer;
+    private boolean sensed = false;
     private boolean algaeMode = false;
     private boolean cancel = false;
 
@@ -26,12 +27,11 @@ public class AutoLoad extends Command {
     @Override
     public void initialize() {
       SmartDashboard.putString("Autoloading status", "Feeding");
-
-        timer.reset();
-        timeout.reset();
-        timeout.start();
+      cancel = false;
+      timeout.restart();
         algaeMode = claw.algaeMode;
         if (algaeMode) {
+          SmartDashboard.putString("Autoloading status", "Feeding algae");
           timer.start();
         } else {
           if (claw.hasCoral()) {
@@ -45,10 +45,12 @@ public class AutoLoad extends Command {
     @Override
     public void execute() {
       if (cancel) return;
-      if (algaeMode) {
+      if (!algaeMode) {
         claw.set(0.1);
-        if (claw.hasCoral()) {
-          timer.start();
+        if (!sensed && claw.hasCoral()) {
+          Constants.log("Timer started");
+          timer.restart();
+          sensed = true;
         }
       } else {
         claw.set(-0.3);
@@ -57,11 +59,14 @@ public class AutoLoad extends Command {
 
     @Override
     public boolean isFinished() {
-      return cancel || (!algaeMode && claw.hasCoral() && timer.hasElapsed(0.5)) || (algaeMode && timer.hasElapsed(2)) || timeout.hasElapsed(6);
+      Constants.log(timer.get());
+      return cancel || (!algaeMode && sensed && timer.hasElapsed(0.28)) || (algaeMode && timer.hasElapsed(2));
     }
 
     @Override
     public void end(boolean interrupted) {
+      sensed = false;
+      timer.stop();
       claw.set(0);
       if (timeout.hasElapsed(6)) {
         SmartDashboard.putString("Autoloading status", "Timed out!");

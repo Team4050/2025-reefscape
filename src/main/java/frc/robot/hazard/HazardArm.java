@@ -90,6 +90,15 @@ public class HazardArm {
         motor.setSetpointPublishingOnly(setpoint);
     }
 
+    /***
+     * Sets a new Kg value (coral/no coral)
+     * @param Kg
+     */
+    public void setLoad(double Kg) {
+      Constants.log("Wrist load changed from " + feedforward.getKg() + " to " + Kg);
+      feedforward.setKg(Kg);
+    }
+
     public void stop() {
       Constants.log("Arm stopped");
       stop = true;

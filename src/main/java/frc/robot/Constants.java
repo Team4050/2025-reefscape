@@ -7,6 +7,7 @@ package frc.robot;
 import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.RobotConfig;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
@@ -30,6 +31,8 @@ import edu.wpi.first.wpilibj.DataLogManager;
  * constants are needed, to reduce verbosity.
  */
 public final class Constants {
+  public static Pose2d startingPose = new Pose2d(16.6, 4, new Rotation2d(Math.toRadians(180)));
+
   /***
    * Returns the alliance side. False for red, true for blue.
    * @return
@@ -88,13 +91,13 @@ public final class Constants {
     public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
     public static final double baseHeightMM = 812.800 + Drivetrain.chassisTopPlateHeightMM; //From Elevator - Full Assembly CAD
 
-    public static final double transport = 0.129;
+    public static final double transport = 0.15;
     public static final double L1Scoring = 1;
     public static final double L2Scoring = 3.8; //~2.77
     public static final double L2AlgaeRemoval = 2.2;
     public static final double L3Scoring = 2.4;
     public static final double L3AlgaeRemoval = 1.145;
-    public static final double L4Scoring = 3.53;
+    public static final double L4Scoring = 3.82;
     public static final double climb = 0.5;
   }
 
@@ -118,9 +121,9 @@ public final class Constants {
     public static final double L1Scoring = Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-52.5);
     public static final double L2AlgaeRemoval = Math.toRadians(-52.5);
-    public static final double L3Scoring = Math.toRadians(78);
+    public static final double L3Scoring = Math.toRadians(66);
     public static final double L3AlgaeRemoval = Math.toRadians(64.8);
-    public static final double L4Scoring = Math.toRadians(62);
+    public static final double L4Scoring = Math.toRadians(65);
     public static final double climb = Math.toRadians(-60);
   }
 
@@ -129,8 +132,8 @@ public final class Constants {
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double wristRotationOffset = Math.toRadians(-30);
-    public static final double startingRotationRadians = Math.toRadians(-41) + wristRotationOffset;
+    public static final double wristRotationOffset = Math.toRadians(-37);
+    public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset;
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
     public static final double wristMax = Math.toRadians(145) + wristRotationOffset;//+108 degrees
@@ -139,13 +142,13 @@ public final class Constants {
     public static final double chuteExitXOffsetMM = 330; //From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; //From Claw - Full Assembly CAD
 
-    public static final double transport = Math.toRadians(-20) + wristRotationOffset;
+    public static final double transport = Math.toRadians(-65);
     public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
     public static final double L1Scoring = startingRotationRadians;
     public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset;
-    public static final double L3Scoring = Math.toRadians(-18) + wristRotationOffset;
+    public static final double L3Scoring = Math.toRadians(-28);
     public static final double L3AlgaeRemoval = Math.toRadians(-20) + wristRotationOffset;
-    public static final double L4Scoring = Math.toRadians(120) + wristRotationOffset;
+    public static final double L4Scoring = Math.toRadians(98);
     public static final double climb = startingRotationRadians;
   }
 
@@ -161,8 +164,8 @@ public final class Constants {
     public static final double climberGearReduction = (12.0 / 54.0) * (1.0 / 49.0); //Sprocket * gearbox 220.5:1 ratio
 
     public static final double startingPositionRotations = 0;
-    public static final double deployedPositionRotations = -0.5;
-    public static final double climbedPositionRotations = 0.25;
+    public static final double deployedPositionRotations = -0.2;//-0.26389;
+    public static final double climbedPositionRotations = 0.11944;
   }
 
   public static DataLog matchLog;
