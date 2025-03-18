@@ -23,17 +23,19 @@ import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.ConditionalCommand;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.AlignToReefPID;
+import frc.robot.commands.AlignToReefPIDVoltage;
 import frc.robot.commands.AutoLoad;
 import frc.robot.commands.AutoScore;
 import frc.robot.commands.ChooseAutonomous;
 import frc.robot.commands.MoveScoringMechanismTo;
+import frc.robot.commands.RumbleController;
 import frc.robot.hazard.HazardXbox;
 import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Climber;
@@ -248,8 +250,9 @@ public class RobotContainer {
     // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
     // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
     // cancelling on release.
-    m_driverController.leftTrigger().onTrue(new AlignToReefPID(drivetrainSubsystem, false, clawSubsystem.algaeMode));
-    m_driverController.rightTrigger().onTrue(new AlignToReefPID(drivetrainSubsystem, true, clawSubsystem.algaeMode));
+    m_driverController.leftTrigger().onTrue(new AlignToReefPIDVoltage(drivetrainSubsystem, false, clawSubsystem.algaeMode));
+    m_driverController.rightTrigger().onTrue(new AlignToReefPIDVoltage(drivetrainSubsystem, true, clawSubsystem.algaeMode));
+    drivetrainSubsystem.autoTrigger.onFalse(new RumbleController(m_driverController, 0.5));
     m_driverController.b().onTrue(new InstantCommand(() -> {
       drivetrainFieldOrientedMode = !drivetrainFieldOrientedMode;
       Constants.log("Drivetrain FOC Mode " + drivetrainFieldOrientedMode);
@@ -287,8 +290,8 @@ public class RobotContainer {
     //m_driverController.povDown().onTrue(new InstantCommand(()-> { climberSubsystem.set(Constants.Climber.deployedPositionRotations); }, climberSubsystem));
     //m_driverController.povUp().onTrue(new InstantCommand(() -> { climberSubsystem.set(Constants.Climber.climbedPositionRotations); }, climberSubsystem));
 
-    m_driverController.povDown().onTrue(new InstantCommand(()-> { climberSubsystem.setAdditive(-0.2); }, climberSubsystem));
-    m_driverController.povUp().onTrue(new InstantCommand(() -> { climberSubsystem.setAdditive(0.2); }, climberSubsystem));
+    m_driverController.povDown().whileTrue(new RunCommand(()-> { climberSubsystem.setAdditive(-0.05); }, climberSubsystem));
+    m_driverController.povUp().whileTrue(new RunCommand(() -> { climberSubsystem.setAdditive(0.05); }, climberSubsystem));
 
 
     /********************************************************** Secondary **************************************************************************/
@@ -299,7 +302,7 @@ public class RobotContainer {
     if (elevatorTuningMode) {
       m_secondaryController.b().onTrue(new InstantCommand(() -> { elevatorSubsystem.goToPosition(elevatorIKTargetX, elevatorIKTargetY, SmartDashboard.getNumber(wristTarget, 0), true);}, elevatorSubsystem));
       m_secondaryController.a().onTrue(new InstantCommand(() -> { elevatorSubsystem.reconfigure(); }, elevatorSubsystem));
-      //m_secondaryController.x().onTrue(new InstantCommand(() -> { elevatorSubsystem.resetEncoders(); }, elevatorSubsystem));
+      m_secondaryController.x().onTrue(new InstantCommand(() -> { elevatorSubsystem.recalibrateArmAbsoluteEncoder(); }));
     } else {
       m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));
       m_secondaryController.b().onTrue(MoveScoringMechanismTo.L2(elevatorSubsystem, clawSubsystem));
@@ -309,7 +312,7 @@ public class RobotContainer {
 
     BooleanSupplier isAlgaeMode = () -> { return clawSubsystem.algaeMode; };
     m_secondaryController.leftTrigger().onTrue(new ConditionalCommand(MoveScoringMechanismTo.AlgaeTransport(elevatorSubsystem, clawSubsystem), MoveScoringMechanismTo.Transport(elevatorSubsystem, clawSubsystem), isAlgaeMode));
-    m_secondaryController.rightTrigger().onTrue(new AutoScore(elevatorSubsystem, clawSubsystem));
+    m_secondaryController.rightTrigger().onTrue(new ConditionalCommand(Commands.sequence(MoveScoringMechanismTo.AlgaeScoring(elevatorSubsystem, clawSubsystem), new AutoScore(elevatorSubsystem, clawSubsystem)), new AutoScore(elevatorSubsystem, clawSubsystem), isAlgaeMode));
 
     m_secondaryController.povUp().whileTrue(new RunCommand(() -> {
       elevatorSubsystem.setElevatorAdditive(0.02 * elevatorManualControlScalar);

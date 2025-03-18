@@ -37,14 +37,13 @@ public class AutoScore extends Command {
             cancel = true;
             return;
           }
-          MoveScoringMechanismTo.AlgaeScoring(elevator, claw).schedule();
         }
     }
 
     @Override
     public void execute() {
       if (cancel) return;
-      if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference())) {
+      if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference()) || true) {
         if (elevator.isScoringL4) {
           claw.set(-0.1);
         } else if (algaeMode) {
@@ -53,6 +52,7 @@ public class AutoScore extends Command {
           claw.set(0.1);
         }
         if (!timer.isRunning() && !claw.hasCoral()) {
+          Constants.log("Positions within tolerances: " + (elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference()));
           SmartDashboard.putString("Autoscoring status", "Scoring...");
           timer.start();
         }

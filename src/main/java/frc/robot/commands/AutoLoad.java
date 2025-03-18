@@ -61,7 +61,7 @@ public class AutoLoad extends Command {
 
     @Override
     public boolean isFinished() {
-      Constants.log(timer.get());
+      //Constants.log(timer.get());
       return cancel || (!algaeMode && sensed && timer.hasElapsed(0.28)) || (algaeMode && timer.hasElapsed(2));
     }
 
@@ -71,8 +71,8 @@ public class AutoLoad extends Command {
       timer.stop();
       claw.set(0);
       if (timeout.hasElapsed(6)) {
-        SmartDashboard.putString("Autoloading status", "Timed out!");
-        Constants.driverLog("Auto loading request timed out!");
+        SmartDashboard.putString("Autoloading status", "Inactive");
+        Constants.driverLog("You have bad timing");
       } else {
         SmartDashboard.putString("Autoloading status", "Inactive");
       }

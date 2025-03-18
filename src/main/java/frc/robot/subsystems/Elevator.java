@@ -209,6 +209,10 @@ public class Elevator extends SubsystemBase {
     leadMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
   }
 
+  public void setL4Mode(boolean value) {
+    isScoringL4 = value;
+  }
+
   public double getElevatorHeightMM() {
     return leadMotor.getPosition() * Constants.Elevator.gearboxRotationsToHeightMM;
   }
@@ -383,9 +387,10 @@ public class Elevator extends SubsystemBase {
   }
 
   private int loop = 0;
+  public boolean armDisabled = false;
   @Override
   public void periodic() {
-    if (shoulder.getPositionRadians() > 0 && wrist.getPositionRadians() > 0) isScoringL4 = true; else isScoringL4 = false;
+    //if (shoulder.getPositionRadians() > 0 && wrist.getPositionRadians() > 0) isScoringL4 = true; else isScoringL4 = false;
     shoulder.periodic();
     wrist.periodic();
     /*loop++;
@@ -393,11 +398,12 @@ public class Elevator extends SubsystemBase {
       Constants.log("Shoulder absolute position degrees: " + Math.toDegrees(shoulder.getPositionRadians()));
       loop = 0;
     }*/
-    if (shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin) {
+    if (shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin && !armDisabled) {
+      armDisabled = true;
       Constants.log("Shoulder going behind hard stop min");
       shoulder.stop();
     }
-    if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax)
+    if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax && !armDisabled)
     {
       Constants.log("Shoulder going past hard stop max");
       shoulder.stop();

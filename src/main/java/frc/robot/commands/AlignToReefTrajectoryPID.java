@@ -1,5 +1,6 @@
 package frc.robot.commands;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -12,6 +13,8 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
@@ -22,8 +25,8 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
 
-public class AlignToReefPIDVoltage extends Command {
-  private Drivetrain drivetrain;
+public class AlignToReefTrajectoryPID extends Command {
+    private Drivetrain drivetrain;
   private Timer timer = new Timer();
   private double KpX = 1;
   private double KiX = 0.02;
@@ -41,6 +44,7 @@ public class AlignToReefPIDVoltage extends Command {
   private double KsY = 0.82;
   private double KsZ = 0.6;
 
+  private Trajectory path;
   private PIDController xController = new PIDController(KpX, KiX, KdX);
   private PIDController yController = new PIDController(KpY, KiY, KdY);
   private ProfiledPIDController omegaController = new ProfiledPIDController(KpZ, KiZ, KdZ, new Constraints(0.5, 0.2));
@@ -48,7 +52,6 @@ public class AlignToReefPIDVoltage extends Command {
   private boolean right = false;
   private boolean algae = false;
 
-  private boolean noTag = false;
   private boolean cancel = false;
 
   private static double feedbackLimit = 3;
@@ -60,7 +63,7 @@ public class AlignToReefPIDVoltage extends Command {
   private DoubleArrayPublisher feedforwardOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("Feedforward").publish();
   private DoubleArrayPublisher setpoint = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("Target pose").publish();
 
-  public AlignToReefPIDVoltage(Drivetrain drivetrain, boolean right, boolean algaeMode) {
+  public AlignToReefTrajectoryPID(Drivetrain drivetrain, boolean right, boolean algaeMode) {
     this.drivetrain = drivetrain;
     this.right = right;
     this.algae = algaeMode;
@@ -95,25 +98,24 @@ public class AlignToReefPIDVoltage extends Command {
 
   @Override
   public void initialize() {
-    noTag = false;
-    cancel = !cancel;
+    cancel = false;
     // TODO Auto-generated method stub
     super.initialize();
     Optional<Pose3d> tag = drivetrain.getLastSeenAprilTag();
     if (tag.isEmpty() || drivetrain.getTimeSinceLastSeenTag() > 1) {
-      noTag = true;
+      cancel = true;
       return;
     }
     Pose2d tagPose = tag.get().toPose2d();
 
     Translation2d offset;
     if (algae) {
-      offset = new Translation2d(0.43, 0);
+      offset = new Translation2d(0.8, 0);
     } else {
       if (right) {
-        offset = new Translation2d(0.45, 0.17 - Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
+        offset = new Translation2d(0.8, 0.2 + Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
       } else {
-        offset = new Translation2d(0.45, -0.17 - Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
+        offset = new Translation2d(0.8, -0.2 + Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
       }
     }
 
@@ -122,6 +124,10 @@ public class AlignToReefPIDVoltage extends Command {
     setpoint.set(new double[] {target.getX(), target.getY(), target.getRotation().getRadians()});
     Pose2d p = drivetrain.getPoseEstimate();
     Constants.log("Initial starting position: " + p.getX()  + " " + p.getY() + " " + p.getRotation().getDegrees());
+    ArrayList<Pose2d> waypoints = new ArrayList<>();
+    waypoints.add(p);
+    waypoints.add(target);
+    path = TrajectoryGenerator.generateTrajectory(waypoints, null);
     //Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
     timer.restart();
 
@@ -149,32 +155,29 @@ public class AlignToReefPIDVoltage extends Command {
     Constants.log("PID Y: " + KpY + " " + KiY + " " + KdY);
     Constants.log("PID Z: " + KpZ + " " + KiZ + " " + KdZ);
     Constants.log("Kstatic: " + KsX + " " + KsY + " " + KsZ);
-
-    drivetrain.setAutoControlled(true);
   }
 
   @Override
   public void execute() {
-    if (noTag) return;
+    if (cancel) return;
     // TODO Auto-generated method stub
     //Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
     Pose2d p = drivetrain.getPoseEstimate();
-    var relativePose = p.relativeTo(target);
-    double vx = xController.calculate(relativePose.getX(), 0);
+    double vx = xController.calculate(p.getX(), target.getX());
     if (xController.atSetpoint()) {
-      //Constants.log("At X setpoint");
+      Constants.log("At X setpoint");
       vx = 0;
     }
-    double vy = yController.calculate(relativePose.getY(), 0);
+    double vy = yController.calculate(p.getY(), target.getY());
     if (yController.atSetpoint()) {
-      //Constants.log("At Y setpoint");
+      Constants.log("At Y setpoint");
       vy = 0;
     }
 
     Rotation2d rot = p.getRotation().minus(target.getRotation());
     double omega = omegaController.calculate(rot.getRadians(), 0);
     if (omegaController.atSetpoint()) {
-      //Constants.log("At Z setpoint");
+      Constants.log("At Z setpoint");
       omega = 0;
     }
 
@@ -182,7 +185,7 @@ public class AlignToReefPIDVoltage extends Command {
     vy = MathUtil.clamp(vy, -feedbackLimit, feedbackLimit);
     omega = MathUtil.clamp(omega, -feedbackLimit, feedbackLimit);
 
-    var feedback = new ChassisSpeeds(vx, vy, omega);
+    var feedback = drivetrain.toRobotRelative(new ChassisSpeeds(vx, vy, omega));
     var feedforward = new ChassisSpeeds(Math.signum(feedback.vxMetersPerSecond) * KsX, Math.signum(feedback.vyMetersPerSecond) * KsY, Math.signum(feedback.omegaRadiansPerSecond) * KsZ);
     var combined = feedforward.plus(feedback);
 
@@ -198,20 +201,15 @@ public class AlignToReefPIDVoltage extends Command {
   @Override
   public boolean isFinished() {
     // TODO Auto-generated method stub
-    if (noTag) Constants.log("Auto-align cancelled, no visible tag");
+    if (cancel) Constants.log("Auto-align cancelled, no visible tag");
     if (drivetrain.invalidPose) Constants.log("Disabled auto-align, invalid drivetrain pose");
-    return noTag || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint()) || timer.hasElapsed(5) || drivetrain.invalidPose;
+    return cancel || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint()) || timer.hasElapsed(5) || drivetrain.invalidPose;
   }
 
   @Override
   public void end(boolean interrupted) {
-    // TODO Auto-generated method stub
-    super.end(interrupted);
-    if (interrupted) {
-      Constants.log("Auto-align interrupted");
-    }
+    if (interrupted) Constants.log("Auto-align interrupted");
     drivetrain.set(0, 0, 0);
-    drivetrain.setAutoControlled(false);
   }
 
   @Override

@@ -13,6 +13,7 @@ import frc.robot.Constants;
 import frc.robot.hazard.HazardSparkMax;
 
 public class Climber extends SubsystemBase {
+  public boolean funnelFolded = false;
   private HazardSparkMax motor;
   private double targetPosition = 0;
 
@@ -35,9 +36,13 @@ public class Climber extends SubsystemBase {
    * @param position 0 is vertical, positive is inwards rowards the robot, negative is outwards
    */
   public void set(double position) {
-    targetPosition = MathUtil.clamp(position, Constants.Climber.deployedPositionRotations, Constants.Climber.climbedPositionRotations);
+    if (funnelFolded) {
+      targetPosition = MathUtil.clamp(position, Constants.Climber.deployedPositionRotations, Constants.Climber.climbedPositionRotations);
+    } else {
+      targetPosition = MathUtil.clamp(position, Constants.Climber.deployedPositionRotations, 0);
+    }
     //Constants.log(targetPosition);
-    motor.setControl(targetPosition, ControlType.kMAXMotionPositionControl);
+    //motor.setControl(targetPosition, ControlType.kMAXMotionPositionControl);
   }
 
   public void setAdditive(double additive) {
@@ -46,12 +51,19 @@ public class Climber extends SubsystemBase {
 
   @Override
   public void periodic() {
+    if (motor.getPosition() < Constants.Climber.funnelFoldThresholdRotations) {
+      if (!funnelFolded) {
+        Constants.log("Funnel assumed to be folded");
+      }
+      funnelFolded = true;
+    }
+
     var dif = targetPosition - motor.getPosition();
     if (Math.abs(dif) > 0.01) {
       if (targetPosition < motor.getPosition()) {
-        motor.set(-0.6);
+        motor.setControl(-3, ControlType.kVoltage);
       } else if (targetPosition > motor.getPosition()) {
-        motor.set(0.6);
+        motor.setControl(3, ControlType.kVoltage);
       }
     } else {
       motor.set(0);

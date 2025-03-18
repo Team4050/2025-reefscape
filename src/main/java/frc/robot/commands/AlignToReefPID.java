@@ -100,9 +100,9 @@ public class AlignToReefPID extends Command {
       offset = new Translation2d(0.8, 0);
     } else {
       if (right) {
-        offset = new Translation2d(0.8, 0.2).rotateBy(tagPose.getRotation());
+        offset = new Translation2d(0.5, 0.2 - Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
       } else {
-        offset = new Translation2d(0.8, -0.2).rotateBy(tagPose.getRotation());
+        offset = new Translation2d(0.5, -0.2 - Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
       }
     }
 

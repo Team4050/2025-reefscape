@@ -60,6 +60,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants;
 
 public class Drivetrain extends SubsystemBase {
@@ -92,6 +93,8 @@ public class Drivetrain extends SubsystemBase {
   // y = M * x
   // x = M+ * y
 
+  private boolean autoControlled = false;
+  public Trigger autoTrigger = new Trigger(() -> { return this.autoControlled; });
   private MecanumDriveKinematics kinematics = new MecanumDriveKinematics(
     new Translation2d(0.2794, 0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
     new Translation2d(0.2794, -0.2794).minus(Constants.Drivetrain.COMOffsetFromWheelbaseCenter),
@@ -173,6 +176,7 @@ public class Drivetrain extends SubsystemBase {
         loggingLoop = 0;
       }
     }
+
     FL = new TalonFX(Constants.Drivetrain.FL);
     FR = new TalonFX(Constants.Drivetrain.FR);
     RL = new TalonFX(Constants.Drivetrain.RL);
@@ -526,6 +530,10 @@ public class Drivetrain extends SubsystemBase {
   }
 
   // ******************************************************** Setters ******************************************************** //
+
+  public void setAutoControlled(boolean value) {
+    autoControlled = value;
+  }
 
   // ************************************ Set motor direct ************************************ //
 

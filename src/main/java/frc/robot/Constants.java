@@ -107,7 +107,7 @@ public final class Constants {
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static double encoderOffset = 272 / 360.0; // Increasing offset will push rotational zero downwards
+    public static double encoderOffset =  0.0002721150716147; // Increasing offset will push rotational zero downwards
     public static final double startingRotationRadians = Math.toRadians(-78); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(90);
     public static final double shoulderHardStopMax = Math.toRadians(160);
@@ -150,6 +150,8 @@ public final class Constants {
     public static final double L3AlgaeRemoval = Math.toRadians(-14) + wristRotationOffset;
     public static final double L4Scoring = Math.toRadians(81.5);
     public static final double climb = startingRotationRadians;
+
+    public static final double scoringOffsetMeters = 2 * (2.54 / 100);
   }
 
   public static class Coral {
@@ -165,6 +167,7 @@ public final class Constants {
 
     public static final double startingPositionRotations = 0;
     public static final double deployedPositionRotations = -0.2;//-0.26389;
+    public static final double funnelFoldThresholdRotations = -0.15;
     public static final double climbedPositionRotations = 0.11944;
   }
 

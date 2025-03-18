@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
@@ -28,7 +29,13 @@ public class ChooseAutonomous {
             new MoveTime(drivetrain, 0, 0.2, 0, 0.5),
             new MoveTime(drivetrain, -0.2, -0.2, 0, 0.5)));
         autoChooser.addOption("Model-based control test", new TestModelBasedControl(drivetrain));
-        autoChooser.addOption("Teleop Limelight align", new AlignToReefPID(drivetrain, false, false));
+        autoChooser.addOption("Teleop Limelight align",
+        Commands.sequence(MoveScoringMechanismTo.L4(elevator, claw),
+        new WaitCommand(0.75),
+        new AlignToReefPIDVoltage(drivetrain, false, false),
+        new AutoScore(elevator, claw),
+        new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
+        MoveScoringMechanismTo.Transport(elevator, claw)));
         autoChooser.addOption("Crossed fingers", crossedFingers);
         autoChooser.addOption("Starting line to tag", startingLineToTag);
         SmartDashboard.putData(autoChooser);
