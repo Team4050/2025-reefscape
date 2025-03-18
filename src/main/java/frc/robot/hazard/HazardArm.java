@@ -2,6 +2,7 @@ package frc.robot.hazard;
 
 import com.revrobotics.spark.SparkBase.ControlType;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -54,7 +55,8 @@ public class HazardArm {
         feedback.setTolerance(tolerance);
 
         profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
-        profiledFeedback.setIntegratorRange(-1.5, 1.5);
+        profiledFeedback.setIZone(Math.toRadians(20));
+        profiledFeedback.setIntegratorRange(-2, 2);
         profiledFeedback.setTolerance(tolerance);
         double motorPosition = motor.getPositionRadians();
         if (useAbsoluteEncoder) {
@@ -147,8 +149,8 @@ public class HazardArm {
       SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
       if (ff + pfb < -6 || ff + pfb > 6) {
         Constants.log("OVERCORRECT - DISABLE ff: " + ff + " pfb: " + pfb + "acc error: " + profiledFeedback.getAccumulatedError());
-        motor.setControl(0, ControlType.kVoltage);
-        voltagePIDOutput.set(0);
+        motor.setControl(MathUtil.clamp(ff + pfb, -6, 6), ControlType.kVoltage);
+        voltagePIDOutput.set(MathUtil.clamp(ff + pfb, -6, 6));
       } else {
         motor.setControl(ff + pfb, ControlType.kVoltage);
         voltagePIDOutput.set(ff + pfb);

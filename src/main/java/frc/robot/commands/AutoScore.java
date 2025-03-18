@@ -37,16 +37,18 @@ public class AutoScore extends Command {
             cancel = true;
             return;
           }
-          MoveScoringMechanismTo.Transport(elevator, claw).execute();
+          MoveScoringMechanismTo.AlgaeScoring(elevator, claw).schedule();
         }
     }
 
     @Override
     public void execute() {
       if (cancel) return;
-      if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference()) || true) {
-        if (elevator.isScoringL4 || algaeMode) {
+      if ((elevator.atElevatorReference() && elevator.atShoulderReference() && elevator.atWristReference())) {
+        if (elevator.isScoringL4) {
           claw.set(-0.1);
+        } else if (algaeMode) {
+          claw.set(-0.5);
         } else {
           claw.set(0.1);
         }
@@ -72,6 +74,7 @@ public class AutoScore extends Command {
       } else {
         SmartDashboard.putString("Autoscoring status", "Inactive");
       }
+      cancel = false;
       super.end(interrupted);
     }
 }

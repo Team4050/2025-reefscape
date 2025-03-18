@@ -29,6 +29,8 @@ public class AutoLoad extends Command {
       SmartDashboard.putString("Autoloading status", "Feeding");
       cancel = false;
       timeout.restart();
+      timer.stop();
+      timer.reset();
         algaeMode = claw.algaeMode;
         if (algaeMode) {
           SmartDashboard.putString("Autoloading status", "Feeding algae");
@@ -53,7 +55,7 @@ public class AutoLoad extends Command {
           sensed = true;
         }
       } else {
-        claw.set(-0.3);
+        claw.set(0.3);
       }
     }
 

@@ -40,6 +40,15 @@ public class MoveScoringMechanismTo {
       }, elevator, claw);
     }
 
+    public static Command AlgaeScoring(Elevator elevator, Claw claw) {
+      Constants.log(elevator);
+      return new InstantCommand(() -> {
+        elevator.set(Constants.Elevator.transport);
+        elevator.setShoulder(Constants.Shoulder.transport);
+        elevator.setWrist(Constants.Wrist.algaeTransport);
+      }, elevator, claw);
+    }
+
     public static Command L1(Elevator elevator, Claw claw) {
       Constants.log("Going to L1");
         return new InstantCommand(() -> {

@@ -65,8 +65,9 @@ public class Elevator extends SubsystemBase {
     leadConfig.idleMode(IdleMode.kBrake);
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
-    leadConfig.closedLoop.pid(0.3, 0.00001, 0.0001);
-    leadConfig.closedLoop.iMaxAccum(0.01);
+    leadConfig.closedLoop.pid(0.3, 0.002, 0.0001);
+    leadConfig.closedLoop.iMaxAccum(1);
+    leadConfig.closedLoop.iZone(0.3);
     leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.03);
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     leadConfig.closedLoop.maxMotion.maxAcceleration(500, ClosedLoopSlot.kSlot0);
@@ -144,12 +145,12 @@ public class Elevator extends SubsystemBase {
       0,
       false,
       0.1,
-      0.16,
+      0.19,
       0.00,
-      1.2,
-      0.05,
-      0.08,
-      1,
+      1.8,
+      0.12,
+      0.15,
+      2,
       2,
       "Wrist",
       tuningMode);
@@ -392,9 +393,13 @@ public class Elevator extends SubsystemBase {
       Constants.log("Shoulder absolute position degrees: " + Math.toDegrees(shoulder.getPositionRadians()));
       loop = 0;
     }*/
-    if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax || shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin)
+    if (shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin) {
+      Constants.log("Shoulder going behind hard stop min");
+      shoulder.stop();
+    }
+    if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax)
     {
-      Constants.log("Shoulder going past hard stop");
+      Constants.log("Shoulder going past hard stop max");
       shoulder.stop();
     }
     /*if (shoulder.getVelocityRadPS() > Math.PI * 5) {

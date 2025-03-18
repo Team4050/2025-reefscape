@@ -57,7 +57,7 @@ public final class Constants {
     public static final double NEOKvRPSPerV = 473d / 60d;
     public static final double wheelRadiusMeters = 0.0762; // 3in
     public static final DCMotor drivetrainMotor = DCMotor.getKrakenX60(1);
-    public static final Transform3d robotToCamera = new Transform3d(0.0352, 0.1651, 0.02, new Rotation3d(new Rotation2d(Math.toRadians(-25.4))));
+    public static final Transform3d robotToCamera = new Transform3d(0.0352, 0.1778, 0.02, new Rotation3d(new Rotation2d(Math.toRadians(-25.4))));
     public static final Translation2d COMOffsetFromWheelbaseCenter = new Translation2d(0, 0);
     public static final double chassisTopPlateHeightMM = 167.64;
     public static final RobotConfig mainConfig = new RobotConfig(
@@ -93,9 +93,9 @@ public final class Constants {
 
     public static final double transport = 0.15;
     public static final double L1Scoring = 1;
-    public static final double L2Scoring = 3.8; //~2.77
+    public static final double L2Scoring = 3.62; //~2.77
     public static final double L2AlgaeRemoval = 2.2;
-    public static final double L3Scoring = 2.4;
+    public static final double L3Scoring = 2.3;
     public static final double L3AlgaeRemoval = 1.145;
     public static final double L4Scoring = 3.82;
     public static final double climb = 0.5;
@@ -110,9 +110,9 @@ public final class Constants {
     public static double encoderOffset = 272 / 360.0; // Increasing offset will push rotational zero downwards
     public static final double startingRotationRadians = Math.toRadians(-78); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(90);
-    public static final double shoulderHardStopMax = Math.toRadians(140);
+    public static final double shoulderHardStopMax = Math.toRadians(160);
     public static final double shoulderMin = Math.toRadians(-78); // -0.24 * 2 * Math.PI
-    public static final double shoulderHardStopMin = Math.toRadians(-86);
+    public static final double shoulderHardStopMin = Math.toRadians(-90);
 
     public static final double shoulderArmLengthMM = 302;
     public static final double shoulderMotorTorqueNM = 0.45;
@@ -121,9 +121,9 @@ public final class Constants {
     public static final double L1Scoring = Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-52.5);
     public static final double L2AlgaeRemoval = Math.toRadians(-52.5);
-    public static final double L3Scoring = Math.toRadians(66);
+    public static final double L3Scoring = Math.toRadians(75);
     public static final double L3AlgaeRemoval = Math.toRadians(64.8);
-    public static final double L4Scoring = Math.toRadians(65);
+    public static final double L4Scoring = Math.toRadians(66);
     public static final double climb = Math.toRadians(-60);
   }
 
@@ -132,7 +132,7 @@ public final class Constants {
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double wristRotationOffset = Math.toRadians(-37);
+    public static final double wristRotationOffset = Math.toRadians(-40);
     public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset;
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
@@ -146,9 +146,9 @@ public final class Constants {
     public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
     public static final double L1Scoring = startingRotationRadians;
     public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset;
-    public static final double L3Scoring = Math.toRadians(-28);
-    public static final double L3AlgaeRemoval = Math.toRadians(-20) + wristRotationOffset;
-    public static final double L4Scoring = Math.toRadians(98);
+    public static final double L3Scoring = Math.toRadians(-53);
+    public static final double L3AlgaeRemoval = Math.toRadians(-14) + wristRotationOffset;
+    public static final double L4Scoring = Math.toRadians(81.5);
     public static final double climb = startingRotationRadians;
   }
 
