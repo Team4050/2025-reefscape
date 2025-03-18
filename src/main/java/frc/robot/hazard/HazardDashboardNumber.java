@@ -11,7 +11,7 @@ public class HazardDashboardNumber {
   }
 
   public double get() {
-    //SmartDashboard.getNum
+    // SmartDashboard.getNum
     return SmartDashboard.getNumber(name, 0);
   }
 

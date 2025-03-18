@@ -1,10 +1,5 @@
 package frc.robot.commands;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -24,21 +19,25 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 
 public class AlignToReefTrajectoryPID extends Command {
-    private Drivetrain drivetrain;
+  private Drivetrain drivetrain;
   private Timer timer = new Timer();
   private double KpX = 1;
   private double KiX = 0.02;
-  private double KdX = 0; //0.08
+  private double KdX = 0; // 0.08
 
   private double KpY = 2;
   private double KiY = 0.05;
-  private double KdY = 0; //0.08
+  private double KdY = 0; // 0.08
 
   private double KpZ = 4;
   private double KiZ = 0.001;
-  private double KdZ = 0; //0.08
+  private double KdZ = 0; // 0.08
 
   private double KsX = 0.2; // 0.02
   private double KsY = 0.82;
@@ -47,7 +46,8 @@ public class AlignToReefTrajectoryPID extends Command {
   private Trajectory path;
   private PIDController xController = new PIDController(KpX, KiX, KdX);
   private PIDController yController = new PIDController(KpY, KiY, KdY);
-  private ProfiledPIDController omegaController = new ProfiledPIDController(KpZ, KiZ, KdZ, new Constraints(0.5, 0.2));
+  private ProfiledPIDController omegaController =
+      new ProfiledPIDController(KpZ, KiZ, KdZ, new Constraints(0.5, 0.2));
   private Pose2d target; // = new Pose2d(14.58, 4.05, Rotation2d.k180deg)
   private boolean right = false;
   private boolean algae = false;
@@ -59,9 +59,21 @@ public class AlignToReefTrajectoryPID extends Command {
   private static double iZone = 10 * (2.54 / 100);
   private static double maxIntegral = 10;
 
-  private DoubleArrayPublisher feedbackOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
-  private DoubleArrayPublisher feedforwardOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("Feedforward").publish();
-  private DoubleArrayPublisher setpoint = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("Target pose").publish();
+  private DoubleArrayPublisher feedbackOut =
+      NetworkTableInstance.getDefault()
+          .getTable("Auto command")
+          .getDoubleArrayTopic("PID")
+          .publish();
+  private DoubleArrayPublisher feedforwardOut =
+      NetworkTableInstance.getDefault()
+          .getTable("Auto command")
+          .getDoubleArrayTopic("Feedforward")
+          .publish();
+  private DoubleArrayPublisher setpoint =
+      NetworkTableInstance.getDefault()
+          .getTable("Auto command")
+          .getDoubleArrayTopic("Target pose")
+          .publish();
 
   public AlignToReefTrajectoryPID(Drivetrain drivetrain, boolean right, boolean algaeMode) {
     this.drivetrain = drivetrain;
@@ -113,22 +125,40 @@ public class AlignToReefTrajectoryPID extends Command {
       offset = new Translation2d(0.8, 0);
     } else {
       if (right) {
-        offset = new Translation2d(0.8, 0.2 + Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
+        offset =
+            new Translation2d(0.8, 0.2 + Constants.Wrist.scoringOffsetMeters)
+                .rotateBy(tagPose.getRotation());
       } else {
-        offset = new Translation2d(0.8, -0.2 + Constants.Wrist.scoringOffsetMeters).rotateBy(tagPose.getRotation());
+        offset =
+            new Translation2d(0.8, -0.2 + Constants.Wrist.scoringOffsetMeters)
+                .rotateBy(tagPose.getRotation());
       }
     }
 
-    target = new Pose2d(tagPose.getTranslation().plus(offset), tagPose.getRotation().plus(Rotation2d.k180deg));
-    Constants.log("Target position (xya): " + target.getX() + " " + target.getY() + " " + target.getRotation().getDegrees());
+    target =
+        new Pose2d(
+            tagPose.getTranslation().plus(offset), tagPose.getRotation().plus(Rotation2d.k180deg));
+    Constants.log(
+        "Target position (xya): "
+            + target.getX()
+            + " "
+            + target.getY()
+            + " "
+            + target.getRotation().getDegrees());
     setpoint.set(new double[] {target.getX(), target.getY(), target.getRotation().getRadians()});
     Pose2d p = drivetrain.getPoseEstimate();
-    Constants.log("Initial starting position: " + p.getX()  + " " + p.getY() + " " + p.getRotation().getDegrees());
+    Constants.log(
+        "Initial starting position: "
+            + p.getX()
+            + " "
+            + p.getY()
+            + " "
+            + p.getRotation().getDegrees());
     ArrayList<Pose2d> waypoints = new ArrayList<>();
     waypoints.add(p);
     waypoints.add(target);
     path = TrajectoryGenerator.generateTrajectory(waypoints, null);
-    //Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
+    // Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
     timer.restart();
 
     KpX = SmartDashboard.getNumber("Autoalign X Kp", KpX);
@@ -161,7 +191,7 @@ public class AlignToReefTrajectoryPID extends Command {
   public void execute() {
     if (cancel) return;
     // TODO Auto-generated method stub
-    //Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
+    // Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
     Pose2d p = drivetrain.getPoseEstimate();
     double vx = xController.calculate(p.getX(), target.getX());
     if (xController.atSetpoint()) {
@@ -186,14 +216,26 @@ public class AlignToReefTrajectoryPID extends Command {
     omega = MathUtil.clamp(omega, -feedbackLimit, feedbackLimit);
 
     var feedback = drivetrain.toRobotRelative(new ChassisSpeeds(vx, vy, omega));
-    var feedforward = new ChassisSpeeds(Math.signum(feedback.vxMetersPerSecond) * KsX, Math.signum(feedback.vyMetersPerSecond) * KsY, Math.signum(feedback.omegaRadiansPerSecond) * KsZ);
+    var feedforward =
+        new ChassisSpeeds(
+            Math.signum(feedback.vxMetersPerSecond) * KsX,
+            Math.signum(feedback.vyMetersPerSecond) * KsY,
+            Math.signum(feedback.omegaRadiansPerSecond) * KsZ);
     var combined = feedforward.plus(feedback);
 
     SmartDashboard.putNumber("R PID X", combined.vxMetersPerSecond);
     SmartDashboard.putNumber("R PID Y", combined.vyMetersPerSecond);
     SmartDashboard.putNumber("R PID Z", combined.omegaRadiansPerSecond);
-    feedforwardOut.set(new double[] {feedforward.vxMetersPerSecond, feedforward.vyMetersPerSecond, feedforward.omegaRadiansPerSecond});
-    feedbackOut.set(new double[] {feedback.vxMetersPerSecond, feedback.vyMetersPerSecond, feedback.omegaRadiansPerSecond});
+    feedforwardOut.set(
+        new double[] {
+          feedforward.vxMetersPerSecond,
+          feedforward.vyMetersPerSecond,
+          feedforward.omegaRadiansPerSecond
+        });
+    feedbackOut.set(
+        new double[] {
+          feedback.vxMetersPerSecond, feedback.vyMetersPerSecond, feedback.omegaRadiansPerSecond
+        });
     drivetrain.setVoltage(combined);
     super.execute();
   }
@@ -203,7 +245,10 @@ public class AlignToReefTrajectoryPID extends Command {
     // TODO Auto-generated method stub
     if (cancel) Constants.log("Auto-align cancelled, no visible tag");
     if (drivetrain.invalidPose) Constants.log("Disabled auto-align, invalid drivetrain pose");
-    return cancel || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint()) || timer.hasElapsed(5) || drivetrain.invalidPose;
+    return cancel
+        || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint())
+        || timer.hasElapsed(5)
+        || drivetrain.invalidPose;
   }
 
   @Override

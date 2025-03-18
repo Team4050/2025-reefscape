@@ -6,7 +6,6 @@ package frc.robot;
 
 import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.RobotConfig;
-
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -57,25 +56,23 @@ public final class Constants {
     public static final double NEOKvRPSPerV = 473d / 60d;
     public static final double wheelRadiusMeters = 0.0762; // 3in
     public static final DCMotor drivetrainMotor = DCMotor.getKrakenX60(1);
-    public static final Transform3d robotToCamera = new Transform3d(0.0352, 0.1778, 0.02, new Rotation3d(new Rotation2d(Math.toRadians(-25.4))));
+    public static final Transform3d robotToCamera =
+        new Transform3d(
+            0.0352, 0.1778, 0.02, new Rotation3d(new Rotation2d(Math.toRadians(-25.4))));
     public static final Translation2d COMOffsetFromWheelbaseCenter = new Translation2d(0, 0);
     public static final double chassisTopPlateHeightMM = 167.64;
-    public static final RobotConfig mainConfig = new RobotConfig(
-      60,//61.235,
-      5.64646, // Current estimate TODO: empirically determine
-      new ModuleConfig(Drivetrain.wheelRadiusMeters,
-      12,
-      0.6,
-      drivetrainMotor,
-      moduleGearReduction,
-      60,
-      4),
-      new Translation2d[] {
-        new Translation2d(0.2794, 0.2794).minus(COMOffsetFromWheelbaseCenter),
-        new Translation2d(0.2794, -0.2794).minus(COMOffsetFromWheelbaseCenter),
-        new Translation2d(-0.2794, 0.2794).minus(COMOffsetFromWheelbaseCenter),
-        new Translation2d(-0.2794, -0.2794).minus(COMOffsetFromWheelbaseCenter)
-      });
+    public static final RobotConfig mainConfig =
+        new RobotConfig(
+            60, // 61.235,
+            5.64646, // Current estimate TODO: empirically determine
+            new ModuleConfig(
+                Drivetrain.wheelRadiusMeters, 12, 0.6, drivetrainMotor, moduleGearReduction, 60, 4),
+            new Translation2d[] {
+              new Translation2d(0.2794, 0.2794).minus(COMOffsetFromWheelbaseCenter),
+              new Translation2d(0.2794, -0.2794).minus(COMOffsetFromWheelbaseCenter),
+              new Translation2d(-0.2794, 0.2794).minus(COMOffsetFromWheelbaseCenter),
+              new Translation2d(-0.2794, -0.2794).minus(COMOffsetFromWheelbaseCenter)
+            });
   }
 
   public static class Elevator {
@@ -89,11 +86,12 @@ public final class Constants {
     public static final double minExtension = 0.02;
     public static final double maxExtension = 4.4;
     public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
-    public static final double baseHeightMM = 812.800 + Drivetrain.chassisTopPlateHeightMM; //From Elevator - Full Assembly CAD
+    public static final double baseHeightMM =
+        812.800 + Drivetrain.chassisTopPlateHeightMM; // From Elevator - Full Assembly CAD
 
     public static final double transport = 0.15;
     public static final double L1Scoring = 1;
-    public static final double L2Scoring = 3.62; //3.8
+    public static final double L2Scoring = 3.62; // 3.8
     public static final double L2AlgaeRemoval = 2.2;
     public static final double L3Scoring = 2.3;
     public static final double L3AlgaeRemoval = 1.145;
@@ -107,8 +105,10 @@ public final class Constants {
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static double encoderOffset =  0.0002721150716147; // Increasing offset will push rotational zero downwards
-    public static final double startingRotationRadians = Math.toRadians(-78); // -0.3 measured from horizontal
+    public static double encoderOffset =
+        0.0002721150716147; // Increasing offset will push rotational zero downwards
+    public static final double startingRotationRadians =
+        Math.toRadians(-78); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(90);
     public static final double shoulderHardStopMax = Math.toRadians(160);
     public static final double shoulderMin = Math.toRadians(-78); // -0.24 * 2 * Math.PI
@@ -136,11 +136,11 @@ public final class Constants {
     public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset;
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
-    public static final double wristMax = Math.toRadians(145) + wristRotationOffset;//+108 degrees
-    public static final double wristMin = Math.toRadians(-45) + wristRotationOffset; //-45 degrees
+    public static final double wristMax = Math.toRadians(145) + wristRotationOffset; // +108 degrees
+    public static final double wristMin = Math.toRadians(-45) + wristRotationOffset; // -45 degrees
 
-    public static final double chuteExitXOffsetMM = 330; //From Claw - Full Assembly CAD
-    public static final double chuteExitYOffsetMM = -222; //From Claw - Full Assembly CAD
+    public static final double chuteExitXOffsetMM = 330; // From Claw - Full Assembly CAD
+    public static final double chuteExitYOffsetMM = -222; // From Claw - Full Assembly CAD
 
     public static final double transport = Math.toRadians(-65);
     public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
@@ -163,10 +163,11 @@ public final class Constants {
   public static class Climber {
     public static final int climber = 5;
     public static final int currentLimit = 40;
-    public static final double climberGearReduction = (12.0 / 54.0) * (1.0 / 49.0); //Sprocket * gearbox 220.5:1 ratio
+    public static final double climberGearReduction =
+        (12.0 / 54.0) * (1.0 / 49.0); // Sprocket * gearbox 220.5:1 ratio
 
     public static final double startingPositionRotations = 0;
-    public static final double deployedPositionRotations = -0.2;//-0.26389;
+    public static final double deployedPositionRotations = -0.2; // -0.26389;
     public static final double funnelFoldThresholdRotations = -0.15;
     public static final double climbedPositionRotations = 0.11944;
   }
@@ -179,6 +180,7 @@ public final class Constants {
   public static void setupDataLog() {
     matchLog = DataLogManager.getLog();
     Constants.log("Setting up data log " + DataLogManager.getLogDir());
+    DataLogManager.logNetworkTables(true);
     estimatedPositionLogEntry = new DoubleArrayLogEntry(matchLog, "EstPosition");
     limelightDataLogEntry = new DoubleArrayLogEntry(matchLog, "Limelight");
     eventsEntry = new StringLogEntry(matchLog, "Events");
@@ -197,12 +199,14 @@ public final class Constants {
   }
 
   public static boolean doLogAuto = true;
+
   public static void autoLog(Object o) {
     if (!doLogAuto) return;
     System.out.println(o);
   }
 
   public static boolean doLogTeleop = true;
+
   public static void driverLog(Object o) {
     if (!doLogTeleop) return;
     System.out.println(o);
@@ -210,7 +214,8 @@ public final class Constants {
 
   public static class Sensors {
     public static ADIS16470_IMU imu = new ADIS16470_IMU(IMUAxis.kZ, IMUAxis.kY, IMUAxis.kX);
-    //public static Vision vision = new Vision();
+
+    // public static Vision vision = new Vision();
 
     public static void resetIMU() {
       Constants.log("Resetting gyro angle to 0...");
@@ -243,7 +248,7 @@ public final class Constants {
     }
 
     public static void calibrate(Pose3d startingPose) {
-      //Current orientation imu is CW+
+      // Current orientation imu is CW+
       imu.configCalTime(CalibrationTime._4s);
       imu.calibrate();
       imu.reset();

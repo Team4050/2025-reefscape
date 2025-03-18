@@ -6,7 +6,6 @@ import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.MAXMotionConfig.MAXMotionPositionMode;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -28,7 +27,9 @@ public class Climber extends SubsystemBase {
     config.closedLoop.maxMotion.maxVelocity(11.5);
     config.encoder.velocityConversionFactor(Constants.Climber.climberGearReduction);
     config.encoder.positionConversionFactor(Constants.Climber.climberGearReduction);
-    motor = new HazardSparkMax(Constants.Climber.climber, MotorType.kBrushless, config, true, "Climber");
+    motor =
+        new HazardSparkMax(
+            Constants.Climber.climber, MotorType.kBrushless, config, true, "Climber");
   }
 
   /***
@@ -37,12 +38,16 @@ public class Climber extends SubsystemBase {
    */
   public void set(double position) {
     if (funnelFolded) {
-      targetPosition = MathUtil.clamp(position, Constants.Climber.deployedPositionRotations, Constants.Climber.climbedPositionRotations);
+      targetPosition =
+          MathUtil.clamp(
+              position,
+              Constants.Climber.deployedPositionRotations,
+              Constants.Climber.climbedPositionRotations);
     } else {
       targetPosition = MathUtil.clamp(position, Constants.Climber.deployedPositionRotations, 0);
     }
-    //Constants.log(targetPosition);
-    //motor.setControl(targetPosition, ControlType.kMAXMotionPositionControl);
+    // Constants.log(targetPosition);
+    // motor.setControl(targetPosition, ControlType.kMAXMotionPositionControl);
   }
 
   public void setAdditive(double additive) {

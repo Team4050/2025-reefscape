@@ -24,20 +24,18 @@
 
 package frc.robot.hazard;
 
-import java.util.Optional;
-
-import org.photonvision.EstimatedRobotPose;
-import org.photonvision.PhotonCamera;
-import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
-import org.photonvision.targeting.PhotonPipelineResult;
-
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.wpilibj.RobotController;
 import frc.robot.Constants;
+import java.util.Optional;
+import org.photonvision.EstimatedRobotPose;
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.PhotonPipelineResult;
 
 /** Copied from 2024 code */
 public class HazardVision {
@@ -52,9 +50,7 @@ public class HazardVision {
         AprilTagFieldLayout.loadField(AprilTagFields.k2025ReefscapeWelded);
     poseEstimator =
         new PhotonPoseEstimator(
-            fieldLayout,
-            PoseStrategy.AVERAGE_BEST_TARGETS,
-            Constants.Drivetrain.robotToCamera);
+            fieldLayout, PoseStrategy.AVERAGE_BEST_TARGETS, Constants.Drivetrain.robotToCamera);
   }
 
   /**
@@ -69,7 +65,7 @@ public class HazardVision {
     Optional<EstimatedRobotPose> latest = Optional.empty();
     for (PhotonPipelineResult r : chassis.getAllUnreadResults()) {
       if (r.hasTargets()) {
-        //Constants.log("Latest photon result: " + r.getBestTarget().bestCameraToTarget);
+        // Constants.log("Latest photon result: " + r.getBestTarget().bestCameraToTarget);
       }
       latest = poseEstimator.update(r);
     }

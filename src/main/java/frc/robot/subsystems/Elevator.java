@@ -7,7 +7,6 @@ import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.MAXMotionConfig.MAXMotionPositionMode;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
@@ -31,8 +30,8 @@ public class Elevator extends SubsystemBase {
   private HazardSparkMax shoulderMotor;
   private HazardSparkMax wristMotor;
 
-  //private SparkMax elevatorWrist; // Not in CAN yet
-  //private SparkClosedLoopController wristMotorController;
+  // private SparkMax elevatorWrist; // Not in CAN yet
+  // private SparkClosedLoopController wristMotorController;
   private PIDController elevatorPID;
   private ElevatorFeedforward elevatorFF;
 
@@ -44,8 +43,10 @@ public class Elevator extends SubsystemBase {
   private double wristSetpoint = 0;
 
   private NetworkTable elevatorTable = NetworkTableInstance.getDefault().getTable("Elevator");
-  private DoublePublisher setpointPublisher = elevatorTable.getDoubleTopic("Elevator setpoint").publish();
-  private DoubleArrayPublisher kinematicsPublisher = elevatorTable.getDoubleArrayTopic("Elevator kinematics").publish();
+  private DoublePublisher setpointPublisher =
+      elevatorTable.getDoubleTopic("Elevator setpoint").publish();
+  private DoubleArrayPublisher kinematicsPublisher =
+      elevatorTable.getDoubleArrayTopic("Elevator kinematics").publish();
 
   private SparkMaxConfig followConfig = new SparkMaxConfig();
   private SparkMaxConfig leadConfig = new SparkMaxConfig();
@@ -72,12 +73,9 @@ public class Elevator extends SubsystemBase {
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     leadConfig.closedLoop.maxMotion.maxAcceleration(500, ClosedLoopSlot.kSlot0);
     leadConfig.closedLoop.maxMotion.maxVelocity(500, ClosedLoopSlot.kSlot0);
-    leadConfig.closedLoop.feedbackSensor(
-        FeedbackSensor.kPrimaryEncoder);
-    leadConfig.encoder.positionConversionFactor(
-        Constants.Elevator.gearboxReduction);
-    leadConfig.encoder.velocityConversionFactor(
-        Constants.Elevator.gearboxReduction);
+    leadConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
+    leadConfig.encoder.positionConversionFactor(Constants.Elevator.gearboxReduction);
+    leadConfig.encoder.velocityConversionFactor(Constants.Elevator.gearboxReduction);
 
     shoulderConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
     shoulderConfig.idleMode(IdleMode.kBrake);
@@ -93,7 +91,7 @@ public class Elevator extends SubsystemBase {
     shoulderConfig.encoder.positionConversionFactor(Constants.Shoulder.gearboxReduction);
     shoulderConfig.encoder.velocityConversionFactor(Constants.Shoulder.gearboxReduction);
     shoulderConfig.absoluteEncoder.inverted(true);
-    shoulderConfig.absoluteEncoder.zeroOffset(Constants.Shoulder.encoderOffset);//0.3252467
+    shoulderConfig.absoluteEncoder.zeroOffset(Constants.Shoulder.encoderOffset); // 0.3252467
     shoulderConfig.absoluteEncoder.positionConversionFactor(360);
 
     wristConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
@@ -104,16 +102,28 @@ public class Elevator extends SubsystemBase {
     wristConfig.closedLoop.outputRange(-0.4, 0.4);
     wristConfig.closedLoop.feedbackSensor(FeedbackSensor.kPrimaryEncoder);
     wristConfig.closedLoop.maxMotion.maxAcceleration(50);
-    wristConfig.closedLoop.maxMotion.maxVelocity(100); //1 rotation/s
+    wristConfig.closedLoop.maxMotion.maxVelocity(100); // 1 rotation/s
     wristConfig.closedLoop.maxMotion.allowedClosedLoopError(0.01);
     wristConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     wristConfig.encoder.positionConversionFactor(Constants.Wrist.gearboxReduction);
     wristConfig.encoder.velocityConversionFactor(Constants.Wrist.gearboxReduction);
 
-    leadMotor = new HazardSparkMax(Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
-    followerMotor = new HazardSparkMax(Constants.Elevator.front, MotorType.kBrushless, followConfig, false, false, elevatorTable);
-    shoulderMotor = new HazardSparkMax(Constants.Shoulder.CAN, MotorType.kBrushless, shoulderConfig, true,  true, "Shoulder");
-    wristMotor = new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
+    leadMotor =
+        new HazardSparkMax(
+            Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
+    followerMotor =
+        new HazardSparkMax(
+            Constants.Elevator.front,
+            MotorType.kBrushless,
+            followConfig,
+            false,
+            false,
+            elevatorTable);
+    shoulderMotor =
+        new HazardSparkMax(
+            Constants.Shoulder.CAN, MotorType.kBrushless, shoulderConfig, true, true, "Shoulder");
+    wristMotor =
+        new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
 
     shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
     wristSetpoint = Constants.Wrist.startingRotationRadians;
@@ -121,39 +131,32 @@ public class Elevator extends SubsystemBase {
     shoulderMotor.setEncoder(Constants.Shoulder.startingRotationRadians / (2 * Math.PI));
     wristMotor.setEncoder(Constants.Wrist.startingRotationRadians / (2 * Math.PI));
 
-    elevatorPID = new PIDController(0.1, 0, 0.05);//Unused, backup if manual feedforward calculation is needed
+    elevatorPID =
+        new PIDController(
+            0.1, 0, 0.05); // Unused, backup if manual feedforward calculation is needed
     elevatorFF = new ElevatorFeedforward(0, 0.4128, 0, 0);
 
     Constants.log("Shoulder NEO Kv: " + (49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt));
 
-    shoulder = new HazardArm(
-      shoulderMotor,
-      0,
-      true,
-      0.08,//0.1,
-      0.56,//1.0,//Constants.Shoulder.shoulderMotorTorqueNM / (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit) + 0.5,
-      0,///49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
-      1.6,
-      0.08,
-      0.05,
-      1,
-      1,
-      "Shoulder",
-      tuningMode);
-    wrist = new HazardArm( //Adjust Kstatic for small movements
-      wristMotor,
-      0,
-      false,
-      0.1,
-      0.19,
-      0.00,
-      1.8,
-      0.12,
-      0.15,
-      2,
-      2,
-      "Wrist",
-      tuningMode);
+    shoulder =
+        new HazardArm(
+            shoulderMotor,
+            0,
+            true,
+            0.08, // 0.1,
+            0.56, // 1.0,//Constants.Shoulder.shoulderMotorTorqueNM /
+            // (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit) + 0.5,
+            0, /// 49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
+            1.6,
+            0.08,
+            0.05,
+            1,
+            1,
+            "Shoulder",
+            tuningMode);
+    wrist =
+        new HazardArm( // Adjust Kstatic for small movements
+            wristMotor, 0, false, 0.1, 0.19, 0.00, 1.8, 0.12, 0.15, 2, 2, "Wrist", tuningMode);
 
     shoulder.setpoint(shoulderSetpoint);
     wrist.setpoint(wristSetpoint);
@@ -163,7 +166,13 @@ public class Elevator extends SubsystemBase {
       SmartDashboard.putNumber("Elevator Ki", 0.00001);
       SmartDashboard.putNumber("Elevator Kd", 0);
 
-      SmartDashboard.putData("Reconfigure controllers", new InstantCommand(() -> { this.reconfigure(); }, this));
+      SmartDashboard.putData(
+          "Reconfigure controllers",
+          new InstantCommand(
+              () -> {
+                this.reconfigure();
+              },
+              this));
     }
 
     SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
@@ -202,10 +211,12 @@ public class Elevator extends SubsystemBase {
    * @param position target position in rotations
    */
   public void set(double position) {
-    //Constants.log("Elevator target position:" + position);
+    // Constants.log("Elevator target position:" + position);
 
     elevatorSetpoint = position;
-    elevatorSetpoint = MathUtil.clamp(elevatorSetpoint, Constants.Elevator.minExtension, Constants.Elevator.maxExtension);
+    elevatorSetpoint =
+        MathUtil.clamp(
+            elevatorSetpoint, Constants.Elevator.minExtension, Constants.Elevator.maxExtension);
     leadMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
   }
 
@@ -223,7 +234,7 @@ public class Elevator extends SubsystemBase {
 
   public void setElevatorAdditive(double additive) {
     if (additive == 0) return;
-    //Constants.log(elevatorSetpoint);
+    // Constants.log(elevatorSetpoint);
     elevatorSetpoint += additive;
     set(elevatorSetpoint);
     SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
@@ -234,23 +245,26 @@ public class Elevator extends SubsystemBase {
    * @param position
    */
   public void setShoulder(double position) {
-    shoulderSetpoint = MathUtil.clamp(position, Constants.Shoulder.shoulderMin, Constants.Shoulder.shoulderMax);
+    shoulderSetpoint =
+        MathUtil.clamp(position, Constants.Shoulder.shoulderMin, Constants.Shoulder.shoulderMax);
     shoulder.setpoint(position);
     checkWrist();
   }
 
   public void setShoulderAdditive(double additive) {
     if (additive == 0) return;
-    //Constants.log(shoulderSetpoint + (additive * 0.02));
+    // Constants.log(shoulderSetpoint + (additive * 0.02));
     setShoulder(shoulderSetpoint + (additive * 0.02));
   }
 
   public void checkWrist() {
-    //Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
-    //Constants.log(wristSetpoint);
-    wrist.setpoint(MathUtil.clamp(wristSetpoint,
-    shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRadians,
-    shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRadians));
+    // Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
+    // Constants.log(wristSetpoint);
+    wrist.setpoint(
+        MathUtil.clamp(
+            wristSetpoint,
+            shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRadians,
+            shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRadians));
     SmartDashboard.putNumber("Wrist setpoint", elevatorSetpoint);
   }
 
@@ -274,7 +288,8 @@ public class Elevator extends SubsystemBase {
    * @param extensionMM Center of coral chute
    * @param wristAngleDegrees Wrist angle (0 parallel to floor, chute facing horizontal)
    */
-  public void goToPosition(double extensionMM, double heightMM, double wristAngleDegrees, boolean verboseLogging) {
+  public void goToPosition(
+      double extensionMM, double heightMM, double wristAngleDegrees, boolean verboseLogging) {
     Constants.log("Going to position " + heightMM + " " + extensionMM);
 
     if (heightMM < 200) {
@@ -284,14 +299,25 @@ public class Elevator extends SubsystemBase {
 
     double relativeHeightMM = heightMM - Constants.Elevator.baseHeightMM;
     double wristRad = Math.toRadians(wristAngleDegrees);
-    double x = Constants.Wrist.chuteExitXOffsetMM * Math.cos(wristRad) - (Constants.Wrist.chuteExitYOffsetMM * Math.sin(wristRad));
-    double y = Constants.Wrist.chuteExitYOffsetMM * Math.cos(wristRad) + (Constants.Wrist.chuteExitXOffsetMM * Math.sin(wristRad));
+    double x =
+        Constants.Wrist.chuteExitXOffsetMM * Math.cos(wristRad)
+            - (Constants.Wrist.chuteExitYOffsetMM * Math.sin(wristRad));
+    double y =
+        Constants.Wrist.chuteExitYOffsetMM * Math.cos(wristRad)
+            + (Constants.Wrist.chuteExitXOffsetMM * Math.sin(wristRad));
     double requiredX = extensionMM - x;
-    double shoulderRotRadians = Math.acos(requiredX / Constants.Shoulder.shoulderArmLengthMM); //Always positive
+    double shoulderRotRadians =
+        Math.acos(requiredX / Constants.Shoulder.shoulderArmLengthMM); // Always positive
 
     if (verboseLogging) {
       Constants.log("Wrist fwd kinematics from required angle (x, y): " + x + " " + y);
-      Constants.log("Shoulder required x extension = " + requiredX + ", required rotation in degrees is either " + Math.toDegrees(shoulderRotRadians) + " or " + Math.toDegrees(-shoulderRotRadians));
+      Constants.log(
+          "Shoulder required x extension = "
+              + requiredX
+              + ", required rotation in degrees is either "
+              + Math.toDegrees(shoulderRotRadians)
+              + " or "
+              + Math.toDegrees(-shoulderRotRadians));
     }
 
     if (Double.isNaN(shoulderRotRadians)) {
@@ -305,17 +331,31 @@ public class Elevator extends SubsystemBase {
     }
 
     if (verboseLogging) {
-      Constants.log("Shoulder rotation is decided to be " + Math.toDegrees(shoulderRotRadians) + " degrees (" + shoulderRotRadians + ") radians");
+      Constants.log(
+          "Shoulder rotation is decided to be "
+              + Math.toDegrees(shoulderRotRadians)
+              + " degrees ("
+              + shoulderRotRadians
+              + ") radians");
     }
 
-    //Constants.log("Shoulder rotation: " + shoulderRotRadians);
-    //Constants.log("X total Extension: " + (x + (Math.cos(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
-    //Constants.log("Elevator + wrist Y: " + (y + (Math.sin(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
+    // Constants.log("Shoulder rotation: " + shoulderRotRadians);
+    // Constants.log("X total Extension: " + (x + (Math.cos(shoulderRotRadians) *
+    // Constants.Shoulder.shoulderArmLengthMM)));
+    // Constants.log("Elevator + wrist Y: " + (y + (Math.sin(shoulderRotRadians) *
+    // Constants.Shoulder.shoulderArmLengthMM)));
 
-    double requiredElevatorExt = (relativeHeightMM - (y + (Math.sin(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
+    double requiredElevatorExt =
+        (relativeHeightMM
+            - (y + (Math.sin(shoulderRotRadians) * Constants.Shoulder.shoulderArmLengthMM)));
 
     if (verboseLogging) {
-      Constants.log("Required elevator extension is " + requiredElevatorExt + " mm, or " + requiredElevatorExt / Constants.Elevator.gearboxRotationsToHeightMM + " sprocket rotations");
+      Constants.log(
+          "Required elevator extension is "
+              + requiredElevatorExt
+              + " mm, or "
+              + requiredElevatorExt / Constants.Elevator.gearboxRotationsToHeightMM
+              + " sprocket rotations");
     }
 
     if (requiredElevatorExt < 0) {
@@ -323,7 +363,7 @@ public class Elevator extends SubsystemBase {
       return;
     }
 
-    //Constants.log("Successful!");
+    // Constants.log("Successful!");
 
     wristSetpoint = wristRad;
     shoulderSetpoint = shoulderRotRadians;
@@ -334,8 +374,16 @@ public class Elevator extends SubsystemBase {
 
   public double[] elevatorForwardKinematics() {
     double x, y;
-    x = (Math.cos(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM) + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM) - (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM);
-    y = Constants.Elevator.baseHeightMM + (elevatorSetpoint * Constants.Elevator.gearboxRotationsToHeightMM) + (Math.sin(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM) + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM) + (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM);
+    x =
+        (Math.cos(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM)
+            + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM)
+            - (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM);
+    y =
+        Constants.Elevator.baseHeightMM
+            + (elevatorSetpoint * Constants.Elevator.gearboxRotationsToHeightMM)
+            + (Math.sin(shoulderSetpoint) * Constants.Shoulder.shoulderArmLengthMM)
+            + (Math.cos(wristSetpoint) * Constants.Wrist.chuteExitYOffsetMM)
+            + (Math.sin(wristSetpoint) * Constants.Wrist.chuteExitXOffsetMM);
     return new double[] {x, y};
   }
 
@@ -352,7 +400,8 @@ public class Elevator extends SubsystemBase {
   }
 
   public boolean atShoulderReference() {
-    return Math.abs(shoulder.getPositionRadians() - shoulderSetpoint) < 0.035; // 2 degrees tolerance // 0.087 = 5 degrees
+    return Math.abs(shoulder.getPositionRadians() - shoulderSetpoint)
+        < 0.035; // 2 degrees tolerance // 0.087 = 5 degrees
   }
 
   public boolean atWristReference() {
@@ -370,17 +419,27 @@ public class Elevator extends SubsystemBase {
   }
 
   public void reconfigure() {
-    Constants.log(SmartDashboard.getNumber("Elevator Kp", 0.4) + " " + SmartDashboard.getNumber("Elevator Ki", 0.00001) + " " + SmartDashboard.getNumber("Elevator Kd", 0));
-    leadMotor.configurePID(SmartDashboard.getNumber("Elevator Kp", 0.4), SmartDashboard.getNumber("Elevator Ki", 0.00001), SmartDashboard.getNumber("Elevator Kd", 0));
+    Constants.log(
+        SmartDashboard.getNumber("Elevator Kp", 0.4)
+            + " "
+            + SmartDashboard.getNumber("Elevator Ki", 0.00001)
+            + " "
+            + SmartDashboard.getNumber("Elevator Kd", 0));
+    leadMotor.configurePID(
+        SmartDashboard.getNumber("Elevator Kp", 0.4),
+        SmartDashboard.getNumber("Elevator Ki", 0.00001),
+        SmartDashboard.getNumber("Elevator Kd", 0));
     shoulder.reconfigure();
     wrist.reconfigure();
   }
 
   public void recalibrateArmAbsoluteEncoder() {
     double offset = Constants.Shoulder.encoderOffset;
-    Constants.log("Current shoulder position degrees: " + Math.toDegrees(shoulder.getPositionRadians()));
+    Constants.log(
+        "Current shoulder position degrees: " + Math.toDegrees(shoulder.getPositionRadians()));
     double diff = -78.0 - Math.toDegrees(shoulder.getPositionRadians());
-    Constants.log("Calculated difference in degrees: " + diff + ", in encoder rotations: " + diff / 360);
+    Constants.log(
+        "Calculated difference in degrees: " + diff + ", in encoder rotations: " + diff / 360);
     Constants.log("Old encoder offset: " + offset);
     offset += diff / 360;
     Constants.log("New encoder offset: " + offset);
@@ -388,9 +447,11 @@ public class Elevator extends SubsystemBase {
 
   private int loop = 0;
   public boolean armDisabled = false;
+
   @Override
   public void periodic() {
-    //if (shoulder.getPositionRadians() > 0 && wrist.getPositionRadians() > 0) isScoringL4 = true; else isScoringL4 = false;
+    // if (shoulder.getPositionRadians() > 0 && wrist.getPositionRadians() > 0) isScoringL4 = true;
+    // else isScoringL4 = false;
     shoulder.periodic();
     wrist.periodic();
     /*loop++;
@@ -398,15 +459,14 @@ public class Elevator extends SubsystemBase {
       Constants.log("Shoulder absolute position degrees: " + Math.toDegrees(shoulder.getPositionRadians()));
       loop = 0;
     }*/
-    if (shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin && !armDisabled) {
-      armDisabled = true;
+    if (shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin) {
+      // armDisabled = true;
       Constants.log("Shoulder going behind hard stop min");
-      shoulder.stop();
+      // shoulder.stop();
     }
-    if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax && !armDisabled)
-    {
+    if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax) {
       Constants.log("Shoulder going past hard stop max");
-      shoulder.stop();
+      // shoulder.stop();
     }
     /*if (shoulder.getVelocityRadPS() > Math.PI * 5) {
       Constants.log("Shoulder going too fast");
@@ -414,7 +474,9 @@ public class Elevator extends SubsystemBase {
     }*/
 
     SmartDashboard.putNumber("Elevator current rotation", leadMotor.getPosition());
-    SmartDashboard.putNumber("Elevator current extension MM", leadMotor.getPosition() * Constants.Elevator.gearboxRotationsToHeightMM);
+    SmartDashboard.putNumber(
+        "Elevator current extension MM",
+        leadMotor.getPosition() * Constants.Elevator.gearboxRotationsToHeightMM);
     followerMotor.publishToNetworkTables();
     leadMotor.publishToNetworkTables();
     shoulderMotor.publishToNetworkTables();

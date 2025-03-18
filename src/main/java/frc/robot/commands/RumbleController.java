@@ -36,7 +36,6 @@ public class RumbleController extends Command {
   @Override
   public boolean isFinished() {
     return timer.hasElapsed(time);
-
   }
 
   @Override

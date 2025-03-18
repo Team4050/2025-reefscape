@@ -7,7 +7,6 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -18,8 +17,10 @@ public class Claw extends SubsystemBase {
   private SparkMaxConfig clawConfig = new SparkMaxConfig();
   private SparkAnalogSensor breakbeam;
   public boolean algaeMode = false;
-  private DoublePublisher clawSpeedPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Speed").publish();
-  private DoublePublisher breakbeamPublisher = NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Breakbeam").publish();
+  private DoublePublisher clawSpeedPublisher =
+      NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Speed").publish();
+  private DoublePublisher breakbeamPublisher =
+      NetworkTableInstance.getDefault().getTable("Claw").getDoubleTopic("Breakbeam").publish();
 
   public Claw() {
     clawMotor = new SparkMax(Constants.Coral.CAN, MotorType.kBrushless);
@@ -27,7 +28,8 @@ public class Claw extends SubsystemBase {
     clawConfig.idleMode(IdleMode.kBrake);
     clawConfig.inverted(true);
     clawConfig.smartCurrentLimit(Constants.Coral.currentLimit);
-    clawMotor.configure(clawConfig,ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
+    clawMotor.configure(
+        clawConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);
     breakbeam = clawMotor.getAnalog();
   }
 
@@ -40,7 +42,7 @@ public class Claw extends SubsystemBase {
    * @param speed
    */
   public void set(double speed) {
-    //Constants.driverLog("Setting claw speed to " + speed + " algae mode " + algaeMode);
+    // Constants.driverLog("Setting claw speed to " + speed + " algae mode " + algaeMode);
     clawSpeedPublisher.set(speed);
     clawMotor.set(speed);
   }
@@ -48,13 +50,9 @@ public class Claw extends SubsystemBase {
   /***
    * Scores the game piece indicated by the current claw mode
    */
-  public void score() {
+  public void score() {}
 
-  }
-
-  public void eject() {
-
-  }
+  public void eject() {}
 
   /***
    * Sets the algae mode

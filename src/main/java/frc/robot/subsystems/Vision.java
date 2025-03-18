@@ -1,15 +1,13 @@
 package frc.robot.subsystems;
 
-import java.util.Optional;
-
-import org.photonvision.EstimatedRobotPose;
-
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import frc.robot.Constants;
 import frc.robot.hazard.HazardVision;
+import java.util.Optional;
+import org.photonvision.EstimatedRobotPose;
 
 public class Vision {
   HazardVision photonVision;
@@ -48,7 +46,7 @@ public class Vision {
   int loop = 0;
 
   public void periodic() {
-    //photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
+    // photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
     photonVision.addHeadingData(Constants.Sensors.getImuRotation3d());
     Optional<EstimatedRobotPose> optional = photonVision.getEstimatedGlobalPose();
     if (optional.isPresent()) {

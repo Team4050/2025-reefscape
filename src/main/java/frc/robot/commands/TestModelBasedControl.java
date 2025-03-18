@@ -1,12 +1,11 @@
 package frc.robot.commands;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.subsystems.Drivetrain;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TestModelBasedControl extends Command {
   private Drivetrain drivetrain;
@@ -40,7 +39,7 @@ public class TestModelBasedControl extends Command {
   @Override
   public void end(boolean interrupted) {
     // TODO Auto-generated method stub
-    //drivetrain.setFieldRelative(new ChassisSpeeds(0, 0, 0));
+    // drivetrain.setFieldRelative(new ChassisSpeeds(0, 0, 0));
   }
 
   @Override

@@ -1,8 +1,5 @@
 package frc.robot.commands;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -18,21 +15,26 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MoveToPositionPID extends Command {
-    private Drivetrain drivetrain;
+  private Drivetrain drivetrain;
   private Timer timer = new Timer();
   private double Kp = 0.2;
   private double Ki = 0.001;
-  private double Kd = 0.02; //0.08
+  private double Kd = 0.02; // 0.08
   private double KsX = 0.1; // 0.02
   private double KsY = 0.1;
   private double KsZ = 0;
   private PIDController xController = new PIDController(Kp, Ki, Kd);
   private PIDController yController = new PIDController(Kp, Ki, Kd);
-  private ProfiledPIDController xProController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(1, 1));
-  private ProfiledPIDController yProController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(1, 1));
-  private ProfiledPIDController omegaController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(0.2, 0.2));
+  private ProfiledPIDController xProController =
+      new ProfiledPIDController(Kp, Ki, Kd, new Constraints(1, 1));
+  private ProfiledPIDController yProController =
+      new ProfiledPIDController(Kp, Ki, Kd, new Constraints(1, 1));
+  private ProfiledPIDController omegaController =
+      new ProfiledPIDController(Kp, Ki, Kd, new Constraints(0.2, 0.2));
   private Pose2d target; // = new Pose2d(14.58, 4.05, Rotation2d.k180deg)
 
   private boolean cancel = false;
@@ -42,8 +44,16 @@ public class MoveToPositionPID extends Command {
   private static double iZone = 10 * (2.54 / 100);
   private static double maxIntegral = 2;
 
-  private DoubleArrayPublisher feedbackOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
-  private DoubleArrayPublisher feedforwardOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("Feedforward").publish();
+  private DoubleArrayPublisher feedbackOut =
+      NetworkTableInstance.getDefault()
+          .getTable("Auto command")
+          .getDoubleArrayTopic("PID")
+          .publish();
+  private DoubleArrayPublisher feedforwardOut =
+      NetworkTableInstance.getDefault()
+          .getTable("Auto command")
+          .getDoubleArrayTopic("Feedforward")
+          .publish();
 
   public MoveToPositionPID(Drivetrain drivetrain, Pose2d target) {
     this.drivetrain = drivetrain;
@@ -80,10 +90,22 @@ public class MoveToPositionPID extends Command {
   @Override
   public void initialize() {
     cancel = false;
-    Constants.log("Target position (xya): " + target.getX() + " " + target.getY() + " " + target.getRotation().getDegrees());
+    Constants.log(
+        "Target position (xya): "
+            + target.getX()
+            + " "
+            + target.getY()
+            + " "
+            + target.getRotation().getDegrees());
     Pose2d p = drivetrain.getPoseEstimate();
-    Constants.log("Initial starting position: " + p.getX()  + " " + p.getY() + " " + p.getRotation().getDegrees());
-    //Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
+    Constants.log(
+        "Initial starting position: "
+            + p.getX()
+            + " "
+            + p.getY()
+            + " "
+            + p.getRotation().getDegrees());
+    // Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
     timer.restart();
 
     Kp = SmartDashboard.getNumber("Autoalign Kp", Kp);
@@ -98,7 +120,7 @@ public class MoveToPositionPID extends Command {
   public void execute() {
     if (cancel) return;
     // TODO Auto-generated method stub
-    //Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
+    // Pose2d p = Constants.Sensors.vision.getPose().toPose2d();
     Pose2d p = drivetrain.getPoseEstimate();
     double vx = xController.calculate(p.getX(), target.getX());
     double vy = yController.calculate(p.getY(), target.getY());
@@ -116,15 +138,29 @@ public class MoveToPositionPID extends Command {
     omega = MathUtil.clamp(omega, -feedbackLimit, feedbackLimit);
 
     var robotRelativeSpeeds = drivetrain.toRobotRelative(new ChassisSpeeds(vx, vy, -omega));
-    var feedforward = new ChassisSpeeds(Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsX, Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsY, Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsZ);
+    var feedforward =
+        new ChassisSpeeds(
+            Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsX,
+            Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsY,
+            Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsZ);
     var combined = feedforward.plus(robotRelativeSpeeds);
 
     SmartDashboard.putNumber("R PID X", combined.vxMetersPerSecond);
     SmartDashboard.putNumber("R PID Y", combined.vyMetersPerSecond);
     SmartDashboard.putNumber("R PID Z", combined.omegaRadiansPerSecond);
 
-    feedforwardOut.set(new double[] {feedforward.vxMetersPerSecond, feedforward.vyMetersPerSecond, feedforward.omegaRadiansPerSecond});
-    feedbackOut.set(new double[] {robotRelativeSpeeds.vxMetersPerSecond, robotRelativeSpeeds.vyMetersPerSecond, robotRelativeSpeeds.omegaRadiansPerSecond});
+    feedforwardOut.set(
+        new double[] {
+          feedforward.vxMetersPerSecond,
+          feedforward.vyMetersPerSecond,
+          feedforward.omegaRadiansPerSecond
+        });
+    feedbackOut.set(
+        new double[] {
+          robotRelativeSpeeds.vxMetersPerSecond,
+          robotRelativeSpeeds.vyMetersPerSecond,
+          robotRelativeSpeeds.omegaRadiansPerSecond
+        });
 
     drivetrain.setVoltage(combined);
   }
@@ -134,7 +170,10 @@ public class MoveToPositionPID extends Command {
     // TODO Auto-generated method stub
     if (cancel) Constants.log("Auto-align cancelled, no visible tag");
     if (drivetrain.invalidPose) Constants.log("Disabled auto-align, invalid drivetrain pose");
-    return cancel || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint()) || timer.hasElapsed(5) || drivetrain.invalidPose;
+    return cancel
+        || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint())
+        || timer.hasElapsed(5)
+        || drivetrain.invalidPose;
   }
 
   @Override
