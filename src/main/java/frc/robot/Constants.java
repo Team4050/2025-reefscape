@@ -93,7 +93,7 @@ public final class Constants {
 
     public static final double transport = 0.15;
     public static final double L1Scoring = 1;
-    public static final double L2Scoring = 3.62; //~2.77
+    public static final double L2Scoring = 3.62; //3.8
     public static final double L2AlgaeRemoval = 2.2;
     public static final double L3Scoring = 2.3;
     public static final double L3AlgaeRemoval = 1.145;

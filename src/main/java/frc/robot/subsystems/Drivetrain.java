@@ -112,7 +112,13 @@ public class Drivetrain extends SubsystemBase {
   private Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
 
   // ******************************************************** PID control ******************************************************** //
-  // x in meters, y in meters, theta in radians
+  // x in meters, y in meters, theta/z in radians
+  private double KsX = 0.03;
+  private double KsY = 0.03;
+  private double KsZ = 0.03;
+  private double KvX = 0.01;
+  private double KvY = 0.01;
+  private double KvZ = 0.01;
   private PIDController xController = new PIDController(0.3, 0.05, 0.03);
   private PIDController yController = new PIDController(0.3, 0.05, 0.03);
   private ProfiledPIDController thetaController = new ProfiledPIDController(0.3, 0.05, 0.03, new Constraints(0.25, 0.5));
@@ -381,6 +387,8 @@ public class Drivetrain extends SubsystemBase {
     ));
   }
 
+  // ******************************************************** Getters ******************************************************** //
+
   private double krakenRadToM(double rads) {
     return (rads / Constants.Drivetrain.moduleGearReduction) * Constants.Drivetrain.wheelRadiusMeters;
   }
@@ -435,6 +443,14 @@ public class Drivetrain extends SubsystemBase {
     return new ChassisSpeeds(d.getX(), d.getY(), speeds.omegaRadiansPerSecond);
   }
 
+  public ChassisSpeeds toRobotRelative(ChassisSpeeds speeds) {
+    return ChassisSpeeds.fromFieldRelativeSpeeds(speeds, getPoseEstimate().getRotation());
+  }
+
+  public MecanumDriveWheelSpeeds toModuleSpeeds(ChassisSpeeds robotRelativeSpeeds) {
+    return kinematics.toWheelSpeeds(robotRelativeSpeeds);
+  }
+
   public double[] getAppliedCurrents() {
     double[] d = {
       motorAppliedCurrent[0].refresh().getValue().in(Units.Amps),
@@ -482,6 +498,24 @@ public class Drivetrain extends SubsystemBase {
     return VecBuilder.fill(s.vxMetersPerSecond, s.vyMetersPerSecond, s.omegaRadiansPerSecond, Constants.Sensors.getIMUYawVelocityRads());
   }
 
+    /***
+   * Set the speed of the chassis in field-relative duty cycle
+   * @param fieldRelativeSpeeds
+   * @return
+   */
+  public void toRobotModuleRelativeSpeeds(ChassisSpeeds fieldRelativeSpeeds) {
+    Rotation2d rot = getPoseEstimate().getRotation();
+    var combined = ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, rot);
+    var ff = new ChassisSpeeds(Math.signum(combined.vxMetersPerSecond) * 0.03, Math.signum(combined.vyMetersPerSecond) * 0.05, Math.signum(combined.omegaRadiansPerSecond) * 0.003);
+    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(combined.plus(ff));
+    set(speeds);
+  }
+
+  public MecanumDriveWheelSpeeds calculateFeedforward(ChassisSpeeds robotRelativeSpeeds) {
+    var ff = new ChassisSpeeds(Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * 0.03, Math.signum(robotRelativeSpeeds.vyMetersPerSecond) * 0.05, Math.signum(robotRelativeSpeeds.omegaRadiansPerSecond) * 0.003);
+    return kinematics.toWheelSpeeds(ff);
+  }
+
   public void setVisionPipeline(int index) {
     chassisCam.setPipelineIndex(index);
     Constants.log("Drivetrain - Set limelight pipeline index to " + index);
@@ -490,6 +524,12 @@ public class Drivetrain extends SubsystemBase {
   public Command pathfindToPose(Pose2d pose) {
     return AutoBuilder.pathfindToPose(pose, new PathConstraints(12, 2, Math.PI, Math.PI));
   }
+
+  // ******************************************************** Setters ******************************************************** //
+
+  // ************************************ Set motor direct ************************************ //
+
+  // **************************** Robot relative **************************** //
 
   /***
    * Set the chassis speed relative to the current robot orientation
@@ -503,27 +543,36 @@ public class Drivetrain extends SubsystemBase {
     set(speeds);
   }
 
+      /***
+   * Set the speed of the chassis in robot-relative duty cycle
+   * @param fieldRelativeSpeeds
+   * @return
+   */
+  public void set(ChassisSpeeds robotRelativeSpeeds) {
+    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(robotRelativeSpeeds);
+    set(speeds);
+  }
+
+
   /***
    * Directly set the wheel speeds
    * @param wheelSpeeds
    */
   public void set(MecanumDriveWheelSpeeds wheelSpeeds) {
-    //Constants.log("Speed control");
-    //Constants.log(wheelSpeeds.frontLeftMetersPerSecond);
-    FL.set((wheelSpeeds.frontLeftMetersPerSecond));
-    FR.set((wheelSpeeds.frontRightMetersPerSecond));
-    RL.set((wheelSpeeds.rearLeftMetersPerSecond));
-    RR.set((wheelSpeeds.rearRightMetersPerSecond));
+    FL.set(wheelSpeeds.frontLeftMetersPerSecond);
+    FR.set(wheelSpeeds.frontRightMetersPerSecond);
+    RL.set(wheelSpeeds.rearLeftMetersPerSecond);
+    RR.set(wheelSpeeds.rearRightMetersPerSecond);
   }
 
   /***
    * Set chassis Voltages
    * @param vx
    * @param vy
-   * @param omega
+   * @param theta
    */
-  public void setVoltage(double vx, double vy, double omega) {
-    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(new ChassisSpeeds(vx, vy, omega));
+  public void setVoltage(double vx, double vy, double theta) {
+    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(new ChassisSpeeds(vx, vy, theta));
     setVoltage(speeds);
   }
 
@@ -538,6 +587,36 @@ public class Drivetrain extends SubsystemBase {
     RL.setVoltage(wheelSpeeds.rearLeftMetersPerSecond);
     RR.setVoltage(wheelSpeeds.rearRightMetersPerSecond);
   }
+
+  // **************************** Field relative **************************** //
+
+  /***
+   * Set the speed of the chassis in field-relative duty cycle
+   * @param fieldRelativeSpeeds
+   * @return
+   */
+  public void setFieldRelative(ChassisSpeeds fieldRelativeSpeeds, ChassisSpeeds robotRelativeFeedforward) {
+    Rotation2d rot = getPoseEstimate().getRotation();
+    var combined = ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, rot);
+    var ff = new ChassisSpeeds(Math.signum(combined.vxMetersPerSecond) * 0.03, Math.signum(combined.vyMetersPerSecond) * 0.05, Math.signum(combined.omegaRadiansPerSecond) * 0.003);
+    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(combined.plus(ff));
+    set(speeds);
+  }
+
+    /***
+   * Set the speed of the chassis in field-relative voltages
+   * @param fieldRelativeSpeeds
+   * @return
+   */
+  public void setVoltageFieldRelative(ChassisSpeeds fieldRelativeSpeeds) {
+    var chassisSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, getPoseEstimate().getRotation());
+    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(chassisSpeeds);
+    setVoltage(speeds);
+  }
+
+  // ************************************ Set setpoints ************************************ //
+
+  // **************************** Robot relative **************************** //
 
   public void setTorqueCurrents(MecanumDriveWheelSpeeds wheelTorqueCurrents) {
     controlRequests[0].withOutput(wheelTorqueCurrents.frontLeftMetersPerSecond);
@@ -565,29 +644,7 @@ public class Drivetrain extends SubsystemBase {
     RR.set(RRVelPID.calculate(d[3], wheelSpeeds.rearRightMetersPerSecond));
   }
 
-  /***
-   * Set the speed of the chassis in robot-relative duty cycle
-   * @param fieldRelativeSpeeds
-   * @return
-   */
-  public void set(ChassisSpeeds robotRelativeSpeeds) {
-    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(robotRelativeSpeeds);
-    set(speeds);
-  }
-
-
-  /***
-   * Set the speed of the chassis in field-relative duty cycle
-   * @param fieldRelativeSpeeds
-   * @return
-   */
-  public void setFieldRelative(ChassisSpeeds fieldRelativeSpeeds, ChassisSpeeds robotRelativeFeedforward) {
-    Rotation2d rot = getPoseEstimate().getRotation();
-    var combined = ChassisSpeeds.fromFieldRelativeSpeeds(fieldRelativeSpeeds, rot);
-    var ff = new ChassisSpeeds(Math.signum(combined.vxMetersPerSecond) * 0.03, Math.signum(combined.vyMetersPerSecond) * 0.05, Math.signum(combined.omegaRadiansPerSecond) * 0.003);
-    MecanumDriveWheelSpeeds speeds = kinematics.toWheelSpeeds(combined.plus(ff));
-    set(speeds);
-  }
+  // **************************** Field relative **************************** //
 
   /***
    * Use the Holonomic Drive Controller to follow a rajectory
@@ -621,7 +678,7 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public void followReference() {
-    setVelocity(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
+    setVoltageFieldRelative(new ChassisSpeeds(u.get(0), u.get(1), u.get(2)));
   }
 
   public void setReference(double vx, double vy, double va) {
@@ -648,8 +705,10 @@ public class Drivetrain extends SubsystemBase {
   }
 
   public void init() {
-
+    stop();
   }
+
+  // ******************************************************** Periodic ******************************************************** //
 
   private Vector<N3> u = VecBuilder.fill(0, 0, 0);
   private int loop = 0;

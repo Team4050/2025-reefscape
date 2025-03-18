@@ -1,16 +1,13 @@
 package frc.robot.commands;
 
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
@@ -22,8 +19,8 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
 
-public class AlignToReefPID extends Command {
-  private Drivetrain drivetrain;
+public class MoveToPositionPID extends Command {
+    private Drivetrain drivetrain;
   private Timer timer = new Timer();
   private double Kp = 0.2;
   private double Ki = 0.001;
@@ -37,8 +34,6 @@ public class AlignToReefPID extends Command {
   private ProfiledPIDController yProController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(1, 1));
   private ProfiledPIDController omegaController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(0.2, 0.2));
   private Pose2d target; // = new Pose2d(14.58, 4.05, Rotation2d.k180deg)
-  private boolean right = false;
-  private boolean algae = false;
 
   private boolean cancel = false;
 
@@ -50,10 +45,9 @@ public class AlignToReefPID extends Command {
   private DoubleArrayPublisher feedbackOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
   private DoubleArrayPublisher feedforwardOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("Feedforward").publish();
 
-  public AlignToReefPID(Drivetrain drivetrain, boolean right, boolean algaeMode) {
+  public MoveToPositionPID(Drivetrain drivetrain, Pose2d target) {
     this.drivetrain = drivetrain;
-    this.right = right;
-    this.algae = algaeMode;
+    this.target = target;
     xController.setTolerance(tolerance);
     xController.setIZone(iZone);
     xController.setIntegratorRange(-maxIntegral, maxIntegral);
@@ -86,27 +80,6 @@ public class AlignToReefPID extends Command {
   @Override
   public void initialize() {
     cancel = false;
-    // TODO Auto-generated method stub
-    super.initialize();
-    Optional<Pose3d> tag = drivetrain.getLastSeenAprilTag();
-    if (tag.isEmpty() || drivetrain.getTimeSinceLastSeenTag() > 1) {
-      cancel = true;
-      return;
-    }
-    Pose2d tagPose = tag.get().toPose2d();
-
-    Translation2d offset;
-    if (algae) {
-      offset = new Translation2d(0.8, 0);
-    } else {
-      if (right) {
-        offset = new Translation2d(0.8, 0.2).rotateBy(tagPose.getRotation());
-      } else {
-        offset = new Translation2d(0.8, -0.2).rotateBy(tagPose.getRotation());
-      }
-    }
-
-    target = new Pose2d(tagPose.getTranslation().plus(offset), tagPose.getRotation().plus(Rotation2d.k180deg));
     Constants.log("Target position (xya): " + target.getX() + " " + target.getY() + " " + target.getRotation().getDegrees());
     Pose2d p = drivetrain.getPoseEstimate();
     Constants.log("Initial starting position: " + p.getX()  + " " + p.getY() + " " + p.getRotation().getDegrees());
@@ -142,17 +115,18 @@ public class AlignToReefPID extends Command {
     vpy = MathUtil.clamp(vpy, -feedbackLimit, feedbackLimit);
     omega = MathUtil.clamp(omega, -feedbackLimit, feedbackLimit);
 
-    double KstaticX = Math.signum(vx) * KsX;
-    double KstaticY = Math.signum(vy) * KsY;
-    double KstaticZ = Math.signum(omega) * KsZ;
+    var robotRelativeSpeeds = drivetrain.toRobotRelative(new ChassisSpeeds(vx, vy, -omega));
+    var feedforward = new ChassisSpeeds(Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsX, Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsY, Math.signum(robotRelativeSpeeds.vxMetersPerSecond) * KsZ);
+    var combined = feedforward.plus(robotRelativeSpeeds);
 
-    SmartDashboard.putNumber("R PID X", vx + KstaticX);
-    SmartDashboard.putNumber("R PID Y", vy + KstaticY);
-    SmartDashboard.putNumber("R PID Z", omega);
-    feedforwardOut.set(new double[] {KstaticX, KstaticY, KstaticZ});
-    feedbackOut.set(new double[] {vx, vy, omega});
-    drivetrain.setFieldRelative(new ChassisSpeeds(vx, vy, -(omega)), new ChassisSpeeds(KstaticX, KstaticY, KstaticZ));
-    super.execute();
+    SmartDashboard.putNumber("R PID X", combined.vxMetersPerSecond);
+    SmartDashboard.putNumber("R PID Y", combined.vyMetersPerSecond);
+    SmartDashboard.putNumber("R PID Z", combined.omegaRadiansPerSecond);
+
+    feedforwardOut.set(new double[] {feedforward.vxMetersPerSecond, feedforward.vyMetersPerSecond, feedforward.omegaRadiansPerSecond});
+    feedbackOut.set(new double[] {robotRelativeSpeeds.vxMetersPerSecond, robotRelativeSpeeds.vyMetersPerSecond, robotRelativeSpeeds.omegaRadiansPerSecond});
+
+    drivetrain.setVoltage(combined);
   }
 
   @Override

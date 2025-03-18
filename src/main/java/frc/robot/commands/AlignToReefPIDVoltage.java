@@ -22,20 +22,28 @@ import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
 
-public class AlignToReefPID extends Command {
+public class AlignToReefPIDVoltage extends Command {
   private Drivetrain drivetrain;
   private Timer timer = new Timer();
-  private double Kp = 0.2;
-  private double Ki = 0.001;
-  private double Kd = 0.02; //0.08
+  private double KpX = 0.2;
+  private double KiX = 0.001;
+  private double KdX = 0.02; //0.08
+
+  private double KpY = 0.2;
+  private double KiY = 0.001;
+  private double KdY = 0.02; //0.08
+
+  private double KpZ = 0.2;
+  private double KiZ = 0.001;
+  private double KdZ = 0.02; //0.08
+
   private double KsX = 0.1; // 0.02
   private double KsY = 0.1;
   private double KsZ = 0;
-  private PIDController xController = new PIDController(Kp, Ki, Kd);
-  private PIDController yController = new PIDController(Kp, Ki, Kd);
-  private ProfiledPIDController xProController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(1, 1));
-  private ProfiledPIDController yProController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(1, 1));
-  private ProfiledPIDController omegaController = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(0.2, 0.2));
+
+  private PIDController xController = new PIDController(KpX, KiX, KdX);
+  private PIDController yController = new PIDController(KpY, KiY, KdY);
+  private ProfiledPIDController omegaController = new ProfiledPIDController(KpZ, KiZ, KdZ, new Constraints(0.2, 0.2));
   private Pose2d target; // = new Pose2d(14.58, 4.05, Rotation2d.k180deg)
   private boolean right = false;
   private boolean algae = false;
@@ -50,7 +58,7 @@ public class AlignToReefPID extends Command {
   private DoubleArrayPublisher feedbackOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("PID").publish();
   private DoubleArrayPublisher feedforwardOut = NetworkTableInstance.getDefault().getTable("Auto command").getDoubleArrayTopic("Feedforward").publish();
 
-  public AlignToReefPID(Drivetrain drivetrain, boolean right, boolean algaeMode) {
+  public AlignToReefPIDVoltage(Drivetrain drivetrain, boolean right, boolean algaeMode) {
     this.drivetrain = drivetrain;
     this.right = right;
     this.algae = algaeMode;
@@ -58,29 +66,29 @@ public class AlignToReefPID extends Command {
     xController.setIZone(iZone);
     xController.setIntegratorRange(-maxIntegral, maxIntegral);
 
-    xProController.setTolerance(tolerance);
-    xProController.setIZone(iZone);
-    xProController.setIntegratorRange(-maxIntegral, maxIntegral);
-
     yController.setTolerance(tolerance);
     yController.setIZone(iZone);
     yController.setIntegratorRange(-maxIntegral, maxIntegral);
-
-    yProController.setTolerance(tolerance);
-    yProController.setIZone(iZone);
-    yProController.setIntegratorRange(-maxIntegral, maxIntegral);
 
     omegaController.setTolerance(Math.toRadians(2));
     omegaController.setIZone(Math.toRadians(15));
     omegaController.setIntegratorRange(-maxIntegral, maxIntegral);
 
-    SmartDashboard.putNumber("R PID X", 0);
-    SmartDashboard.putNumber("R PID Y", 0);
-    SmartDashboard.putNumber("R PID Z", 0);
+    SmartDashboard.putNumber("Autoalign X Ks", KsX);
+    SmartDashboard.putNumber("Autoalign Y Ks", KsY);
+    SmartDashboard.putNumber("Autoalign Z Ks", KsZ);
 
-    SmartDashboard.putNumber("Autoalign Kp", Kp);
-    SmartDashboard.putNumber("Autoalign Ki", Ki);
-    SmartDashboard.putNumber("Autoalign Kd", Kd);
+    SmartDashboard.putNumber("Autoalign X Kp", KpX);
+    SmartDashboard.putNumber("Autoalign X Ki", KiX);
+    SmartDashboard.putNumber("Autoalign X Kd", KdX);
+
+    SmartDashboard.putNumber("Autoalign Y Kp", KpY);
+    SmartDashboard.putNumber("Autoalign Y Ki", KiY);
+    SmartDashboard.putNumber("Autoalign Y Kd", KdY);
+
+    SmartDashboard.putNumber("Autoalign Z Kp", KpZ);
+    SmartDashboard.putNumber("Autoalign Z Ki", KiZ);
+    SmartDashboard.putNumber("Autoalign Z Kd", KdZ);
   }
 
   @Override
@@ -113,12 +121,30 @@ public class AlignToReefPID extends Command {
     //Constants.Sensors.imu.setGyroAngleZ(p.getRotation().getDegrees());
     timer.restart();
 
-    Kp = SmartDashboard.getNumber("Autoalign Kp", Kp);
-    Ki = SmartDashboard.getNumber("Autoalign Ki", Ki);
-    Kd = SmartDashboard.getNumber("Autoalign Kd", Kd);
-    xController.setPID(Kp, Ki, Kd);
-    yController.setPID(Kp, Ki, Kd);
-    omegaController.setPID(Kp, Ki, Kd);
+    KpX = SmartDashboard.getNumber("Autoalign X Kp", KpX);
+    KiX = SmartDashboard.getNumber("Autoalign X Ki", KiX);
+    KdX = SmartDashboard.getNumber("Autoalign X Kd", KdX);
+
+    KpY = SmartDashboard.getNumber("Autoalign Y Kp", KpY);
+    KiY = SmartDashboard.getNumber("Autoalign Y Ki", KiY);
+    KdY = SmartDashboard.getNumber("Autoalign Y Kd", KdY);
+
+    KpZ = SmartDashboard.getNumber("Autoalign Z Kp", KpZ);
+    KiZ = SmartDashboard.getNumber("Autoalign Z Ki", KiZ);
+    KdZ = SmartDashboard.getNumber("Autoalign Z Kd", KdZ);
+
+    xController.setPID(KpX, KiX, KdX);
+    yController.setPID(KpY, KiY, KdY);
+    omegaController.setPID(KpZ, KiZ, KdZ);
+
+    KsX = SmartDashboard.getNumber("Autoalign X Ks", KsX);
+    KsY = SmartDashboard.getNumber("Autoalign Y Ks", KsY);
+    KsZ = SmartDashboard.getNumber("Autoalign Z Ks", KsZ);
+
+    Constants.log("PID X: " + KpX + " " + KiX + " " + KdX);
+    Constants.log("PID Y: " + KpY + " " + KiY + " " + KdY);
+    Constants.log("PID Z: " + KpZ + " " + KiZ + " " + KdZ);
+    Constants.log("Kstatic: " + KsX + " " + KsY + " " + KsZ);
   }
 
   @Override
@@ -130,28 +156,23 @@ public class AlignToReefPID extends Command {
     double vx = xController.calculate(p.getX(), target.getX());
     double vy = yController.calculate(p.getY(), target.getY());
 
-    double vpx = xProController.calculate(p.getX(), target.getX());
-    double vpy = yProController.calculate(p.getY(), target.getY());
-
     Rotation2d rot = target.getRotation().minus(p.getRotation());
     double omega = omegaController.calculate(rot.getRadians(), 0);
 
     vx = MathUtil.clamp(vx, -feedbackLimit, feedbackLimit);
     vy = MathUtil.clamp(vy, -feedbackLimit, feedbackLimit);
-    vpx = MathUtil.clamp(vpx, -feedbackLimit, feedbackLimit);
-    vpy = MathUtil.clamp(vpy, -feedbackLimit, feedbackLimit);
     omega = MathUtil.clamp(omega, -feedbackLimit, feedbackLimit);
 
-    double KstaticX = Math.signum(vx) * KsX;
-    double KstaticY = Math.signum(vy) * KsY;
-    double KstaticZ = Math.signum(omega) * KsZ;
+    var feedback = drivetrain.toRobotRelative(new ChassisSpeeds(vx, vy, omega));
+    var feedforward = new ChassisSpeeds(Math.signum(vx) * KsX, Math.signum(vy) * KsY, Math.signum(omega) * KsZ);
+    var combined = feedforward.plus(feedback);
 
-    SmartDashboard.putNumber("R PID X", vx + KstaticX);
-    SmartDashboard.putNumber("R PID Y", vy + KstaticY);
-    SmartDashboard.putNumber("R PID Z", omega);
-    feedforwardOut.set(new double[] {KstaticX, KstaticY, KstaticZ});
-    feedbackOut.set(new double[] {vx, vy, omega});
-    drivetrain.setFieldRelative(new ChassisSpeeds(vx, vy, -(omega)), new ChassisSpeeds(KstaticX, KstaticY, KstaticZ));
+    SmartDashboard.putNumber("R PID X", combined.vxMetersPerSecond);
+    SmartDashboard.putNumber("R PID Y", combined.vyMetersPerSecond);
+    SmartDashboard.putNumber("R PID Z", combined.omegaRadiansPerSecond);
+    feedforwardOut.set(new double[] {feedforward.vxMetersPerSecond, feedforward.vyMetersPerSecond, feedforward.omegaRadiansPerSecond});
+    feedbackOut.set(new double[] {feedback.vxMetersPerSecond, feedback.vyMetersPerSecond, feedback.omegaRadiansPerSecond});
+    drivetrain.setVoltage(combined);
     super.execute();
   }
 
