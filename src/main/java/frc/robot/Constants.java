@@ -125,7 +125,7 @@ public final class Constants {
     public static final double L3Scoring = Math.toRadians(75);
     public static final double L3AlgaeRemoval = Math.toRadians(64.8);
     public static final double L4Scoring = Math.toRadians(66);
-    public static final double climb = Math.toRadians(-60);
+    public static final double climb = Math.toRadians(-55);
   }
 
   public static class Wrist {

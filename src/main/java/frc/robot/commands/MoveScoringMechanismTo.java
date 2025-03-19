@@ -35,7 +35,12 @@ public class MoveScoringMechanismTo {
   }
 
   public static Command Climbing(Elevator elevator, Claw claw) {
-    return new InstantCommand(() -> {}, elevator, claw);
+    return new InstantCommand(() -> {
+      elevator.setL4Mode(false);
+      elevator.set(Constants.Elevator.climb);
+      elevator.setShoulder(Constants.Shoulder.climb);
+      elevator.setWrist(Constants.Wrist.climb);
+    }, elevator, claw);
   }
 
   public static Command AlgaeTransport(Elevator elevator, Claw claw) {

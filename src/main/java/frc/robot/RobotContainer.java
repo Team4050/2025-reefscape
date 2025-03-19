@@ -481,8 +481,8 @@ public class RobotContainer {
                 },
                 elevatorSubsystem));
 
-    // m_secondaryController.start().onTrue(new SetSubsystemsToClimbingConfig());
-    // m_secondaryController.back().onTrue(new SetSubsystemsToClimbingConfig());
+    m_secondaryController.start().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
+    m_secondaryController.back().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
   }
 
   private void configureDashboard() {
