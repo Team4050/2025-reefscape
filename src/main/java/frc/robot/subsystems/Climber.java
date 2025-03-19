@@ -67,9 +67,12 @@ public class Climber extends SubsystemBase {
     var dif = targetPosition - motor.getPosition();
     if (Math.abs(dif) > 0.01) {
       if (targetPosition < motor.getPosition()) {
-        motor.setControl(-3, ControlType.kVelocity);
+        motor.setControl(-2, ControlType.kVoltage);
       } else if (targetPosition > motor.getPosition()) {
-        motor.set(1);
+        if (motor.getPosition() > 0) {
+          motor.setControl(6, ControlType.kVoltage);
+        }
+        motor.setControl(2, ControlType.kVoltage);
       }
     } else {
       motor.set(0);
