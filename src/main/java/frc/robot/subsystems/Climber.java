@@ -6,6 +6,7 @@ import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.MAXMotionConfig.MAXMotionPositionMode;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -66,9 +67,9 @@ public class Climber extends SubsystemBase {
     var dif = targetPosition - motor.getPosition();
     if (Math.abs(dif) > 0.01) {
       if (targetPosition < motor.getPosition()) {
-        motor.setControl(-3, ControlType.kVoltage);
+        motor.setControl(-3, ControlType.kVelocity);
       } else if (targetPosition > motor.getPosition()) {
-        motor.setControl(3, ControlType.kVoltage);
+        motor.set(1);
       }
     } else {
       motor.set(0);

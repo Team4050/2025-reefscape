@@ -6,6 +6,7 @@ package frc.robot;
 
 import com.pathplanner.lib.config.ModuleConfig;
 import com.pathplanner.lib.config.RobotConfig;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -162,7 +163,7 @@ public final class Constants {
 
   public static class Climber {
     public static final int climber = 5;
-    public static final int currentLimit = 40;
+    public static final int currentLimit = 60;
     public static final double climberGearReduction =
         (12.0 / 54.0) * (1.0 / 49.0); // Sprocket * gearbox 220.5:1 ratio
 

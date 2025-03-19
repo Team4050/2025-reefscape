@@ -4,6 +4,9 @@
 
 package frc.robot;
 
+import java.util.Optional;
+import java.util.function.BooleanSupplier;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.cameraserver.CameraServer;
@@ -38,8 +41,6 @@ import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Climber;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Elevator;
-import java.util.Optional;
-import java.util.function.BooleanSupplier;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -366,7 +367,7 @@ public class RobotContainer {
         .whileTrue(
             new RunCommand(
                 () -> {
-                  climberSubsystem.setAdditive(-0.05);
+                  climberSubsystem.setAdditive(-0.15);
                 },
                 climberSubsystem));
     m_driverController
@@ -374,7 +375,7 @@ public class RobotContainer {
         .whileTrue(
             new RunCommand(
                 () -> {
-                  climberSubsystem.setAdditive(0.05);
+                  climberSubsystem.setAdditive(0.3);
                 },
                 climberSubsystem));
 
