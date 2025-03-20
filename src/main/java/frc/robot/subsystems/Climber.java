@@ -31,6 +31,8 @@ public class Climber extends SubsystemBase {
     motor =
         new HazardSparkMax(
             Constants.Climber.climber, MotorType.kBrushless, config, true, "Climber");
+    motor.setEncoder(0);
+    Constants.log("Reset climber encoders");
   }
 
   /***

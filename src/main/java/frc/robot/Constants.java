@@ -90,14 +90,14 @@ public final class Constants {
     public static final double baseHeightMM =
         812.800 + Drivetrain.chassisTopPlateHeightMM; // From Elevator - Full Assembly CAD
 
-    public static final double transport = 0.15;
+    public static final double transport = 0.9;
     public static final double L1Scoring = 1;
     public static final double L2Scoring = 3.62; // 3.8
     public static final double L2AlgaeRemoval = 2.2;
     public static final double L3Scoring = 2.3;
     public static final double L3AlgaeRemoval = 1.145;
     public static final double L4Scoring = 3.82;
-    public static final double climb = 0.5;
+    public static final double climb = 2;
   }
 
   public static class Shoulder {
