@@ -2,6 +2,13 @@ package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Amps;
 
+import java.util.Optional;
+
+import org.photonvision.PhotonCamera;
+import org.photonvision.PhotonPoseEstimator;
+import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.PhotonPipelineResult;
+
 import com.ctre.phoenix6.Orchestra;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
@@ -15,6 +22,7 @@ import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import com.pathplanner.lib.path.PathConstraints;
 import com.pathplanner.lib.util.DriveFeedforwards;
+
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.Matrix;
@@ -54,11 +62,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants;
-import java.util.Optional;
-import org.photonvision.PhotonCamera;
-import org.photonvision.PhotonPoseEstimator;
-import org.photonvision.PhotonPoseEstimator.PoseStrategy;
-import org.photonvision.targeting.PhotonPipelineResult;
 
 public class Drivetrain extends SubsystemBase {
   // TODO: check if kraken encoders are integrated or remote
@@ -297,6 +300,8 @@ public class Drivetrain extends SubsystemBase {
       uPublisher = drivetrainTable.getDoubleArrayTopic("Control vector").publish();
       referenceVectorPublisher = drivetrainTable.getDoubleArrayTopic("Reference vector").publish();
     }
+
+    //NetworkTableInstance.getDefault().getTable("Limelight").getEntry("stream").setNumber(0);
 
     xController.setTolerance(0.1);
     yController.setTolerance(0.1);
@@ -852,9 +857,14 @@ public class Drivetrain extends SubsystemBase {
     // Constants.estimatedPositionLogEntry.append(new double[] {pose.getX(), pose.getY(),
     // pose.getRotation().getDegrees()});
     if (pose.getX() < 0 || pose.getX() > 17.5 || pose.getY() < 0 || pose.getY() > 8) {
-      Constants.log("Invalid pose estimate");
       invalidPose = true;
+      if (!invalidPose) {
+        Constants.log("Exited valid pose limits");
+      }
     } else {
+      if (invalidPose) {
+        Constants.log("Re-entered valid pose limits");
+      }
       invalidPose = false;
     }
 

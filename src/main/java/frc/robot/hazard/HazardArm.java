@@ -1,6 +1,7 @@
 package frc.robot.hazard;
 
 import com.revrobotics.spark.SparkBase.ControlType;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.PIDController;
@@ -25,6 +26,7 @@ public class HazardArm {
   private DoublePublisher voltagePIDOutput;
   private DoublePublisher velocityFFtarget;
   private boolean tuneUsingDashboard = false;
+  private boolean overridePID = false;
   private boolean useAbsoluteEncoder = false;
   private boolean stop = false;
 
@@ -103,6 +105,11 @@ public class HazardArm {
             .publish();
   }
 
+  public void set(double dutyCycle) {
+    overridePID = true;
+    motor.set(dutyCycle);
+  }
+
   /***
    * Sets the arm setpoint in radians
    * @param value
@@ -129,6 +136,10 @@ public class HazardArm {
   public void unstop() {
     Constants.log("Arm reenabled");
     stop = false;
+  }
+
+  public boolean underLoad() {
+    return motor.isUnderLoad();
   }
 
   public boolean atReference() {
@@ -159,27 +170,32 @@ public class HazardArm {
     if (useAbsoluteEncoder) {
       motorPosition = motor.getAbsPositionRadians();
     }
-    var currentState = new State(motorPosition, motor.getVelocityRadPS());
-    var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
-    // Constants.log("Arm FF target velocity: " + v.velocity);
-    var ff = feedforward.calculate(setpoint, v.velocity);
-    var fb = feedback.calculate(motorPosition, setpoint);
-    var pfb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
-    SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
-    SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
-    if (ff + pfb < -6 || ff + pfb > 6) {
-      Constants.log(
-          "OVERCORRECT - DISABLE ff: "
-              + ff
-              + " pfb: "
-              + pfb
-              + "acc error: "
-              + profiledFeedback.getAccumulatedError());
-      motor.setControl(MathUtil.clamp(ff + pfb, -6, 6), ControlType.kVoltage);
-      voltagePIDOutput.set(MathUtil.clamp(ff + pfb, -6, 6));
+    if (overridePID) {
+      setpoint = motorPosition;
+      overridePID = false;
     } else {
-      motor.setControl(ff + pfb, ControlType.kVoltage);
-      voltagePIDOutput.set(ff + pfb);
+      var currentState = new State(motorPosition, motor.getVelocityRadPS());
+      var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
+      // Constants.log("Arm FF target velocity: " + v.velocity);
+      var ff = feedforward.calculate(setpoint, v.velocity);
+      var fb = feedback.calculate(motorPosition, setpoint);
+      var pfb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
+      SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
+      SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
+      if (ff + pfb < -6 || ff + pfb > 6) {
+        Constants.log(
+            "OVERCORRECT - DISABLE ff: "
+                + ff
+                + " pfb: "
+                + pfb
+                + "acc error: "
+                + profiledFeedback.getAccumulatedError());
+        motor.setControl(MathUtil.clamp(ff + pfb, -6, 6), ControlType.kVoltage);
+        voltagePIDOutput.set(MathUtil.clamp(ff + pfb, -6, 6));
+      } else {
+        motor.setControl(ff + pfb, ControlType.kVoltage);
+        voltagePIDOutput.set(ff + pfb);
+      }
     }
     motor.publishToNetworkTables();
   }

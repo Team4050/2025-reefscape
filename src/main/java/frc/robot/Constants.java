@@ -31,7 +31,7 @@ import edu.wpi.first.wpilibj.DataLogManager;
  * constants are needed, to reduce verbosity.
  */
 public final class Constants {
-  public static Pose2d startingPose = new Pose2d(16.6, 4, new Rotation2d(Math.toRadians(180)));
+  public static Pose2d startingPose = new Pose2d(7, 4, new Rotation2d(Math.toRadians(0)));
 
   /***
    * Returns the alliance side. False for red, true for blue.
@@ -79,7 +79,7 @@ public final class Constants {
   public static class Elevator {
     public static final int back = 6;
     public static final int front = 7;
-    public static final int elevatorCurrentLimit = 20;
+    public static final int currentLimit = 20;
     public static final double gearboxReduction = 1.0 / 10.0;
     public static final double gearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
@@ -118,7 +118,7 @@ public final class Constants {
     public static final double shoulderArmLengthMM = 302;
     public static final double shoulderMotorTorqueNM = 0.45;
 
-    public static final double transport = Math.toRadians(-75);
+    public static final double transport = Math.toRadians(-80); // TODO: See if reducing from -80 improves loading performance
     public static final double L1Scoring = Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-52.5);
     public static final double L2AlgaeRemoval = Math.toRadians(-52.5);
@@ -137,13 +137,13 @@ public final class Constants {
     public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset;
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
-    public static final double wristMax = Math.toRadians(145) + wristRotationOffset; // +108 degrees
-    public static final double wristMin = Math.toRadians(-45) + wristRotationOffset; // -45 degrees
+    public static final double wristMax = Math.toRadians(145) + wristRotationOffset; // +105 degrees
+    public static final double wristMin = Math.toRadians(-45) + wristRotationOffset; // -95 degrees
 
     public static final double chuteExitXOffsetMM = 330; // From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; // From Claw - Full Assembly CAD
 
-    public static final double transport = Math.toRadians(-65);
+    public static final double transport = Math.toRadians(-85); //TODO: Change back to -80 if feeding performance is unchanged
     public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
     public static final double L1Scoring = startingRotationRadians;
     public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset;
@@ -223,6 +223,10 @@ public final class Constants {
       imu.reset();
     }
 
+    /***
+     * Set IMU angle in degrees
+     * @param angle
+     */
     public static void setIMUGyroYaw(double angle) {
       Constants.log("Setting gyro angle to " + angle);
       imu.setGyroAngleZ(angle);
@@ -253,7 +257,7 @@ public final class Constants {
       imu.configCalTime(CalibrationTime._4s);
       imu.calibrate();
       imu.reset();
-      imu.setGyroAngleZ(180);
+      imu.setGyroAngleZ(Math.toDegrees(startingPose.getRotation().getAngle()));
       Constants.log("IMU starting angle: " + imu.getAngle());
     }
   }

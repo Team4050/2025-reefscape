@@ -7,6 +7,7 @@ import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.MAXMotionConfig.MAXMotionPositionMode;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ElevatorFeedforward;
 import edu.wpi.first.math.controller.PIDController;
@@ -24,6 +25,7 @@ import frc.robot.hazard.HazardSparkMax;
 
 public class Elevator extends SubsystemBase {
   public boolean isScoringL4 = false;
+  public boolean isLoading = false;
 
   private HazardSparkMax leadMotor;
   private HazardSparkMax followerMotor;
@@ -54,7 +56,7 @@ public class Elevator extends SubsystemBase {
   private SparkMaxConfig wristConfig = new SparkMaxConfig();
 
   public Elevator(boolean tuningMode) {
-    followConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
+    followConfig.smartCurrentLimit(Constants.Elevator.currentLimit);
     followConfig.idleMode(IdleMode.kBrake);
     followConfig.follow(Constants.Elevator.front, true);
     /*followConfig.absoluteEncoder.positionConversionFactor( //TODO: Change position conversion factor on sparkMaxes for convenience
@@ -62,7 +64,7 @@ public class Elevator extends SubsystemBase {
     followConfig.absoluteEncoder.velocityConversionFactor(
         Constants.Elevator.gearboxReduction);*/
 
-    leadConfig.smartCurrentLimit(Constants.Elevator.elevatorCurrentLimit);
+    leadConfig.smartCurrentLimit(Constants.Elevator.currentLimit);
     leadConfig.idleMode(IdleMode.kBrake);
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
@@ -110,20 +112,22 @@ public class Elevator extends SubsystemBase {
 
     leadMotor =
         new HazardSparkMax(
-            Constants.Elevator.back, MotorType.kBrushless, leadConfig, false, true, elevatorTable);
+            Constants.Elevator.back, MotorType.kBrushless,
+            Constants.Elevator.currentLimit, leadConfig, false, true, elevatorTable);
     followerMotor =
         new HazardSparkMax(
             Constants.Elevator.front,
             MotorType.kBrushless,
+            Constants.Elevator.currentLimit,
             followConfig,
             false,
             false,
             elevatorTable);
     shoulderMotor =
         new HazardSparkMax(
-            Constants.Shoulder.CAN, MotorType.kBrushless, shoulderConfig, true, true, "Shoulder");
+            Constants.Shoulder.CAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder");
     wristMotor =
-        new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, wristConfig, true, "Wrist");
+        new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, Constants.Wrist.currentLimit, wristConfig, true, "Wrist");
 
     shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
     wristSetpoint = Constants.Wrist.startingRotationRadians;
@@ -155,7 +159,7 @@ public class Elevator extends SubsystemBase {
             "Shoulder",
             tuningMode);
     wrist =
-        new HazardArm( // Adjust Kstatic for small movements
+        new HazardArm( // Adjust Kstatic for small movements TODO: reduce play in system
             wristMotor, 0, false, 0.1, 0.19, 0.00, 1.8, 0.12, 0.15, 2, 2, "Wrist", tuningMode);
 
     shoulder.setpoint(shoulderSetpoint);
@@ -204,6 +208,14 @@ public class Elevator extends SubsystemBase {
   public double encoderRevToWristAngle(double r) {
     r /= Constants.Wrist.gearboxReduction;
     return r * 2 * Math.PI;
+  }
+
+  public boolean shoulderUnderLoad() {
+    return shoulder.underLoad();
+  }
+
+  public boolean wristUnderLoad() {
+    return wrist.underLoad();
   }
 
   /***
@@ -257,14 +269,23 @@ public class Elevator extends SubsystemBase {
     setShoulder(shoulderSetpoint + (additive * 0.02));
   }
 
+  public void driveShoulder(double dutyCycle) {
+    shoulder.set(dutyCycle);
+  }
+
   public void checkWrist() {
     // Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
     // Constants.log(wristSetpoint);
-    wrist.setpoint(
+    if (isLoading) {
+      wrist.setpoint(wristSetpoint);
+    } else {
+      wrist.setpoint(
         MathUtil.clamp(
             wristSetpoint,
-            shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRadians,
-            shoulderSetpoint + Constants.Wrist.wristMaxShoulderOffsetRadians));
+            Constants.Wrist.startingRotationRadians,
+            Constants.Wrist.wristMax));
+    }
+
     SmartDashboard.putNumber("Wrist setpoint", elevatorSetpoint);
   }
 
@@ -454,6 +475,10 @@ public class Elevator extends SubsystemBase {
     // else isScoringL4 = false;
     shoulder.periodic();
     wrist.periodic();
+
+    if (leadMotor.getPosition() < 0.5 && shoulder.getPositionRadians() < Math.toRadians(-50)) {
+
+    }
     /*loop++;
     if (loop > 100) {
       Constants.log("Shoulder absolute position degrees: " + Math.toDegrees(shoulder.getPositionRadians()));

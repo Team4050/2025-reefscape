@@ -12,6 +12,7 @@ public class MoveScoringMechanismTo {
   public static Command StartingConfig(Elevator elevator, Claw claw) {
     return new InstantCommand(
         () -> {
+          elevator.isLoading = false;
           elevator.setL4Mode(false);
           elevator.set(0);
           elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
@@ -25,6 +26,7 @@ public class MoveScoringMechanismTo {
     Constants.log("Moving to trasport config");
     return new InstantCommand(
         () -> {
+          elevator.isLoading = true;
           elevator.setL4Mode(false);
           elevator.set(Constants.Elevator.transport);
           elevator.setShoulder(Constants.Shoulder.transport);
@@ -47,6 +49,7 @@ public class MoveScoringMechanismTo {
     Constants.log("Moving to algae trasport config");
     return new InstantCommand(
         () -> {
+          elevator.isLoading = true;
           elevator.setL4Mode(false);
           elevator.set(Constants.Elevator.transport);
           elevator.setShoulder(Constants.Shoulder.transport);
@@ -60,6 +63,7 @@ public class MoveScoringMechanismTo {
     Constants.log(elevator);
     return new InstantCommand(
         () -> {
+          elevator.isLoading = false;
           elevator.setL4Mode(false);
           elevator.set(Constants.Elevator.transport);
           elevator.setShoulder(Constants.Shoulder.transport);
@@ -76,6 +80,7 @@ public class MoveScoringMechanismTo {
           if (claw.algaeMode) {
             Constants.log("Cannot remove algae from L1! Possible misinput?");
           } else {
+            elevator.isLoading = false;
             elevator.setL4Mode(false);
             elevator.set(0);
             elevator.setShoulder(Constants.Shoulder.L1Scoring);
@@ -90,8 +95,9 @@ public class MoveScoringMechanismTo {
     return new InstantCommand(
         () -> {
           Constants.log("Going to L2");
+          elevator.isLoading = false;
+          elevator.setL4Mode(false);
           if (claw.algaeMode) {
-            elevator.setL4Mode(false);
             elevator.set(Constants.Elevator.L2AlgaeRemoval);
             elevator.setShoulder(Constants.Shoulder.L2AlgaeRemoval);
             elevator.setWrist(Constants.Wrist.L2Scoring);
@@ -109,6 +115,8 @@ public class MoveScoringMechanismTo {
     return new InstantCommand(
         () -> {
           Constants.log("Going to L3");
+          elevator.isLoading = false;
+          elevator.setL4Mode(false);
           if (claw.algaeMode) {
             elevator.setL4Mode(false);
             elevator.set(Constants.Elevator.L3AlgaeRemoval);
@@ -128,6 +136,7 @@ public class MoveScoringMechanismTo {
     return new InstantCommand(
         () -> {
           Constants.log("Going to L4");
+          elevator.isLoading = false;
           if (claw.algaeMode) {
             Constants.log("Cannot remove algae from L4! Possible misinput?");
           } else {
@@ -144,40 +153,11 @@ public class MoveScoringMechanismTo {
   public static Command Processor(Elevator elevator, Claw claw) {
     return new InstantCommand(
         () -> {
+          elevator.isLoading = true;
           elevator.setL4Mode(false);
           elevator.set(Constants.Elevator.transport);
           elevator.setShoulder(Constants.Shoulder.transport);
           elevator.setWrist(Constants.Wrist.transport);
-        },
-        elevator,
-        claw);
-  }
-
-  public static Command FeedingConfig(Elevator elevator, Claw claw) {
-    return new InstantCommand(
-        () -> {
-          elevator.setL4Mode(false);
-          elevator.set(0);
-          elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
-          elevator.setWrist(Constants.Wrist.startingRotationRadians);
-        },
-        elevator,
-        claw);
-  }
-
-  /***
-   * For PID tuning
-   * @param elevator
-   * @param claw
-   * @return
-   */
-  public static Command Horizontal(Elevator elevator, Claw claw) {
-    return new InstantCommand(
-        () -> {
-          elevator.setL4Mode(false);
-          elevator.set(0);
-          elevator.setShoulder(Constants.Shoulder.startingRotationRadians);
-          elevator.setWrist(Constants.Wrist.startingRotationRadians);
         },
         elevator,
         claw);

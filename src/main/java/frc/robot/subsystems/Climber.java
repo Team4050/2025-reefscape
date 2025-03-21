@@ -30,7 +30,7 @@ public class Climber extends SubsystemBase {
     config.encoder.positionConversionFactor(Constants.Climber.climberGearReduction);
     motor =
         new HazardSparkMax(
-            Constants.Climber.climber, MotorType.kBrushless, config, true, "Climber");
+            Constants.Climber.climber, MotorType.kBrushless, Constants.Climber.currentLimit, config, true, "Climber");
     motor.setEncoder(0);
     Constants.log("Reset climber encoders");
   }

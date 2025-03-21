@@ -10,16 +10,19 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants;
 
 public class HazardSparkMax {
   private int CAN_ID;
   private SparkMax controller;
   private SparkMaxConfig config;
+  private double currentLimit;
   private boolean useExternalEncoder;
   private RelativeEncoder integratedEncoder;
   private SparkAbsoluteEncoder externalEncoder;
@@ -27,6 +30,7 @@ public class HazardSparkMax {
   private SparkClosedLoopController closedLoop;
   private double setpoint = 0;
 
+  private double lastVelocityRotations;
   private boolean publishToMotorTable;
   private StringPublisher controlMode;
   private DoublePublisher dutyCycle;
@@ -39,9 +43,12 @@ public class HazardSparkMax {
   private DoublePublisher voltage;
   private DoublePublisher current;
 
+  private Trigger loadTrigger;
+
   public HazardSparkMax(
       int CAN_ID,
       MotorType type,
+      double currentLimit,
       SparkMaxConfig config,
       boolean useExternalEncoder,
       boolean publishToMotorTable,
@@ -50,6 +57,8 @@ public class HazardSparkMax {
     this.config = config;
     this.useExternalEncoder = useExternalEncoder;
     this.publishToMotorTable = publishToMotorTable;
+    this.currentLimit = currentLimit;
+    loadTrigger = new Trigger(this::isUnderLoad);
     controller = new SparkMax(CAN_ID, MotorType.kBrushless);
     controller.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     integratedEncoder = controller.getEncoder();
@@ -75,10 +84,11 @@ public class HazardSparkMax {
   }
 
   public HazardSparkMax(
-      int CAN_ID, MotorType type, SparkMaxConfig config, boolean publishToMotorTable, String name) {
+      int CAN_ID, MotorType type, double currentLimit, SparkMaxConfig config, boolean publishToMotorTable, String name) {
     this(
         CAN_ID,
         type,
+        currentLimit,
         config,
         false,
         publishToMotorTable,
@@ -88,6 +98,7 @@ public class HazardSparkMax {
   public HazardSparkMax(
       int CAN_ID,
       MotorType type,
+      double currentLimit,
       SparkMaxConfig config,
       boolean useExternalEncoder,
       boolean publishToMotorTable,
@@ -95,6 +106,7 @@ public class HazardSparkMax {
     this(
         CAN_ID,
         type,
+        currentLimit,
         config,
         useExternalEncoder,
         publishToMotorTable,
@@ -149,6 +161,10 @@ public class HazardSparkMax {
       Constants.log(CAN_ID + " Position: " + getPositionRadians());
       Constants.log(CAN_ID + " Velocity: " + getVelocityRadPS());
     }
+  }
+
+  public boolean isUnderLoad() {
+    return controller.getOutputCurrent() > currentLimit / 10;
   }
 
   /***
