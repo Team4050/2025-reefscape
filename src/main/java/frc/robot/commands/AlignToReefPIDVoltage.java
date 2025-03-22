@@ -1,5 +1,9 @@
 package frc.robot.commands;
 
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
+
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.ProfiledPIDController;
@@ -17,9 +21,6 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Drivetrain;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
 
 public class AlignToReefPIDVoltage extends Command {
   private Drivetrain drivetrain;
@@ -120,15 +121,15 @@ public class AlignToReefPIDVoltage extends Command {
 
     Translation2d offset;
     if (algae) {
-      offset = new Translation2d(0.43, 0);
+      offset = new Translation2d(0.43, 0); //TODO: increase X for all? Should be 0.4572 for flush against no bumper compression. Might be able to fix by further back starting posiiton
     } else {
       if (right) {
         offset =
-            new Translation2d(0.45, 0.17 - Constants.Wrist.scoringOffsetMeters)
+            new Translation2d(0.44, 0.15 - Constants.Wrist.scoringOffsetMeters)
                 .rotateBy(tagPose.getRotation());
       } else {
         offset =
-            new Translation2d(0.45, -0.17 - Constants.Wrist.scoringOffsetMeters)
+            new Translation2d(0.44, -0.16 - Constants.Wrist.scoringOffsetMeters)
                 .rotateBy(tagPose.getRotation());
       }
     }
@@ -136,6 +137,7 @@ public class AlignToReefPIDVoltage extends Command {
     target =
         new Pose2d(
             tagPose.getTranslation().plus(offset), tagPose.getRotation().plus(Rotation2d.k180deg));
+    Constants.log("Starting auto-align: right = " + right + ", algaeMode = " + algae);
     Constants.log(
         "Target position (xya): "
             + target.getX()
@@ -242,6 +244,7 @@ public class AlignToReefPIDVoltage extends Command {
     // TODO Auto-generated method stub
     if (noTag) Constants.log("Auto-align cancelled, no visible tag");
     if (drivetrain.invalidPose) Constants.log("Disabled auto-align, invalid drivetrain pose");
+    if ((xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint())) Constants.log("Auto-align successful");
     return noTag
         || (xController.atSetpoint() && yController.atSetpoint() && omegaController.atSetpoint())
         || timer.hasElapsed(5)

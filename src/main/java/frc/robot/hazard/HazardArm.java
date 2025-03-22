@@ -26,6 +26,7 @@ public class HazardArm {
   private DoublePublisher voltagePIDOutput;
   private DoublePublisher velocityFFtarget;
   private boolean tuneUsingDashboard = false;
+  private boolean profiledControl = false;
   private boolean overridePID = false;
   private boolean useAbsoluteEncoder = false;
   private boolean stop = false;
@@ -65,8 +66,9 @@ public class HazardArm {
     velocityCurve = new TrapezoidProfile(new Constraints(maxV, maxA));
     feedforward = new ArmFeedforward(Ks, Kg, Kv);
     feedback = new PIDController(Kp, Ki, Kd);
-    feedback.setIntegratorRange(-5, 5);
+    feedback.setIntegratorRange(-2, 2);
     feedback.setTolerance(tolerance);
+    feedback.setIZone(0.25);
 
     profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
     profiledFeedback.setIZone(Math.toRadians(20));
@@ -175,26 +177,27 @@ public class HazardArm {
       overridePID = false;
     } else {
       var currentState = new State(motorPosition, motor.getVelocityRadPS());
-      var v = velocityCurve.calculate(0.02, currentState, new State(setpoint, 0));
       // Constants.log("Arm FF target velocity: " + v.velocity);
-      var ff = feedforward.calculate(setpoint, v.velocity);
+      var ff = feedforward.calculate(setpoint, profiledFeedback.getSetpoint().velocity);
       var fb = feedback.calculate(motorPosition, setpoint);
-      var pfb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
+      if (profiledControl) {
+        fb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
+      }
       SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
       SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
-      if (ff + pfb < -6 || ff + pfb > 6) {
+      if (ff + fb < -6 || ff + fb > 6) {
         Constants.log(
             "OVERCORRECT - DISABLE ff: "
                 + ff
                 + " pfb: "
-                + pfb
+                + fb
                 + "acc error: "
                 + profiledFeedback.getAccumulatedError());
-        motor.setControl(MathUtil.clamp(ff + pfb, -6, 6), ControlType.kVoltage);
-        voltagePIDOutput.set(MathUtil.clamp(ff + pfb, -6, 6));
+        motor.setControl(MathUtil.clamp(ff + fb, -6, 6), ControlType.kVoltage);
+        voltagePIDOutput.set(MathUtil.clamp(ff + fb, -6, 6));
       } else {
-        motor.setControl(ff + pfb, ControlType.kVoltage);
-        voltagePIDOutput.set(ff + pfb);
+        motor.setControl(ff + fb, ControlType.kVoltage);
+        voltagePIDOutput.set(ff + fb);
       }
     }
     motor.publishToNetworkTables();

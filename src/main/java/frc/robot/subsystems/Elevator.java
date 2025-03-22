@@ -26,6 +26,7 @@ import frc.robot.hazard.HazardSparkMax;
 public class Elevator extends SubsystemBase {
   public boolean isScoringL4 = false;
   public boolean isLoading = false;
+  public int position = 0;
 
   private HazardSparkMax leadMotor;
   private HazardSparkMax followerMotor;
@@ -147,11 +148,11 @@ public class Elevator extends SubsystemBase {
             shoulderMotor,
             0,
             true,
-            0.08, // 0.1,
+            0.1, // 0.1,
             0.56, // 1.0,//Constants.Shoulder.shoulderMotorTorqueNM /
             // (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit) + 0.5,
             0, /// 49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
-            1.6,
+            0.5,//1.6,
             0.08,
             0.05,
             1,
@@ -160,7 +161,12 @@ public class Elevator extends SubsystemBase {
             tuningMode);
     wrist =
         new HazardArm( // Adjust Kstatic for small movements TODO: reduce play in system
-            wristMotor, 0, false, 0.1, 0.19, 0.00, 1.8, 0.12, 0.15, 2, 2, "Wrist", tuningMode);
+            wristMotor, 0, false, 0.1, 0.19, 0.00,
+            1.0,//1.8,
+            0.12,
+            0.15,
+            2,
+            2, "Wrist", tuningMode);
 
     shoulder.setpoint(shoulderSetpoint);
     wrist.setpoint(wristSetpoint);
@@ -276,7 +282,7 @@ public class Elevator extends SubsystemBase {
   public void checkWrist() {
     // Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
     // Constants.log(wristSetpoint);
-    if (isLoading) {
+    if (leadMotor.getPosition() < Constants.Elevator.hardStopExt) {
       wrist.setpoint(wristSetpoint);
     } else {
       wrist.setpoint(

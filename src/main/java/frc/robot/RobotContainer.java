@@ -52,7 +52,7 @@ import frc.robot.subsystems.Elevator;
  */
 public class RobotContainer {
   private boolean drivetrainFieldOrientedMode = false;
-  private boolean elevatorTuningMode = true;
+  private boolean elevatorTuningMode = false;
 
   // The robot's subsystems and commands are defined here...
   private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0);

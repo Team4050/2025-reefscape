@@ -84,16 +84,17 @@ public final class Constants {
     public static final double gearboxRotationsToHeightMM = 140.178;
     public static final double elevatorFFVoltage = 0.4128;
     public static final double startingExtension = 0;
+    public static final double hardStopExt = 0.5;
     public static final double minExtension = 0.02;
     public static final double maxExtension = 4.4;
     public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
     public static final double baseHeightMM =
         812.800 + Drivetrain.chassisTopPlateHeightMM; // From Elevator - Full Assembly CAD
 
-    public static final double transport = 0.9;
+    public static final double transport = 1.2;
     public static final double L1Scoring = 1;
     public static final double L2Scoring = 3.62; // 3.8
-    public static final double L2AlgaeRemoval = 2.2;
+    public static final double L2AlgaeRemoval = 2.0;
     public static final double L3Scoring = 2.3;
     public static final double L3AlgaeRemoval = 1.145;
     public static final double L4Scoring = 3.82;
@@ -106,8 +107,7 @@ public final class Constants {
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static double encoderOffset =
-        0.0002721150716147; // Increasing offset will push rotational zero downwards
+    public static double encoderOffset = (6.0/360.0); // Increasing offset will push rotational zero downwards
     public static final double startingRotationRadians =
         Math.toRadians(-78); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(90);
@@ -121,7 +121,7 @@ public final class Constants {
     public static final double transport = Math.toRadians(-80); // TODO: See if reducing from -80 improves loading performance
     public static final double L1Scoring = Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-52.5);
-    public static final double L2AlgaeRemoval = Math.toRadians(-52.5);
+    public static final double L2AlgaeRemoval = Math.toRadians(-24);
     public static final double L3Scoring = Math.toRadians(75);
     public static final double L3AlgaeRemoval = Math.toRadians(64.8);
     public static final double L4Scoring = Math.toRadians(66);
@@ -143,16 +143,17 @@ public final class Constants {
     public static final double chuteExitXOffsetMM = 330; // From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; // From Claw - Full Assembly CAD
 
-    public static final double transport = Math.toRadians(-85); //TODO: Change back to -80 if feeding performance is unchanged
+    public static final double transport = Math.toRadians(-60); //TODO: Change back to -80 if feeding performance is unchanged
     public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
     public static final double L1Scoring = startingRotationRadians;
     public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset;
+    public static final double L2AlgaeRemoval = Math.toRadians(-18) + wristRotationOffset;
     public static final double L3Scoring = Math.toRadians(-53);
     public static final double L3AlgaeRemoval = Math.toRadians(-14) + wristRotationOffset;
     public static final double L4Scoring = Math.toRadians(81.5);
     public static final double climb = startingRotationRadians;
 
-    public static final double scoringOffsetMeters = 2 * (2.54 / 100);
+    public static final double scoringOffsetMeters = 1.75 * (2.54 / 100); //TODO: test if 1/4in offset is that important
   }
 
   public static class Coral {

@@ -100,7 +100,7 @@ public class MoveScoringMechanismTo {
           if (claw.algaeMode) {
             elevator.set(Constants.Elevator.L2AlgaeRemoval);
             elevator.setShoulder(Constants.Shoulder.L2AlgaeRemoval);
-            elevator.setWrist(Constants.Wrist.L2Scoring);
+            elevator.setWrist(Constants.Wrist.L2AlgaeRemoval);
           } else {
             elevator.set(Constants.Elevator.L2Scoring);
             elevator.setShoulder(Constants.Shoulder.L2Scoring);
