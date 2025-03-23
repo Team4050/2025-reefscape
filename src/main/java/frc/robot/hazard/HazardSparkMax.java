@@ -72,7 +72,7 @@ public class HazardSparkMax {
     if (publishToMotorTable) {
       velocity = table.getDoubleTopic("Velocity RadPS").publish();
       position = table.getDoubleTopic("Position Radians").publish();
-      rotations = table.getDoubleTopic("Position rotations").publish();
+      rotations = table.getDoubleTopic("Position Rotations").publish();
       absolutePosition = table.getDoubleTopic("Absotlute Position Radians").publish();
       setpointPub = table.getDoubleTopic("Control setpoint (Rotations, RPS, Volts)").publish();
       setpoint2Pub = table.getDoubleTopic("Alternate control setpoint").publish();

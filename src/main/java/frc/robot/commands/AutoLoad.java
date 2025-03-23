@@ -72,6 +72,10 @@ public class AutoLoad extends Command {
     sensed = false;
     timer.stop();
     claw.set(0);
+    if (cancel) {
+      Constants.log("Autoloading cancelled: coral detected in claw");
+      SmartDashboard.putString("Autoloading status", "Cancelled");
+    }
     if (timeout.hasElapsed(6)) {
       SmartDashboard.putString("Autoloading status", "Inactive");
       Constants.driverLog("You have bad timing");

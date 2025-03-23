@@ -139,7 +139,7 @@ public class Elevator extends SubsystemBase {
     elevatorPID =
         new PIDController(
             0.1, 0, 0.05); // Unused, backup if manual feedforward calculation is needed
-    elevatorFF = new ElevatorFeedforward(0, 0.4128, 0, 0);
+    elevatorFF = new ElevatorFeedforward(0, 0, 0, 0);
 
     Constants.log("Shoulder NEO Kv: " + (49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt));
 
