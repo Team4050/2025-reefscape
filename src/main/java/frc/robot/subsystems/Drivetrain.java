@@ -88,6 +88,7 @@ public class Drivetrain extends SubsystemBase {
   private PhotonPoseEstimator aprilTagPoseEstimator =
       new PhotonPoseEstimator(
           aprilTags, PoseStrategy.AVERAGE_BEST_TARGETS, Constants.Drivetrain.robotToCamera);
+  private String visionDashboardDisplay = "Tag readout";
   public boolean invalidPose = false;
   private int lastAprilTagSeen = 0;
   private Timer timeSinceTagSeen = new Timer();
@@ -100,6 +101,15 @@ public class Drivetrain extends SubsystemBase {
   // x = M+ * y
 
   private boolean autoControlled = false;
+
+  public enum ControlMode {
+    Manual,
+    PID,
+    ProfiledPID,
+    ModelBased
+  }
+  public ControlMode currentMode = ControlMode.Manual;
+
   public Trigger autoTrigger =
       new Trigger(
           () -> {
@@ -122,10 +132,9 @@ public class Drivetrain extends SubsystemBase {
   private Vector<N3> referenceVector;
   private KalmanFilter<N3, N3, N4> mecanumFieldRelativeKalmanFilter;
   private LinearSystem<N3, N3, N4> mecanumFieldRelativeSystem;
-  private PIDController FLVelPID = new PIDController(0.3, 0, 0.1);
-  private PIDController FRVelPID = new PIDController(0.3, 0, 0.1);
-  private PIDController RLVelPID = new PIDController(0.3, 0, 0.1);
-  private PIDController RRVelPID = new PIDController(0.3, 0, 0.1);
+  private PIDController XPID = new PIDController(0.3, 0, 0.1);
+  private PIDController YPID = new PIDController(0.3, 0, 0.1);
+  private PIDController ZPID = new PIDController(0.3, 0, 0.1);
   private LinearQuadraticRegulator<N3, N3, N4> mecanumFieldRelativeLQR;
   private LinearPlantInversionFeedforward<N3, N3, N4> mecanumFF;
   private Vector<N3> stateSim = VecBuilder.fill(0, 0, 0);
@@ -133,19 +142,30 @@ public class Drivetrain extends SubsystemBase {
   // ******************************************************** PID control
   // ******************************************************** //
   // x in meters, y in meters, theta/z in radians
-  private double KsX = 0.03;
-  private double KsY = 0.03;
-  private double KsZ = 0.03;
-  private double KvX = 0.01;
-  private double KvY = 0.01;
-  private double KvZ = 0.01;
+  private static double feedbackLimit = 3;
+  private static double posTolerance = 1 * (2.54 / 100);
+  private static double rotTolerance = Math.toRadians(2);
+  private static double iZone = 10 * (2.54 / 100);
+  private static double maxIntegral = 10;
+  private double KsX = 0.2;
+  private double KsY = 0.82;
+  private double KsZ = 0.6;
+  private double KvX = 0;
+  private double KvY = 0;
+  private double KvZ = 0;
   private PIDController xController = new PIDController(0.3, 0.05, 0.03);
   private PIDController yController = new PIDController(0.3, 0.05, 0.03);
-  private ProfiledPIDController thetaController =
-      new ProfiledPIDController(0.3, 0.05, 0.03, new Constraints(0.25, 0.5));
+  private ProfiledPIDController xPosController = new ProfiledPIDController(KsY, KsX, d, new Constraints(15, 16));
+  private ProfiledPIDController yPosController = new ProfiledPIDController(KsY, KsX, d, new Constraints(15, 16));
+  private ProfiledPIDController zRotController =
+  new ProfiledPIDController(4, 0.001, 0, new Constraints(0.5, 0.2));
+  private PIDController xVelController = new PIDController(KsY, KsX, d);
+  private PIDController yVelController = new PIDController(KsY, KsX, d);
+  private PIDController zVelController = new PIDController(KsY, KsX, d);
   private HolonomicDriveController holonomicDriveController;
   private PPHolonomicDriveController pathPlannerHolonomicDriveController;
   private TorqueCurrentFOC[] controlRequests = new TorqueCurrentFOC[4];
+  private Pose2d targetPose;
 
   // ******************************************************** Networktables
   // ******************************************************** //
@@ -197,6 +217,45 @@ public class Drivetrain extends SubsystemBase {
       }
     }
 
+    configureMotors();
+
+    if (useNetworkTables) {
+      configureNetworkTables();
+    }
+
+    configurePID();
+    configureTrajectoryFollowing();
+    configureModelBasedControl();
+    configurePathPlanner();
+
+    configureDashboard();
+
+    //NetworkTableInstance.getDefault().getTable("Limelight").getEntry("stream").setNumber(0);
+
+    var rot = Constants.Sensors.getImuRotation2d();
+    Constants.log("Drivetrain - Initial IMU angle: " + rot);
+    poseEstimator =
+        new MecanumDrivePoseEstimator(
+            kinematics,
+            rot,
+            new MecanumDriveWheelPositions(),
+            Constants.startingPose,
+            VecBuilder.fill(0.1, 0.1, 0.1),
+            VecBuilder.fill(0.45, 0.45, 0.45));
+
+    timeSinceTagSeen.start();
+    configurePID();
+  }
+
+  public Drivetrain(boolean useNetworkTables, int logInfo, Pose2d initalPoseEstimate) {
+    this(useNetworkTables, logInfo);
+    Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
+    poseEstimator.resetPosition(
+        Constants.Sensors.getImuRotation2d(), getWheelPositionsMeters(), initalPoseEstimate);
+    Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
+  }
+
+  public void configureMotors() {
     FL = new TalonFX(Constants.Drivetrain.FL);
     FR = new TalonFX(Constants.Drivetrain.FR);
     RL = new TalonFX(Constants.Drivetrain.RL);
@@ -286,27 +345,9 @@ public class Drivetrain extends SubsystemBase {
     controlRequests[1] = new TorqueCurrentFOC(0);
     controlRequests[2] = new TorqueCurrentFOC(0);
     controlRequests[3] = new TorqueCurrentFOC(0);
+  }
 
-    if (useNetworkTables) {
-      drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
-      timerPublisher = drivetrainTable.getDoubleTopic("Time since tag detection").publish();
-      appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | Amps").publish();
-      velocity = drivetrainTable.getDoubleArrayTopic("Chassis velocities | mps").publish();
-      position = drivetrainTable.getDoubleArrayTopic("Pose estimate").publish();
-      xPublisher = drivetrainTable.getDoubleArrayTopic("Simulated state | mps").publish();
-      xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered state | mps").publish();
-      yPublisher =
-          drivetrainTable.getDoubleArrayTopic("Sensor measurements | mps & radps").publish();
-      uPublisher = drivetrainTable.getDoubleArrayTopic("Control vector").publish();
-      referenceVectorPublisher = drivetrainTable.getDoubleArrayTopic("Reference vector").publish();
-    }
-
-    //NetworkTableInstance.getDefault().getTable("Limelight").getEntry("stream").setNumber(0);
-
-    xController.setTolerance(0.1);
-    yController.setTolerance(0.1);
-    thetaController.setTolerance(0.2);
-
+  public void configureModelBasedControl() {
     // xhat = Ax + Bu
     // yhat = Cx + Du
     // u =
@@ -356,18 +397,67 @@ public class Drivetrain extends SubsystemBase {
     Constants.log("Controller gain: " + mecanumFieldRelativeLQR.getK());
     mecanumFF = new LinearPlantInversionFeedforward<>(mecanumFieldRelativeSystem, 0.02);
     referenceVector = VecBuilder.fill(0.5, 0, 0);
+  }
 
-    var rot = Constants.Sensors.getImuRotation2d();
-    Constants.log("Drivetrain - Initial IMU angle: " + rot);
-    poseEstimator =
-        new MecanumDrivePoseEstimator(
-            kinematics,
-            rot,
-            new MecanumDriveWheelPositions(),
-            Constants.startingPose,
-            VecBuilder.fill(0.1, 0.1, 0.1),
-            VecBuilder.fill(0.45, 0.45, 0.45));
+  public void configurePathPlanner() {
+    pathPlannerHolonomicDriveController =
+        new PPHolonomicDriveController(
+            new PIDConstants(0.4, 0, 0, 0.3048), new PIDConstants(0.3, 0, 0, Math.toRadians(20)));
 
+    AutoBuilder.configure(
+        this::getPoseEstimate,
+        this::resetPoseEstimate,
+        this::getRobotRelativeSpeedsMPS,
+        this::drivePathFieldRelative,
+        pathPlannerHolonomicDriveController,
+        Constants.Drivetrain.mainConfig,
+        Constants::alliance,
+        this);
+  }
+
+  public void configurePID() {
+    targetPose = getPoseEstimate();
+    xPosController.reset(getPoseEstimate().getX());
+    yPosController.reset(getPoseEstimate().getY());
+    xVelController.reset();
+    yVelController.reset();
+    zRotController.enableContinuousInput(Math.toRadians(-180), Math.toRadians(180));
+    zRotController.reset(getPoseEstimate().getRotation().getRadians());
+
+    xController.setTolerance(posTolerance);
+    yController.setTolerance(posTolerance);
+    zRotController.setTolerance(rotTolerance);
+
+    xPosController.setTolerance(posTolerance);
+    yPosController.setTolerance(posTolerance);
+    xVelController.setTolerance(0);
+    yVelController.setTolerance(0);
+    zVelController.setTolerance(0);
+
+    xController.setIZone(iZone);
+    yController.setIZone(iZone);
+  }
+
+  public void configureTrajectoryFollowing() {
+    holonomicDriveController =
+        new HolonomicDriveController(xController, yController, zRotController);
+  }
+
+  public void configureNetworkTables() {
+    drivetrainTable = NetworkTableInstance.getDefault().getTable("Drivetrain");
+    timerPublisher = drivetrainTable.getDoubleTopic("Time since tag detection").publish();
+    appliedCurrent = drivetrainTable.getDoubleArrayTopic("Applied currents | Amps").publish();
+    velocity = drivetrainTable.getDoubleArrayTopic("Chassis velocities | mps").publish();
+    position = drivetrainTable.getDoubleArrayTopic("Pose estimate").publish();
+    xPublisher = drivetrainTable.getDoubleArrayTopic("Simulated state | mps").publish();
+    xHatPublisher = drivetrainTable.getDoubleArrayTopic("Filtered state | mps").publish();
+    yPublisher =
+        drivetrainTable.getDoubleArrayTopic("Sensor measurements | mps & radps").publish();
+    uPublisher = drivetrainTable.getDoubleArrayTopic("Control vector").publish();
+    referenceVectorPublisher = drivetrainTable.getDoubleArrayTopic("Reference vector").publish();
+  }
+
+  public void configureDashboard() {
     SmartDashboard.putNumber(dashboardPosKp, 0.6);
     SmartDashboard.putNumber(dashboardPosKi, 0);
     SmartDashboard.putNumber(dashboardPosKd, 0);
@@ -383,33 +473,6 @@ public class Drivetrain extends SubsystemBase {
 
     SmartDashboard.putNumber(dashboardPosTolerance, 2);
     SmartDashboard.putNumber(dashboardRotTolerance, 5);
-
-    holonomicDriveController =
-        new HolonomicDriveController(xController, yController, thetaController);
-
-    pathPlannerHolonomicDriveController =
-        new PPHolonomicDriveController(
-            new PIDConstants(0.4, 0, 0, 0.3048), new PIDConstants(0.3, 0, 0, Math.toRadians(20)));
-
-    AutoBuilder.configure(
-        this::getPoseEstimate,
-        this::resetPoseEstimate,
-        this::getRobotRelativeSpeedsMPS,
-        this::drivePathFieldRelative,
-        pathPlannerHolonomicDriveController,
-        Constants.Drivetrain.mainConfig,
-        Constants::alliance,
-        this);
-
-    timeSinceTagSeen.start();
-  }
-
-  public Drivetrain(boolean useNetworkTables, int logInfo, Pose2d initalPoseEstimate) {
-    this(useNetworkTables, logInfo);
-    Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
-    poseEstimator.resetPosition(
-        Constants.Sensors.getImuRotation2d(), getWheelPositionsMeters(), initalPoseEstimate);
-    Constants.log("IMU ANGLE: " + Constants.Sensors.getImuRotation2d());
   }
 
   public void reconfigure() {
@@ -423,14 +486,14 @@ public class Drivetrain extends SubsystemBase {
             SmartDashboard.getNumber("Drivetrain Y Kp", 0.1),
             SmartDashboard.getNumber("Drivetrain Y Ki", 0),
             SmartDashboard.getNumber("Drivetrain Y Kd", 0));
-    thetaController =
+    zRotController =
         new ProfiledPIDController(
             SmartDashboard.getNumber("Drivetrain Angle Kp", 0.3),
             SmartDashboard.getNumber("Drivetrain Angle Ki", 0),
             SmartDashboard.getNumber("Drivetrain Angle Kd", 0),
             new Constraints(SmartDashboard.getNumber("Drivetrain Angle maxV", 1.57079), 3.14));
     holonomicDriveController =
-        new HolonomicDriveController(xController, yController, thetaController);
+        new HolonomicDriveController(xController, yController, zRotController);
     holonomicDriveController.setTolerance(
         new Pose2d(
             SmartDashboard.getNumber("Drivetrain X Tolerance", 2) * 0.0254,
@@ -723,17 +786,16 @@ public class Drivetrain extends SubsystemBase {
   }
 
   /***
-   * Set closed-loop velocity control (Not tuned - do not use)
+   * Set closed-loop velocity control
    * @param speeds
    */
   @Deprecated
-  public void setVelocity(ChassisSpeeds speeds) {
-    MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
-    double[] d = {}; // getWheelVelocitiesMPS();
-    FL.set(FLVelPID.calculate(d[0], wheelSpeeds.frontLeftMetersPerSecond));
-    FR.set(FRVelPID.calculate(d[1], wheelSpeeds.frontRightMetersPerSecond));
-    RL.set(RLVelPID.calculate(d[2], wheelSpeeds.rearLeftMetersPerSecond));
-    RR.set(RRVelPID.calculate(d[3], wheelSpeeds.rearRightMetersPerSecond));
+  public void setVelocity(ChassisSpeeds targetSpeedsMPS) {
+    getRobotRelativeSpeedsMPS();
+  }
+
+  public void setPositionTarget(Pose2d target) {
+
   }
 
   // **************************** Field relative **************************** //
@@ -808,18 +870,16 @@ public class Drivetrain extends SubsystemBase {
   private Vector<N3> u = VecBuilder.fill(0, 0, 0);
   private int loop = 0;
 
-  @Override
-  public void periodic() {
-    // Vector<N3> xN = (Vector<N3>) mecanumChassisRelativeSystem.calculateX(VecBuilder.fill(1,1, 0),
-    // VecBuilder.fill(1, -1, 1, -1), 0.02);
-
+  public void updateVision() {
     var unreadResults = chassisCam.getAllUnreadResults();
-    double closestMeters = 100;
+    double closestMeters = 90210;
     for (PhotonPipelineResult photonPipelineResult : unreadResults) {
       var estimate = aprilTagPoseEstimator.update(photonPipelineResult);
       if (estimate.isPresent()) {
         // Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
+        String message = "";
         for (int i = 0; i < estimate.get().targetsUsed.size(); i++) {
+          message += ", " + estimate.get().targetsUsed.get(i).fiducialId;
           double distanceToTag =
               estimate.get().targetsUsed.get(i).bestCameraToTarget.getTranslation().getNorm();
           if (distanceToTag < closestMeters) {
@@ -829,12 +889,7 @@ public class Drivetrain extends SubsystemBase {
           }
         }
 
-        String message = "Saw tags";
-        /*for (PhotonTrackedTarget t : (PhotonTrackedTarget[])estimate.get().targetsUsed.toArray()) {
-          message += (" " + t .fiducialId);
-        }
-        message += timeSinceLastTag.get();
-        Constants.logStringToFile(message);*/
+        SmartDashboard.putString(visionDashboardDisplay, "closest, all tags: " + lastAprilTagSeen + message);
 
         var pose = estimate.get().estimatedPose;
         Constants.limelightDataLogEntry.append(
@@ -851,11 +906,14 @@ public class Drivetrain extends SubsystemBase {
             estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
       }
     }
-
     poseEstimator.update(Constants.Sensors.getImuRotation2d(), getWheelPositionsMeters());
+  }
+
+  @Override
+  public void periodic() {
+    updateVision();
     var pose = getPoseEstimate();
-    // Constants.estimatedPositionLogEntry.append(new double[] {pose.getX(), pose.getY(),
-    // pose.getRotation().getDegrees()});
+
     if (pose.getX() < 0 || pose.getX() > 17.5 || pose.getY() < 0 || pose.getY() > 8) {
       invalidPose = true;
       if (!invalidPose) {
@@ -868,14 +926,38 @@ public class Drivetrain extends SubsystemBase {
       invalidPose = false;
     }
 
-    Vector<N4> y = getY();
-    mecanumFieldRelativeKalmanFilter.predict(u, 0.02);
-    mecanumFieldRelativeKalmanFilter.correct(u, y);
-    Vector<N3> x = new Vector<N3>(mecanumFieldRelativeKalmanFilter.getXhat());
-    u =
-        new Vector<N3>(
-            mecanumFieldRelativeLQR.calculate(
-                x, referenceVector)); // .plus(mecanumFF.calculate(referenceVector)));
+    switch (currentMode) {
+      case Manual:
+
+        break;
+      case PID:
+        Pose2d currentPoseRelative = getPoseEstimate().relativeTo(targetPose);
+        double vx = xController.calculate(currentPoseRelative.getX(), 0);
+        double vy = yController.calculate(currentPoseRelative.getY(), 0);
+        double vz = zRotController.calculate(getPoseEstimate().getRotation().getRadians(), targetPose.getRotation().getRadians());
+        double ffx = (Math.signum(vx) * KsX) + getRobotRelativeSpeedsMPS().vxMetersPerSecond * KvX;
+        double ffy = (Math.signum(vy) * KsY) + getRobotRelativeSpeedsMPS().vyMetersPerSecond * KvY;
+        double ffz = (Math.signum(vz) * KsZ) + getRobotRelativeSpeedsMPS().omegaRadiansPerSecond * KvZ;
+        setVoltage(ffx + vx, ffy + vy, ffz + vz);
+        break;
+      case ModelBased:
+        Vector<N4> y = getY();
+        mecanumFieldRelativeKalmanFilter.predict(u, 0.02);
+        mecanumFieldRelativeKalmanFilter.correct(u, y);
+        Vector<N3> x = new Vector<N3>(mecanumFieldRelativeKalmanFilter.getXhat());
+        u =
+          new Vector<N3>(
+              mecanumFieldRelativeLQR.calculate(
+                  x, referenceVector)); // .plus(mecanumFF.calculate(referenceVector)));
+        if (useNetworkTables) {
+          xHatPublisher.set(x.getData());
+          yPublisher.set(y.getData());
+        }
+        break;
+      default:
+        break;
+    }
+
 
     // Constants.log("Slipping...");
     // TODO Auto-generated method stub
@@ -896,8 +978,7 @@ public class Drivetrain extends SubsystemBase {
       position.set(
           new double[] {estimate.getX(), estimate.getY(), estimate.getRotation().getRadians()});
       xPublisher.set(stateSim.getData());
-      xHatPublisher.set(x.getData());
-      yPublisher.set(y.getData());
+
       uPublisher.set(u.getData());
       referenceVectorPublisher.set(referenceVector.getData());
     }
@@ -905,9 +986,9 @@ public class Drivetrain extends SubsystemBase {
     if (loggingLoop == -1) return;
     loop++;
     if (loop > loggingLoop) {
-      Constants.log("State simulation:" + stateSim.toString());
-      Constants.log("State estimate:" + x.toString());
-      Constants.log("Control vec:" + u.toString());
+      //Constants.log("State simulation:" + stateSim.toString());
+      //Constants.log("State estimate:" + x.toString());
+      //Constants.log("Control vec:" + u.toString());
       loop = 0;
     }
   }

@@ -128,19 +128,6 @@ public class RobotContainer {
     Constants.Sensors.calibrate(new Pose3d());
     Constants.log("IMU angle 1: " + Constants.Sensors.imu.getAngle());
 
-    double[] elevatorStartingXY = elevatorSubsystem.elevatorForwardKinematics();
-
-    // Constants.log(SmartDashboard.putNumberArray(IKtargetX, elevatorStartingXY));
-    SmartDashboard.putNumber(IKtargetX, elevatorStartingXY[0]);
-    SmartDashboard.putNumber(IKtargetY, elevatorStartingXY[1]);
-    SmartDashboard.putNumber(wristTarget, 0);
-    SmartDashboard.putData(
-        "Calculate offset",
-        new InstantCommand(
-            () -> {
-              elevatorSubsystem.recalibrateArmAbsoluteEncoder();
-            }));
-
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
             () -> {
@@ -498,11 +485,28 @@ public class RobotContainer {
     // PubSubOption.periodic(0.01));
     // gyroPlotting.setDefault(0);
 
+    //************************** Data **************************//
+
     imuDataPublisher =
         netTables
             .getDoubleArrayTopic("IMU Data | Yaw & Yaw Velocity")
             .publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     imuDataPublisher.setDefault(def);
+
+    double[] elevatorStartingXY = elevatorSubsystem.elevatorForwardKinematics();
+
+    // Constants.log(SmartDashboard.putNumberArray(IKtargetX, elevatorStartingXY));
+    SmartDashboard.putNumber(IKtargetX, elevatorStartingXY[0]);
+    SmartDashboard.putNumber(IKtargetY, elevatorStartingXY[1]);
+    SmartDashboard.putNumber(wristTarget, 0);
+    SmartDashboard.putData(
+        "Calculate offset",
+        new InstantCommand(
+            () -> {
+              elevatorSubsystem.recalibrateArmAbsoluteEncoder();
+            }));
+
+    //************************** Commands **************************//
 
     SmartDashboard.putData(
         "play",
@@ -522,6 +526,18 @@ public class RobotContainer {
             () -> {
               drivetrainSubsystem.stop();
             }));
+    SmartDashboard.putData(
+      "Run elevator SysID routines",
+      elevatorSubsystem.getElevatorRoutines()
+    );
+    SmartDashboard.putData(
+      "Run elevator SysID routines",
+      elevatorSubsystem.getShoulderRoutines()
+    );
+    SmartDashboard.putData(
+      "Run elevator SysID routines",
+      elevatorSubsystem.getWristRoutines()
+    );
   }
 
   /**

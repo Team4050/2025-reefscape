@@ -15,6 +15,7 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.util.datalog.DataLogEntry;
 import edu.wpi.first.util.datalog.DoubleArrayLogEntry;
 import edu.wpi.first.util.datalog.StringLogEntry;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
@@ -85,9 +86,9 @@ public final class Constants {
     public static final double elevatorFFVoltage = 0.4128;
     public static final double startingExtension = 0;
     public static final double hardStopExt = 0.5;
-    public static final double minExtension = 0.02;
-    public static final double maxExtension = 4.4;
-    public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
+    public static final double minExtensionRotations = 0.02;
+    public static final double maxExtensionRotations = 4.4;
+    public static final double maxHeightExtensionMM = maxExtensionRotations * gearboxRotationsToHeightMM;
     public static final double baseHeightMM =
         812.800 + Drivetrain.chassisTopPlateHeightMM; // From Elevator - Full Assembly CAD
 
@@ -175,7 +176,7 @@ public final class Constants {
   }
 
   public static DataLog matchLog;
-  public static DoubleArrayLogEntry estimatedPositionLogEntry;
+  public static DataLogEntry elevatorSysIDEntry;
   public static DoubleArrayLogEntry limelightDataLogEntry;
   public static StringLogEntry eventsEntry;
 
@@ -183,9 +184,10 @@ public final class Constants {
     matchLog = DataLogManager.getLog();
     Constants.log("Setting up data log " + DataLogManager.getLogDir());
     DataLogManager.logNetworkTables(true);
-    estimatedPositionLogEntry = new DoubleArrayLogEntry(matchLog, "EstPosition");
-    limelightDataLogEntry = new DoubleArrayLogEntry(matchLog, "Limelight");
-    eventsEntry = new StringLogEntry(matchLog, "Events");
+    //elevatorSysIDEntry = new DataLogEntry();
+    //estimatedPositionLogEntry = new DoubleArrayLogEntry(matchLog, "EstPosition");
+    //limelightDataLogEntry = new DoubleArrayLogEntry(matchLog, "Limelight");
+    //eventsEntry = new StringLogEntry(matchLog, "Events");
   }
 
   public static void flushLog() {

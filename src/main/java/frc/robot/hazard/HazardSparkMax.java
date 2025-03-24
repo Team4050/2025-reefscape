@@ -1,5 +1,8 @@
 package frc.robot.hazard;
 
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Volts;
+
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
 import com.revrobotics.spark.SparkBase.ControlType;
@@ -15,6 +18,8 @@ import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants;
 
@@ -165,6 +170,14 @@ public class HazardSparkMax {
 
   public boolean isUnderLoad() {
     return controller.getOutputCurrent() > currentLimit / 10;
+  }
+
+  public Voltage getVoltage() {
+    return Voltage.ofBaseUnits(controller.getAppliedOutput() * controller.getBusVoltage(), Volts); //TODO: verify if this is an accurate representation of voltage passing through the motor
+  }
+
+  public Current getCurrent() {
+    return Current.ofBaseUnits(controller.getOutputCurrent(), Amps);
   }
 
   /***

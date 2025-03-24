@@ -20,6 +20,7 @@ public class HazardArm {
   private ArmFeedforward feedforward;
   private TrapezoidProfile velocityCurve;
   private PIDController feedback;
+  private PIDController velocityFeedback;
   private ProfiledPIDController profiledFeedback;
   private double setpoint = 0;
   private String name;
@@ -65,15 +66,18 @@ public class HazardArm {
     this.tuneUsingDashboard = tuneUsingDashboard;
     velocityCurve = new TrapezoidProfile(new Constraints(maxV, maxA));
     feedforward = new ArmFeedforward(Ks, Kg, Kv);
-    feedback = new PIDController(Kp, Ki, Kd);
+    feedback = new PIDController(Kp, Ki, Kd, 0.02);
     feedback.setIntegratorRange(-2, 2);
     feedback.setTolerance(tolerance);
-    feedback.setIZone(0.25);
+    feedback.setIZone(Math.toRadians(20));
 
-    profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA));
-    profiledFeedback.setIZone(Math.toRadians(20));
+    velocityFeedback = new PIDController(0.1, 0, 0);
+    velocityFeedback.setIZone(10);
+
+    profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA), 0.02);
     profiledFeedback.setIntegratorRange(-2, 2);
     profiledFeedback.setTolerance(tolerance);
+    profiledFeedback.setIZone(Math.toRadians(20));
     double motorPosition = motor.getPositionRadians();
     if (useAbsoluteEncoder) {
       motorPosition = motor.getAbsPositionRadians();
@@ -107,37 +111,11 @@ public class HazardArm {
             .publish();
   }
 
-  public void set(double dutyCycle) {
-    overridePID = true;
-    motor.set(dutyCycle);
-  }
+  //************************************************ Getters ************************************************//
 
-  /***
-   * Sets the arm setpoint in radians
-   * @param value
-   */
-  public void setpoint(double value) {
-    setpoint = value;
-    motor.setSetpointPublishingOnly(setpoint);
-  }
 
-  /***
-   * Sets a new Kg value (coral/no coral)
-   * @param Kg
-   */
-  public void setLoad(double Kg) {
-    Constants.log("Wrist load changed from " + feedforward.getKg() + " to " + Kg);
-    feedforward.setKg(Kg);
-  }
-
-  public void stop() {
-    Constants.log("Arm stopped");
-    stop = true;
-  }
-
-  public void unstop() {
-    Constants.log("Arm reenabled");
-    stop = false;
+  public HazardSparkMax getMotor() {
+    return motor;
   }
 
   public boolean underLoad() {
@@ -163,29 +141,82 @@ public class HazardArm {
     return motor.getVelocityRadPS();
   }
 
+  //************************************************ Setters ************************************************//
+
+  //**************************** Manual ****************************//
+
+  public void set(double dutyCycle) {
+    overridePID = true;
+    motor.set(dutyCycle);
+  }
+
+  public void setVoltage(double voltage) {
+    overridePID = true;
+    motor.setControl(voltage, ControlType.kVoltage);
+  }
+
+  //**************************** PID ****************************//
+
+  /***
+   * Sets the arm setpoint in radians
+   * @param value
+   */
+  public void setpoint(double value) {
+    setpoint = value;
+    motor.setSetpointPublishingOnly(setpoint);
+  }
+
+  /***
+   * Sets a new Kg value (coral/no coral)
+   * @param Kg
+   */
+  public void setLoad(double Kg) {
+    Constants.log("Wrist load changed from " + feedforward.getKg() + " to " + Kg);
+    feedforward.setKg(Kg);
+  }
+
+  //**************************** Safety ****************************//
+
+  public void stop() {
+    Constants.log("Arm stopped");
+    stop = true;
+  }
+
+  public void unstop() {
+    Constants.log("Arm reenabled");
+    stop = false;
+  }
+
+  //************************************************ Periodic ************************************************//
+
   public void periodic() {
     if (stop) {
       motor.set(0);
       return;
     }
     double motorPosition = motor.getPositionRadians();
+    double motorVelocity = motor.getVelocityRadPS();
     if (useAbsoluteEncoder) {
       motorPosition = motor.getAbsPositionRadians();
+      motorVelocity = motor.getAbsVelocityRadPS();
     }
     if (overridePID) {
       setpoint = motorPosition;
       overridePID = false;
     } else {
       var currentState = new State(motorPosition, motor.getVelocityRadPS());
-      // Constants.log("Arm FF target velocity: " + v.velocity);
-      var ff = feedforward.calculate(setpoint, profiledFeedback.getSetpoint().velocity);
-      var fb = feedback.calculate(motorPosition, setpoint);
+      double ff = feedforward.calculate(setpoint, 0);
+      double fb = feedback.calculate(motorPosition, setpoint);
+      double vfb = 0;
       if (profiledControl) {
+        ff = feedforward.calculate(setpoint, profiledFeedback.getSetpoint().velocity);
         fb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
+        vfb = velocityFeedback.calculate(motorVelocity, profiledFeedback.getSetpoint().velocity);
       }
       SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
       SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
-      if (ff + fb < -6 || ff + fb > 6) {
+      double sigma = ff + fb + vfb;
+      if (sigma < -6 || sigma > 6) {
         Constants.log(
             "OVERCORRECT - DISABLE ff: "
                 + ff
@@ -193,11 +224,11 @@ public class HazardArm {
                 + fb
                 + "acc error: "
                 + profiledFeedback.getAccumulatedError());
-        motor.setControl(MathUtil.clamp(ff + fb, -6, 6), ControlType.kVoltage);
-        voltagePIDOutput.set(MathUtil.clamp(ff + fb, -6, 6));
+        motor.setControl(MathUtil.clamp(sigma, -6, 6), ControlType.kVoltage);
+        voltagePIDOutput.set(MathUtil.clamp(sigma, -6, 6));
       } else {
-        motor.setControl(ff + fb, ControlType.kVoltage);
-        voltagePIDOutput.set(ff + fb);
+        motor.setControl(sigma, ControlType.kVoltage);
+        voltagePIDOutput.set(sigma);
       }
     }
     motor.publishToNetworkTables();
