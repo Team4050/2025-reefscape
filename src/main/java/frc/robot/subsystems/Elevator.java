@@ -152,7 +152,7 @@ public class Elevator extends SubsystemBase {
             0.56, // 1.0,//Constants.Shoulder.shoulderMotorTorqueNM /
             // (Constants.Shoulder.motor.KtNMPerAmp * Constants.Shoulder.currentLimit) + 0.5,
             0, /// 49.0 / Constants.Shoulder.motor.KvRadPerSecPerVolt,
-            0.5,//1.6,
+            1.6,//1.6,
             0.08,
             0.05,
             1,

@@ -52,7 +52,7 @@ import frc.robot.subsystems.Elevator;
  */
 public class RobotContainer {
   private boolean drivetrainFieldOrientedMode = false;
-  private boolean elevatorTuningMode = false;
+  private boolean elevatorTuningMode = true;
 
   // The robot's subsystems and commands are defined here...
   private final Drivetrain drivetrainSubsystem = new Drivetrain(true, 0);
@@ -403,11 +403,7 @@ public class RobotContainer {
           .onTrue(
               new InstantCommand(
                   () -> {
-                    elevatorSubsystem.goToPosition(
-                        elevatorIKTargetX,
-                        elevatorIKTargetY,
-                        SmartDashboard.getNumber(wristTarget, 0),
-                        true);
+                   elevatorSubsystem.setShoulder(Constants.Shoulder.L4Scoring);
                   },
                   elevatorSubsystem));
       m_secondaryController
@@ -423,7 +419,7 @@ public class RobotContainer {
           .onTrue(
               new InstantCommand(
                   () -> {
-                    elevatorSubsystem.recalibrateArmAbsoluteEncoder();
+                    elevatorSubsystem.setShoulder(Constants.Shoulder.transport);
                   }));
     } else {
       m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));

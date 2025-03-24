@@ -107,6 +107,24 @@ public class HazardArm {
             .publish();
   }
 
+  public HazardArm(      HazardSparkMax motor,
+  double tolerance,
+  boolean useAbsoluteEncoder,
+  double Ks,
+  double Kg,
+  double Kv,
+  double Kp,
+  double Ki,
+  double Kd,
+  double maxV,
+  double maxA,
+  String name,
+  boolean tuneUsingDashboard,
+  boolean profiled) {
+    this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, maxV, maxA, name, tuneUsingDashboard);
+    this.profiledControl = profiled;
+  }
+
   public void set(double dutyCycle) {
     overridePID = true;
     motor.set(dutyCycle);
