@@ -70,6 +70,7 @@ public class Elevator extends SubsystemBase {
   private HazardSparkMax leadMotor;
   private HazardSparkMax followerMotor;
   private HazardSparkMax shoulderMotor;
+  private HazardSparkMax shoulderFollower;
   private HazardSparkMax wristMotor;
 
   // private SparkMax elevatorWrist; // Not in CAN yet
@@ -102,6 +103,7 @@ public class Elevator extends SubsystemBase {
   private SparkMaxConfig followConfig = new SparkMaxConfig();
   private SparkMaxConfig leadConfig = new SparkMaxConfig();
   private SparkMaxConfig shoulderConfig = new SparkMaxConfig();
+  private SparkMaxConfig shoulderFollowerConfig = new SparkMaxConfig();
   private SparkMaxConfig wristConfig = new SparkMaxConfig();
 
   public Elevator(boolean tuningMode) {
@@ -145,6 +147,16 @@ public class Elevator extends SubsystemBase {
     shoulderConfig.absoluteEncoder.zeroOffset(Constants.Shoulder.encoderOffset); // 0.3252467
     shoulderConfig.absoluteEncoder.positionConversionFactor(360);
 
+    shoulderFollowerConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
+    shoulderFollowerConfig.idleMode(IdleMode.kBrake);
+    shoulderFollowerConfig.inverted(false);
+    shoulderFollowerConfig.follow(Constants.Shoulder.leadCAN, true); // TODO: is inverted?
+    shoulderFollowerConfig.encoder.positionConversionFactor(Constants.Shoulder.gearboxReduction);
+    shoulderFollowerConfig.encoder.velocityConversionFactor(Constants.Shoulder.gearboxReduction);
+    shoulderFollowerConfig.absoluteEncoder.inverted(true);
+    shoulderFollowerConfig.absoluteEncoder.zeroOffset(Constants.Shoulder.encoderOffset); // 0.3252467
+    shoulderFollowerConfig.absoluteEncoder.positionConversionFactor(360);
+
     wristConfig.smartCurrentLimit(Constants.Wrist.currentLimit);
     wristConfig.idleMode(IdleMode.kBrake);
     wristConfig.inverted(true);
@@ -175,14 +187,15 @@ public class Elevator extends SubsystemBase {
     shoulderMotor =
         new HazardSparkMax(
             Constants.Shoulder.leadCAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder");
+    shoulderFollower = new HazardSparkMax(Constants.Shoulder.followerCAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder follower");
     wristMotor =
         new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, Constants.Wrist.currentLimit, wristConfig, true, "Wrist");
 
     shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
     wristSetpoint = Constants.Wrist.startingRotationRadians;
 
-    leadMotor.setEncoder(0);
-    followerMotor.setEncoder(0);
+    leadMotor.setEncoder(Constants.Elevator.startingExtension);
+    followerMotor.setEncoder(Constants.Elevator.startingExtension);
     shoulderMotor.setEncoder(Constants.Shoulder.startingRotationRadians / (2 * Math.PI));
     wristMotor.setEncoder(Constants.Wrist.startingRotationRadians / (2 * Math.PI));
 

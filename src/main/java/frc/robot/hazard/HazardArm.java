@@ -233,8 +233,8 @@ public class HazardArm {
       }
       SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
       SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
-      double sigma = ff + fb + vfb;
-      if (sigma < -6 || sigma > 6) {
+      double u = ff + fb + vfb;
+      if (u < -12 || u > 12) {
         Constants.log(
             "OVERCORRECT - DISABLE ff: "
                 + ff
@@ -242,11 +242,12 @@ public class HazardArm {
                 + fb
                 + "acc error: "
                 + profiledFeedback.getAccumulatedError());
-        motor.setControl(MathUtil.clamp(sigma, -6, 6), ControlType.kVoltage);
-        voltagePIDOutput.set(MathUtil.clamp(sigma, -6, 6));
+        double clampedU = MathUtil.clamp(u, -12, 12);
+        motor.setControl(clampedU, ControlType.kVoltage);
+        voltagePIDOutput.set(clampedU);
       } else {
-        motor.setControl(sigma, ControlType.kVoltage);
-        voltagePIDOutput.set(sigma);
+        motor.setControl(u, ControlType.kVoltage);
+        voltagePIDOutput.set(u);
       }
     }
     motor.publishToNetworkTables();
