@@ -162,7 +162,7 @@ public class Elevator extends SubsystemBase {
     wrist =
         new HazardArm( // Adjust Kstatic for small movements TODO: reduce play in system
             wristMotor, 0, false, 0.1, 0.19, 0.00,
-            1.0,//1.8,
+            1.8,//1.8,
             0.12,
             0.15,
             2,
