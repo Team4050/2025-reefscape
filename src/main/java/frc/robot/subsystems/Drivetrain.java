@@ -223,27 +223,27 @@ public class Drivetrain extends SubsystemBase {
       configureNetworkTables();
     }
 
+        //NetworkTableInstance.getDefault().getTable("Limelight").getEntry("stream").setNumber(0);
+
+        var rot = Constants.Sensors.getImuRotation2d();
+        Constants.log("Drivetrain - Initial IMU angle: " + rot);
+        poseEstimator =
+            new MecanumDrivePoseEstimator(
+                kinematics,
+                rot,
+                new MecanumDriveWheelPositions(),
+                Constants.startingPose,
+                VecBuilder.fill(0.1, 0.1, 0.1),
+                VecBuilder.fill(0.45, 0.45, 0.45));
+
+        timeSinceTagSeen.start();
+
     configurePID();
     configureTrajectoryFollowing();
     configureModelBasedControl();
     configurePathPlanner();
 
     configureDashboard();
-
-    //NetworkTableInstance.getDefault().getTable("Limelight").getEntry("stream").setNumber(0);
-
-    var rot = Constants.Sensors.getImuRotation2d();
-    Constants.log("Drivetrain - Initial IMU angle: " + rot);
-    poseEstimator =
-        new MecanumDrivePoseEstimator(
-            kinematics,
-            rot,
-            new MecanumDriveWheelPositions(),
-            Constants.startingPose,
-            VecBuilder.fill(0.1, 0.1, 0.1),
-            VecBuilder.fill(0.45, 0.45, 0.45));
-
-    timeSinceTagSeen.start();
     configurePID();
   }
 

@@ -27,7 +27,7 @@ public class HazardArm {
   private DoublePublisher voltagePIDOutput;
   private DoublePublisher velocityFFtarget;
   private boolean tuneUsingDashboard = false;
-  private boolean profiledControl = false;
+  private boolean profiledControl = true;
   private boolean overridePID = false;
   private boolean useAbsoluteEncoder = false;
   private boolean stop = false;
