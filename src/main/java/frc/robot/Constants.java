@@ -102,7 +102,8 @@ public final class Constants {
   }
 
   public static class Shoulder {
-    public static final int CAN = 8;
+    public static final int leadCAN = 8;
+    public static final int followerCAN = -1;
     public static final int currentLimit = 30;
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev

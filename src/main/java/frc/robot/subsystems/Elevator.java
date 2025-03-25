@@ -126,7 +126,7 @@ public class Elevator extends SubsystemBase {
             elevatorTable);
     shoulderMotor =
         new HazardSparkMax(
-            Constants.Shoulder.CAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder");
+            Constants.Shoulder.leadCAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder");
     wristMotor =
         new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, Constants.Wrist.currentLimit, wristConfig, true, "Wrist");
 
