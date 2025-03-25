@@ -390,11 +390,7 @@ public class RobotContainer {
           .onTrue(
               new InstantCommand(
                   () -> {
-                    elevatorSubsystem.goToPosition(
-                        elevatorIKTargetX,
-                        elevatorIKTargetY,
-                        SmartDashboard.getNumber(wristTarget, 0),
-                        true);
+                   elevatorSubsystem.setShoulder(Constants.Shoulder.L4Scoring);
                   },
                   elevatorSubsystem));
       m_secondaryController
@@ -410,7 +406,7 @@ public class RobotContainer {
           .onTrue(
               new InstantCommand(
                   () -> {
-                    elevatorSubsystem.recalibrateArmAbsoluteEncoder();
+                    elevatorSubsystem.setShoulder(Constants.Shoulder.transport);
                   }));
     } else {
       m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));

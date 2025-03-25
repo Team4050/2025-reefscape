@@ -174,13 +174,15 @@ public class Elevator extends SubsystemBase {
             elevatorTable);
     shoulderMotor =
         new HazardSparkMax(
-            Constants.Shoulder.CAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder");
+            Constants.Shoulder.leadCAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder");
     wristMotor =
         new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, Constants.Wrist.currentLimit, wristConfig, true, "Wrist");
 
     shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
     wristSetpoint = Constants.Wrist.startingRotationRadians;
 
+    leadMotor.setEncoder(0);
+    followerMotor.setEncoder(0);
     shoulderMotor.setEncoder(Constants.Shoulder.startingRotationRadians / (2 * Math.PI));
     wristMotor.setEncoder(Constants.Wrist.startingRotationRadians / (2 * Math.PI));
 
