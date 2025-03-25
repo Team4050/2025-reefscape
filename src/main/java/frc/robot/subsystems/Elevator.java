@@ -133,6 +133,8 @@ public class Elevator extends SubsystemBase {
     shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
     wristSetpoint = Constants.Wrist.startingRotationRadians;
 
+    leadMotor.setEncoder(0);
+    followerMotor.setEncoder(0);
     shoulderMotor.setEncoder(Constants.Shoulder.startingRotationRadians / (2 * Math.PI));
     wristMotor.setEncoder(Constants.Wrist.startingRotationRadians / (2 * Math.PI));
 
@@ -433,16 +435,6 @@ public class Elevator extends SubsystemBase {
 
   public boolean atWristReference() {
     return Math.abs(wrist.getPositionRadians() - wristSetpoint) < 0.035; // 2 degrees tolerance
-  }
-
-  public void resetEncoders() {
-    Constants.log("Resetting encoders...");
-    leadMotor.setEncoder(Constants.Elevator.minExtension);
-    shoulderMotor.setEncoderRadians(Constants.Shoulder.startingRotationRadians);
-    wristMotor.setEncoderRadians(Constants.Wrist.startingRotationRadians);
-    elevatorSetpoint = Constants.Elevator.minExtension;
-    shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
-    wristSetpoint = Constants.Wrist.startingRotationRadians;
   }
 
   public void reconfigure() {
