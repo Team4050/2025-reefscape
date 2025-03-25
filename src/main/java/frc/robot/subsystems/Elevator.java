@@ -69,9 +69,9 @@ public class Elevator extends SubsystemBase {
     leadConfig.idleMode(IdleMode.kBrake);
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
-    leadConfig.closedLoop.pid(0.3, 0.002, 0.0001);
+    leadConfig.closedLoop.pid(0.3, 0.001, 0.0001);
     leadConfig.closedLoop.iMaxAccum(1);
-    leadConfig.closedLoop.iZone(0.3);
+    leadConfig.closedLoop.iZone(0.05);
     leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.03);
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     leadConfig.closedLoop.maxMotion.maxAcceleration(500, ClosedLoopSlot.kSlot0);
@@ -133,6 +133,7 @@ public class Elevator extends SubsystemBase {
     shoulderSetpoint = Constants.Shoulder.startingRotationRadians;
     wristSetpoint = Constants.Wrist.startingRotationRadians;
 
+    Constants.log("Resetting elevator encoders");
     leadMotor.setEncoder(0);
     followerMotor.setEncoder(0);
     shoulderMotor.setEncoder(Constants.Shoulder.startingRotationRadians / (2 * Math.PI));
@@ -164,7 +165,7 @@ public class Elevator extends SubsystemBase {
     wrist =
         new HazardArm( // Adjust Kstatic for small movements TODO: reduce play in system
             wristMotor, 0, false, 0.1, 0.19, 0.00,
-            1.8,//1.8,
+            1.6,//1.8,
             0.12,
             0.15,
             2,
