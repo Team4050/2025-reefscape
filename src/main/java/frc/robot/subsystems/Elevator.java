@@ -110,17 +110,15 @@ public class Elevator extends SubsystemBase {
     followConfig.smartCurrentLimit(Constants.Elevator.currentLimit);
     followConfig.idleMode(IdleMode.kBrake);
     followConfig.follow(Constants.Elevator.front, true);
-    /*followConfig.absoluteEncoder.positionConversionFactor( //TODO: Change position conversion factor on sparkMaxes for convenience
-        Constants.Elevator.gearboxReduction);
-    followConfig.absoluteEncoder.velocityConversionFactor(
-        Constants.Elevator.gearboxReduction);*/
+    followConfig.encoder.positionConversionFactor(Constants.Elevator.gearboxReduction);
+    followConfig.encoder.velocityConversionFactor(Constants.Elevator.gearboxReduction);
 
     leadConfig.smartCurrentLimit(Constants.Elevator.currentLimit);
     leadConfig.idleMode(IdleMode.kBrake);
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
     leadConfig.closedLoop.pid(0.3, 0.002, 0.0001);
-    leadConfig.closedLoop.iMaxAccum(1);
+    leadConfig.closedLoop.iMaxAccum(10);
     leadConfig.closedLoop.iZone(0.3);
     leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.03);
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
@@ -144,7 +142,7 @@ public class Elevator extends SubsystemBase {
     shoulderConfig.encoder.positionConversionFactor(Constants.Shoulder.gearboxReduction);
     shoulderConfig.encoder.velocityConversionFactor(Constants.Shoulder.gearboxReduction);
     shoulderConfig.absoluteEncoder.inverted(true);
-    shoulderConfig.absoluteEncoder.zeroOffset(Constants.Shoulder.encoderOffset); // 0.3252467
+    shoulderConfig.absoluteEncoder.zeroOffset(Constants.Shoulder.encoderOffset);
     shoulderConfig.absoluteEncoder.positionConversionFactor(360);
 
     shoulderFollowerConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
@@ -153,9 +151,6 @@ public class Elevator extends SubsystemBase {
     shoulderFollowerConfig.follow(Constants.Shoulder.leadCAN, true); // TODO: is inverted?
     shoulderFollowerConfig.encoder.positionConversionFactor(Constants.Shoulder.gearboxReduction);
     shoulderFollowerConfig.encoder.velocityConversionFactor(Constants.Shoulder.gearboxReduction);
-    shoulderFollowerConfig.absoluteEncoder.inverted(true);
-    shoulderFollowerConfig.absoluteEncoder.zeroOffset(Constants.Shoulder.encoderOffset); // 0.3252467
-    shoulderFollowerConfig.absoluteEncoder.positionConversionFactor(360);
 
     wristConfig.smartCurrentLimit(Constants.Wrist.currentLimit);
     wristConfig.idleMode(IdleMode.kBrake);
@@ -212,17 +207,18 @@ public class Elevator extends SubsystemBase {
             0,
             true,
             0.1, // 0.1,
-            0.56, // 1.0,
-            0.1,
-            0,//1.6,
+            0.65, // 1.0,
+            0.2,
+            1,//1.6,
             0,
             0,
-            100,
-            100,
+            10,//Math.toRadians(90), //90deg/s
+            1, //Math.toRadians(270), //Reach max speed in 1/3 seconds TODO: try these values
             "Shoulder",
-            tuningMode);
+            tuningMode,
+            true);
     wrist =
-        new HazardArm( // Adjust Kstatic for small movements TODO: reduce play in system
+        new HazardArm( // Adjust Kstatic for small movements
             wristMotor,
             0,
             false,
@@ -517,6 +513,8 @@ public class Elevator extends SubsystemBase {
     if (additive == 0) return;
     setWrist(wristSetpoint + (additive * 0.02));
   }
+
+  //**************************** Kinematics ****************************//
 
   /***
    * Tell the end pivot of the claw to go to a target height and extension in MM

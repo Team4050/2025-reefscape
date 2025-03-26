@@ -24,8 +24,12 @@ public class HazardArm {
   private ProfiledPIDController profiledFeedback;
   private double setpoint = 0;
   private String name;
-  private DoublePublisher voltagePIDOutput;
-  private DoublePublisher velocityFFtarget;
+  private DoublePublisher feedbackPublisher;
+  private DoublePublisher profiledFeedbackPublisher;
+  private DoublePublisher velocityFeedbackPublisher;
+  private DoublePublisher feedforwardPublisher;
+  private DoublePublisher uPublisher;
+  private double maxEffort = 12;
   private boolean tuneUsingDashboard = false;
   private boolean profiledControl = true;
   private boolean overridePID = false;
@@ -81,6 +85,9 @@ public class HazardArm {
     double motorPosition = motor.getPositionRadians();
     if (useAbsoluteEncoder) {
       motorPosition = motor.getAbsPositionRadians();
+      Constants.log("Setting relative encoder equal to absolute encoder");
+      motor.setEncoderRadians(motorPosition);
+      Constants.log("Relative pos: " + motor.getPositionRadians() + ", absolute pos: " + motor.getAbsPositionRadians());
     }
     profiledFeedback.reset(motorPosition, 0);
 
@@ -102,31 +109,55 @@ public class HazardArm {
       ;
     }
 
-    voltagePIDOutput =
-        NetworkTableInstance.getDefault().getTable(name).getDoubleTopic("PID Output").publish();
-    velocityFFtarget =
-        NetworkTableInstance.getDefault()
-            .getTable(name)
-            .getDoubleTopic("Velocity feedforward")
-            .publish();
+    var table = NetworkTableInstance.getDefault().getTable(name);
+    feedbackPublisher =
+      table.getDoubleTopic("PID").publish();
+    profiledFeedbackPublisher =
+      table.getDoubleTopic("Profiled PID").publish();
+    velocityFeedbackPublisher =
+      table.getDoubleTopic("Velocity PID").publish();
+    feedforwardPublisher =
+      table.getDoubleTopic("Feedforward").publish();
   }
 
-  public HazardArm(      HazardSparkMax motor,
-  double tolerance,
-  boolean useAbsoluteEncoder,
-  double Ks,
-  double Kg,
-  double Kv,
-  double Kp,
-  double Ki,
-  double Kd,
-  double maxV,
-  double maxA,
-  String name,
-  boolean tuneUsingDashboard,
-  boolean profiled) {
+  public HazardArm(
+    HazardSparkMax motor,
+    double tolerance,
+    boolean useAbsoluteEncoder,
+    double Ks,
+    double Kg,
+    double Kv,
+    double Kp,
+    double Ki,
+    double Kd,
+    double maxV,
+    double maxA,
+    String name,
+    boolean tuneUsingDashboard,
+    boolean profiled) {
     this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, maxV, maxA, name, tuneUsingDashboard);
     this.profiledControl = profiled;
+  }
+
+  public HazardArm(
+    HazardSparkMax motor,
+    double tolerance,
+    boolean useAbsoluteEncoder,
+    double Ks,
+    double Kg,
+    double Kv,
+    double Kp,
+    double Ki,
+    double Kd,
+    double maxV,
+    double maxA,
+    String name,
+    boolean tuneUsingDashboard,
+    boolean profiled,
+    double maxControlEffort) {
+    this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, maxV, maxA, name, tuneUsingDashboard);
+    this.profiledControl = profiled;
+    this.maxEffort = maxControlEffort;
   }
 
   //************************************************ Getters ************************************************//
@@ -142,10 +173,6 @@ public class HazardArm {
 
   public boolean atReference() {
     return feedback.atSetpoint();
-  }
-
-  public void setBrake(boolean brake) {
-    motor.setBrakeMode(brake);
   }
 
   public double getPositionRadians() {
@@ -173,6 +200,11 @@ public class HazardArm {
     motor.setControl(voltage, ControlType.kVoltage);
   }
 
+  public void setBrake(boolean brake) {
+    Constants.log(name + " motor set to brake mode: " + brake);
+    motor.setBrakeMode(brake);
+  }
+
   //**************************** PID ****************************//
 
   /***
@@ -185,23 +217,31 @@ public class HazardArm {
   }
 
   /***
-   * Sets a new Kg value (coral/no coral)
+   * Sets a new Kg value e.g. (coral/no coral)
    * @param Kg
    */
   public void setLoad(double Kg) {
-    Constants.log("Wrist load changed from " + feedforward.getKg() + " to " + Kg);
+    Constants.log(name + " load changed from " + feedforward.getKg() + " to " + Kg);
     feedforward.setKg(Kg);
   }
 
   //**************************** Safety ****************************//
 
+  public double checkEncoderDifference() {
+    return motor.getPositionRadians() - motor.getAbsPositionRadians();
+  }
+
+  public double checkVelocityDifference() {
+    return motor.getVelocityRadPS() - motor.getAbsVelocityRadPS();
+  }
+
   public void stop() {
-    Constants.log("Arm stopped");
+    Constants.log(name + " stopped");
     stop = true;
   }
 
   public void unstop() {
-    Constants.log("Arm reenabled");
+    Constants.log(name + " reenabled");
     stop = false;
   }
 
@@ -215,6 +255,17 @@ public class HazardArm {
     double motorPosition = motor.getPositionRadians();
     double motorVelocity = motor.getVelocityRadPS();
     if (useAbsoluteEncoder) {
+      double diff = checkEncoderDifference();
+      if (Math.abs(diff) > Math.toRadians(20)) {
+        Constants.log(name + " - Something caused relative encoder to drift away from absolute encoder");
+      }
+      double vDiff = checkVelocityDifference();
+      if (Math.abs(vDiff) > Math.toRadians(90)) {
+        Constants.log(name + " - Something caused relative encoder velocity to be decoupled from absolute encoder velocity");
+      } else if (Math.abs(vDiff) > Math.toRadians(20)) {
+        Constants.log(name + " - Major backlash in mechanism detected");
+      }
+
       motorPosition = motor.getAbsPositionRadians();
       motorVelocity = motor.getAbsVelocityRadPS();
     }
@@ -222,33 +273,29 @@ public class HazardArm {
       setpoint = motorPosition;
       overridePID = false;
     } else {
-      var currentState = new State(motorPosition, motor.getVelocityRadPS());
       double ff = feedforward.calculate(setpoint, 0);
       double fb = feedback.calculate(motorPosition, setpoint);
       double vfb = 0;
+      feedforwardPublisher.set(ff);
+      feedbackPublisher.set(fb);
       if (profiledControl) {
         ff = feedforward.calculate(setpoint, profiledFeedback.getSetpoint().velocity);
         fb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
         vfb = velocityFeedback.calculate(motorVelocity, profiledFeedback.getSetpoint().velocity);
       }
+      profiledFeedbackPublisher.set(fb);
+      velocityFeedbackPublisher.set(vfb);
       SmartDashboard.putNumber(name + " rotation", Math.toDegrees(motorPosition));
       SmartDashboard.putNumber(name + " setpoint", Math.toDegrees(setpoint));
       double u = ff + fb + vfb;
-      if (u < -12 || u > 12) {
-        Constants.log(
-            "OVERCORRECT - DISABLE ff: "
-                + ff
-                + " pfb: "
-                + fb
-                + "acc error: "
-                + profiledFeedback.getAccumulatedError());
-        double clampedU = MathUtil.clamp(u, -12, 12);
-        motor.setControl(clampedU, ControlType.kVoltage);
-        voltagePIDOutput.set(clampedU);
+      if (u < -maxEffort || u > maxEffort) {
+        Constants.log("Control effort exceeding limit");
+        u = MathUtil.clamp(u, -maxEffort, maxEffort);
+        motor.setControl(u, ControlType.kVoltage);
       } else {
         motor.setControl(u, ControlType.kVoltage);
-        voltagePIDOutput.set(u);
       }
+      uPublisher.set(u);
     }
     motor.publishToNetworkTables();
   }

@@ -217,11 +217,15 @@ public class HazardSparkMax {
    * @return
    */
   public double getAbsPosition() {
-    return externalEncoder.getPosition();
+    return externalEncoder.getPosition() / 360.0;
   }
 
   public double getAbsPositionRadians() {
     double deg = externalEncoder.getPosition();
+    if (deg < 0 || deg > 360) {
+      Constants.log(CAN_ID + ": aBS detected, degrees = " + deg);
+      return setpoint;
+    }
     if (deg > 180) {
       deg -= 360;
     }
