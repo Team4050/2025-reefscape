@@ -1,13 +1,14 @@
 package frc.robot.commands;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.subsystems.Drivetrain;
-import java.util.HashSet;
-import java.util.Set;
 
-public class MoveTime extends Command {
+public class MoveTimeBased extends Command {
   private Drivetrain drivetrain;
   private double moveTime;
   private double xSpeed;
@@ -15,7 +16,7 @@ public class MoveTime extends Command {
   private double angularSpeed;
   private long endTimestamp;
 
-  public MoveTime(
+  public MoveTimeBased(
       Drivetrain drivetrain, double xSpeed, double ySpeed, double angularSpeed, double moveTime) {
     this.drivetrain = drivetrain;
     this.moveTime = moveTime;
