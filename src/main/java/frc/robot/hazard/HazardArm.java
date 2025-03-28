@@ -24,6 +24,8 @@ public class HazardArm {
   private ProfiledPIDController profiledFeedback;
   private double setpoint = 0;
   private String name;
+  private DoublePublisher setpointPublisher;
+  private DoublePublisher setpointVelocityPublisher;
   private DoublePublisher feedbackPublisher;
   private DoublePublisher profiledFeedbackPublisher;
   private DoublePublisher velocityFeedbackPublisher;
@@ -73,9 +75,9 @@ public class HazardArm {
     feedback = new PIDController(Kp, Ki, Kd, 0.02);
     feedback.setIntegratorRange(-2, 2);
     feedback.setTolerance(tolerance);
-    feedback.setIZone(Math.toRadians(20));
+    feedback.setIZone(Math.toRadians(5));
 
-    velocityFeedback = new PIDController(0.1, 0, 0);
+    velocityFeedback = new PIDController(0.5, 0, 0);
     velocityFeedback.setIZone(10);
 
     profiledFeedback = new ProfiledPIDController(Kp, Ki, Kd, new Constraints(maxV, maxA), 0.02);
@@ -110,6 +112,9 @@ public class HazardArm {
     }
 
     var table = NetworkTableInstance.getDefault().getTable(name);
+    setpointPublisher =
+    table.getDoubleTopic("Actual Setpoint").publish();
+    setpointVelocityPublisher = table.getDoubleTopic("Setpoint Velocity").publish();
     feedbackPublisher =
       table.getDoubleTopic("PID").publish();
     profiledFeedbackPublisher =
@@ -118,6 +123,8 @@ public class HazardArm {
       table.getDoubleTopic("Velocity PID").publish();
     feedforwardPublisher =
       table.getDoubleTopic("Feedforward").publish();
+    uPublisher =
+    table.getDoubleTopic("Control effort").publish();
   }
 
   public HazardArm(
@@ -257,13 +264,13 @@ public class HazardArm {
     if (useAbsoluteEncoder) {
       double diff = checkEncoderDifference();
       if (Math.abs(diff) > Math.toRadians(20)) {
-        Constants.log(name + " - Something caused relative encoder to drift away from absolute encoder");
+        //Constants.log(name + " - Something caused relative encoder to drift away from absolute encoder");
       }
       double vDiff = checkVelocityDifference();
       if (Math.abs(vDiff) > Math.toRadians(90)) {
-        Constants.log(name + " - Something caused relative encoder velocity to be decoupled from absolute encoder velocity");
+        //Constants.log(name + " - Something caused relative encoder velocity to be decoupled from absolute encoder velocity");
       } else if (Math.abs(vDiff) > Math.toRadians(20)) {
-        Constants.log(name + " - Major backlash in mechanism detected");
+        //Constants.log(name + " - Major backlash in mechanism detected");
       }
 
       motorPosition = motor.getAbsPositionRadians();
@@ -281,6 +288,8 @@ public class HazardArm {
       if (profiledControl) {
         ff = feedforward.calculate(setpoint, profiledFeedback.getSetpoint().velocity);
         fb = profiledFeedback.calculate(motorPosition, new State(setpoint, 0));
+        setpointPublisher.set(profiledFeedback.getSetpoint().position);
+        setpointVelocityPublisher.set(profiledFeedback.getSetpoint().velocity);
         vfb = velocityFeedback.calculate(motorVelocity, profiledFeedback.getSetpoint().velocity);
       }
       profiledFeedbackPublisher.set(fb);

@@ -388,12 +388,10 @@ public class RobotContainer {
     if (elevatorTuningMode) {
       m_secondaryController
           .b()
-          .onTrue(
-              new InstantCommand(
-                  () -> {
-                   elevatorSubsystem.setShoulder(Constants.Shoulder.L4Scoring);
-                  },
-                  elevatorSubsystem));
+          .onTrue(new InstantCommand(
+            () -> {
+              elevatorSubsystem.setShoulder(Constants.Shoulder.transport);
+            }));
       m_secondaryController
           .a()
           .onTrue(
@@ -407,7 +405,7 @@ public class RobotContainer {
           .onTrue(
               new InstantCommand(
                   () -> {
-                    elevatorSubsystem.setShoulder(Constants.Shoulder.transport);
+                    elevatorSubsystem.setShoulder(Constants.Shoulder.L4Scoring);
                   }));
     } else {
       m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));

@@ -103,13 +103,13 @@ public final class Constants {
   }
 
   public static class Shoulder {
-    public static final int leadCAN = 8;
-    public static final int followerCAN = -1;
-    public static final int currentLimit = 30;
+    public static final int leadCAN = 9;
+    public static final int followerCAN = 8;
+    public static final int currentLimit = 60;
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static double encoderOffset = 0.30088670518663196; // Increasing offset will push rotational zero downwards
+    public static double encoderOffset = 0.3872078365749783; // Increasing offset will push rotational zero downwards
     public static final double startingRotationRadians =
         Math.toRadians(-78); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(90);
@@ -131,7 +131,7 @@ public final class Constants {
   }
 
   public static class Wrist {
-    public static final int CAN = 9;
+    public static final int CAN = 15;
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 25.0;

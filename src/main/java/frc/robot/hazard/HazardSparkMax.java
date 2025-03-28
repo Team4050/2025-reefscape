@@ -67,6 +67,7 @@ public class HazardSparkMax {
     controller = new SparkMax(CAN_ID, MotorType.kBrushless);
     controller.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     integratedEncoder = controller.getEncoder();
+    Constants.log(CAN_ID + " is a follower? " + controller.isFollower());
     if (useExternalEncoder) {
       externalEncoder = controller.getAbsoluteEncoder();
       Constants.log(CAN_ID + " Absolute encoder starting at " + externalEncoder.getPosition());

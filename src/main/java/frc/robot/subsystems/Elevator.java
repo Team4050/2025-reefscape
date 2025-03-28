@@ -130,7 +130,7 @@ public class Elevator extends SubsystemBase {
 
     shoulderConfig.smartCurrentLimit(Constants.Shoulder.currentLimit);
     shoulderConfig.idleMode(IdleMode.kBrake);
-    shoulderConfig.inverted(false); // Change to gear from belt drive
+    shoulderConfig.inverted(true); // Change to gear from belt drive
     shoulderConfig.closedLoop.pidf(0.25, 0.005, 0.05, 0.25);
     shoulderConfig.closedLoop.iMaxAccum(0.085);
     shoulderConfig.closedLoop.outputRange(-0.3, 0.3);
@@ -182,7 +182,7 @@ public class Elevator extends SubsystemBase {
     shoulderMotor =
         new HazardSparkMax(
             Constants.Shoulder.leadCAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder");
-    shoulderFollower = new HazardSparkMax(Constants.Shoulder.followerCAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderConfig, true, true, "Shoulder follower");
+    shoulderFollower = new HazardSparkMax(Constants.Shoulder.followerCAN, MotorType.kBrushless, Constants.Shoulder.currentLimit, shoulderFollowerConfig, false, true, "Shoulder follower");
     wristMotor =
         new HazardSparkMax(Constants.Wrist.CAN, MotorType.kBrushless, Constants.Wrist.currentLimit, wristConfig, true, "Wrist");
 
@@ -192,6 +192,7 @@ public class Elevator extends SubsystemBase {
     leadMotor.setEncoder(Constants.Elevator.startingExtension);
     followerMotor.setEncoder(Constants.Elevator.startingExtension);
     shoulderMotor.setEncoder(Constants.Shoulder.startingRotationRadians / (2 * Math.PI));
+    shoulderFollower.setEncoder(Constants.Shoulder.startingRotationRadians / (2 * Math.PI));
     wristMotor.setEncoder(Constants.Wrist.startingRotationRadians / (2 * Math.PI));
 
     elevatorPID =
@@ -207,13 +208,13 @@ public class Elevator extends SubsystemBase {
             0,
             true,
             0.1, // 0.1,
-            0.65, // 1.0,
-            0.2,
-            1,//1.6,
-            0,
+            0.55, // 1.0,
+            0.3,
+            1.6,
+            0.08,
             0,
             10,//Math.toRadians(90), //90deg/s
-            1, //Math.toRadians(270), //Reach max speed in 1/3 seconds TODO: try these values
+            2.8, //Math.toRadians(270), //Reach max speed in 1/3 seconds TODO: try these values
             "Shoulder",
             tuningMode,
             true);
@@ -666,11 +667,11 @@ public class Elevator extends SubsystemBase {
     }*/
     if (shoulder.getPositionRadians() < Constants.Shoulder.shoulderHardStopMin) {
       // armDisabled = true;
-      Constants.log("Shoulder going behind hard stop min");
+      //Constants.log("Shoulder going behind hard stop min");
       // shoulder.stop();
     }
     if (shoulder.getPositionRadians() > Constants.Shoulder.shoulderHardStopMax) {
-      Constants.log("Shoulder going past hard stop max");
+      //Constants.log("Shoulder going past hard stop max");
       // shoulder.stop();
     }
     /*if (shoulder.getVelocityRadPS() > Math.PI * 5) {
