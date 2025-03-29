@@ -22,6 +22,7 @@ public class HazardArm {
   private PIDController feedback;
   private PIDController velocityFeedback;
   private ProfiledPIDController profiledFeedback;
+  private double offset = 0;
   private double setpoint = 0;
   private String name;
   private DoublePublisher setpointPublisher;
@@ -232,6 +233,10 @@ public class HazardArm {
     feedforward.setKg(Kg);
   }
 
+  public void setOffsetAngleRadians(double offset) {
+    this.offset = offset;
+  }
+
   //**************************** Safety ****************************//
 
   public double checkEncoderDifference() {
@@ -280,7 +285,7 @@ public class HazardArm {
       setpoint = motorPosition;
       overridePID = false;
     } else {
-      double ff = feedforward.calculate(setpoint, 0);
+      double ff = feedforward.calculate(offset + setpoint, 0);
       double fb = feedback.calculate(motorPosition, setpoint);
       double vfb = 0;
       feedforwardPublisher.set(ff);

@@ -518,11 +518,12 @@ public class Elevator extends SubsystemBase {
   //**************************** Kinematics ****************************//
 
   /***
-   * Tell the end pivot of the claw to go to a target height and extension in MM
+   * Tell the end pivot of the claw to go to a target height and extension in MM. Deprecated - wrist mech changed
    * @param heightMM Height of coral chute
    * @param extensionMM Center of coral chute
    * @param wristAngleDegrees Wrist angle (0 parallel to floor, chute facing horizontal)
    */
+  @Deprecated
   public void goToPosition(
       double extensionMM, double heightMM, double wristAngleDegrees, boolean verboseLogging) {
     Constants.log("Going to position " + heightMM + " " + extensionMM);
@@ -655,6 +656,7 @@ public class Elevator extends SubsystemBase {
     // if (shoulder.getPositionRadians() > 0 && wrist.getPositionRadians() > 0) isScoringL4 = true;
     // else isScoringL4 = false;
     shoulder.periodic();
+    wrist.setOffsetAngleRadians(shoulder.getPositionRadians());
     wrist.periodic();
 
     if (leadMotor.getPosition() < 0.5 && shoulder.getPositionRadians() < Math.toRadians(-50)) {

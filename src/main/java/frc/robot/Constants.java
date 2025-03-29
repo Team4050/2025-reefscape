@@ -145,15 +145,15 @@ public final class Constants {
     public static final double chuteExitXOffsetMM = 330; // From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; // From Claw - Full Assembly CAD
 
-    public static final double transport = Math.toRadians(-60); //TODO: Change back to -80 if feeding performance is unchanged
-    public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
-    public static final double L1Scoring = startingRotationRadians;
-    public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset;
-    public static final double L2AlgaeRemoval = Math.toRadians(-18) + wristRotationOffset;
-    public static final double L3Scoring = Math.toRadians(-53);
-    public static final double L3AlgaeRemoval = Math.toRadians(-14) + wristRotationOffset;
-    public static final double L4Scoring = Math.toRadians(81.5);
-    public static final double climb = startingRotationRadians;
+    public static final double transport = Math.toRadians(-60) - Math.toRadians(-80); //TODO: Change back to -80 if feeding performance is unchanged
+    public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset - Math.toRadians(-80);
+    public static final double L1Scoring = startingRotationRadians - Math.toRadians(-66.5);
+    public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset - Math.toRadians(-52.5);
+    public static final double L2AlgaeRemoval = Math.toRadians(-18) + wristRotationOffset - Math.toRadians(-24);
+    public static final double L3Scoring = Math.toRadians(-53) - Math.toRadians(75);
+    public static final double L3AlgaeRemoval = Math.toRadians(-14) + wristRotationOffset - Math.toRadians(64.8);
+    public static final double L4Scoring = Math.toRadians(81.5) - Math.toRadians(66);
+    public static final double climb = startingRotationRadians - Math.toRadians(-55);
 
     public static final double scoringOffsetMeters = 1.75 * (2.54 / 100); //TODO: test if 1/4in offset is that important
   }
