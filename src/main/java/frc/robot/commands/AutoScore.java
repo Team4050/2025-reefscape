@@ -48,11 +48,11 @@ public class AutoScore extends Command {
             && elevator.atWristReference())
         || true) {
       if (elevator.isScoringL4) {
-        claw.set(-0.1);
+        claw.set(-Constants.Coral.coralScoreSpeed);
       } else if (algaeMode) {
-        claw.set(-0.5);
+        claw.set(-Constants.Coral.algaeSpeed);
       } else {
-        claw.set(0.1);
+        claw.set(Constants.Coral.coralScoreSpeed);
       }
       if (!timer.isRunning() && !claw.hasCoral()) {
         Constants.log(

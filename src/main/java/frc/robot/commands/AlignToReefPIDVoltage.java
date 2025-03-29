@@ -25,19 +25,23 @@ import frc.robot.subsystems.Drivetrain;
 public class AlignToReefPIDVoltage extends Command {
   private Drivetrain drivetrain;
   private Timer timer = new Timer();
-  private double KpX = 1;
+  /* PID values for fwd/back control */
+  private double KpX = 1.2;
   private double KiX = 0.02;
-  private double KdX = 0; // 0.08
+  private double KdX = 0;
 
+  /* PID values for strafe control */
   private double KpY = 2;
   private double KiY = 0.05;
-  private double KdY = 0; // 0.08
+  private double KdY = 0;
 
+  /* PID values for rotation control */
   private double KpZ = 4;
   private double KiZ = 0.001;
-  private double KdZ = 0; // 0.08
+  private double KdZ = 0;
 
-  private double KsX = 0.2; // 0.02
+  /* Feedforward values for fwd, strafe, and rotation control */
+  private double KsX = 0.2;
   private double KsY = 0.82;
   private double KsZ = 0.6;
 

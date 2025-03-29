@@ -892,7 +892,7 @@ public class Drivetrain extends SubsystemBase {
         SmartDashboard.putString(visionDashboardDisplay, "closest, all tags: " + lastAprilTagSeen + message);
 
         var pose = estimate.get().estimatedPose;
-        Constants.limelightDataLogEntry.append(
+        /*Constants.limelightDataLogEntry.append(
             new double[] {
               pose.getX(),
               pose.getY(),
@@ -901,7 +901,7 @@ public class Drivetrain extends SubsystemBase {
               pose.getRotation().getQuaternion().getX(),
               pose.getRotation().getQuaternion().getY(),
               pose.getRotation().getQuaternion().getZ()
-            });
+            });*/
         poseEstimator.addVisionMeasurement(
             estimate.get().estimatedPose.toPose2d(), estimate.get().timestampSeconds);
       }

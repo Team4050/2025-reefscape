@@ -7,6 +7,7 @@ import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -26,7 +27,7 @@ public class Claw extends SubsystemBase {
     clawMotor = new SparkMax(Constants.Coral.CAN, MotorType.kBrushless);
 
     clawConfig.idleMode(IdleMode.kBrake);
-    clawConfig.inverted(true);
+    clawConfig.inverted(false);
     clawConfig.smartCurrentLimit(Constants.Coral.currentLimit);
     clawMotor.configure(
         clawConfig, ResetMode.kNoResetSafeParameters, PersistMode.kPersistParameters);

@@ -117,7 +117,8 @@ public class Elevator extends SubsystemBase {
     leadConfig.idleMode(IdleMode.kBrake);
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
-    leadConfig.closedLoop.pid(0.3, 0.002, 0.0001);
+    /* Elevator PID control */
+    leadConfig.closedLoop.pid(Constants.Elevator.p, Constants.Elevator.i, Constants.Elevator.d);
     leadConfig.closedLoop.iMaxAccum(10);
     leadConfig.closedLoop.iZone(0.3);
     leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.03);
@@ -154,7 +155,7 @@ public class Elevator extends SubsystemBase {
 
     wristConfig.smartCurrentLimit(Constants.Wrist.currentLimit);
     wristConfig.idleMode(IdleMode.kBrake);
-    wristConfig.inverted(true);
+    wristConfig.inverted(false);
     wristConfig.closedLoop.pid(0.2, 0.00005, 0);
     wristConfig.closedLoop.iMaxAccum(5);
     wristConfig.closedLoop.outputRange(-0.4, 0.4);
@@ -207,10 +208,10 @@ public class Elevator extends SubsystemBase {
             shoulderMotor,
             0,
             true,
-            0.1, // 0.1,
-            0.55, // 1.0,
+            0.1, // Shoulder feedforward values
+            0.55,
             0.3,
-            1.6,
+            1.6, // Shoulder PID values
             0.08,
             0,
             10,//Math.toRadians(90), //90deg/s
@@ -223,10 +224,10 @@ public class Elevator extends SubsystemBase {
             wristMotor,
             0,
             false,
-            0.1,
+            0.1, // Wrist feedforard values
             0.19,
             0.00,
-            1.0,//1.8,
+            2.5, // Wrist PID values
             0.12,
             0.15,
             2,
@@ -252,6 +253,7 @@ public class Elevator extends SubsystemBase {
     SmartDashboard.putNumber("Elevator setpoint", elevatorSetpoint);
     SmartDashboard.putNumber("Shoulder setpoint", shoulderSetpoint);
     SmartDashboard.putNumber("Wrist setpoint", wristSetpoint);
+    SmartDashboard.putNumber("Wrist sum angle", 0);
   }
 
   public void init() {
@@ -488,15 +490,16 @@ public class Elevator extends SubsystemBase {
   public void checkWrist() {
     // Constants.log(shoulderSetpoint + Constants.Wrist.wristMinShoulderOffsetRotations);
     // Constants.log(wristSetpoint);
-    if (leadMotor.getPosition() < Constants.Elevator.hardStopExt) {
-      wrist.setpoint(wristSetpoint);
+    wrist.setpoint(wristSetpoint);
+    /*if (leadMotor.getPosition() < Constants.Elevator.hardStopExt) {
+
     } else {
       wrist.setpoint(
         MathUtil.clamp(
             wristSetpoint,
             Constants.Wrist.startingRotationRadians,
             Constants.Wrist.wristMax));
-    }
+    }*/
 
     SmartDashboard.putNumber("Wrist setpoint", elevatorSetpoint);
   }
@@ -507,7 +510,8 @@ public class Elevator extends SubsystemBase {
    */
   public void setWrist(double position) {
     wristSetpoint = MathUtil.clamp(position, Constants.Wrist.wristMin, Constants.Wrist.wristMax);
-    checkWrist();
+    wrist.setpoint(wristSetpoint);
+    SmartDashboard.putNumber("Wrist setpoint", elevatorSetpoint);
   }
 
   public void setWristAdditive(double additive) {
@@ -657,6 +661,7 @@ public class Elevator extends SubsystemBase {
     // else isScoringL4 = false;
     shoulder.periodic();
     wrist.setOffsetAngleRadians(shoulder.getPositionRadians());
+    SmartDashboard.putNumber("Wrist sum angle", Math.toDegrees(shoulder.getPositionRadians() + wrist.getPositionRadians()));
     wrist.periodic();
 
     if (leadMotor.getPosition() < 0.5 && shoulder.getPositionRadians() < Math.toRadians(-50)) {

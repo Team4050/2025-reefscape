@@ -17,6 +17,14 @@ public class ChooseAutonomous {
   private List<Command> autos;
   private SendableChooser<Command> autoChooser;
 
+  /*
+   * For all reef align commands
+   * first couple seconds before auto align should be moving the mechanism
+   * time based commands should total up to a max of 5 seconds to leave time for aligning and scoring
+   * time based speed should remain below 0.4 (40%), and above 0.1 (10%)
+   * There should not be any sudden, jittery movements, if there are, check logs of battery voltage and chassis velocity and estimated pose
+   */
+
   public ChooseAutonomous(Drivetrain drivetrain, Elevator elevator, Claw claw) {
     autoChooser = new SendableChooser<Command>();
     autoChooser.addOption("Do nothing", new MoveTime(drivetrain, 0, 0, 0, 5));

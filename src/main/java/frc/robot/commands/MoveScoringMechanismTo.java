@@ -36,6 +36,7 @@ public class MoveScoringMechanismTo {
         claw);
   }
 
+  @Deprecated
   public static Command Climbing(Elevator elevator, Claw claw) {
     return new InstantCommand(() -> {
       elevator.setL4Mode(false);
@@ -73,6 +74,7 @@ public class MoveScoringMechanismTo {
         claw);
   }
 
+  @Deprecated
   public static Command L1(Elevator elevator, Claw claw) {
     Constants.log("Going to L1");
     return new InstantCommand(

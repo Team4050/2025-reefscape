@@ -92,13 +92,19 @@ public final class Constants {
     public static final double baseHeightMM =
         812.800 + Drivetrain.chassisTopPlateHeightMM; // From Elevator - Full Assembly CAD
 
-    public static final double transport = 1.2;
+    /* Elevator PID values */
+    public static final double p = 0.3;
+    public static final double i = 0.002;
+    public static final double d = 0.0001;
+
+    /* Elevator setpoint controls */
+    public static final double transport = 0.9;
     public static final double L1Scoring = 1;
-    public static final double L2Scoring = 3.62; // 3.8
+    public static final double L2Scoring = 3.8; // 3.8
     public static final double L2AlgaeRemoval = 2.0;
-    public static final double L3Scoring = 2.3;
+    public static final double L3Scoring = 2.5;
     public static final double L3AlgaeRemoval = 1.145;
-    public static final double L4Scoring = 3.82;
+    public static final double L4Scoring = 3.9;
     public static final double climb = 2;
   }
 
@@ -114,17 +120,18 @@ public final class Constants {
         Math.toRadians(-78); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(90);
     public static final double shoulderHardStopMax = Math.toRadians(160);
-    public static final double shoulderMin = Math.toRadians(-78); // -0.24 * 2 * Math.PI
+    public static final double shoulderMin = Math.toRadians(-82); // -0.24 * 2 * Math.PI
     public static final double shoulderHardStopMin = Math.toRadians(-90);
 
     public static final double shoulderArmLengthMM = 302;
     public static final double shoulderMotorTorqueNM = 0.45;
 
+    /* Shoulder setpoint controls */
     public static final double transport = Math.toRadians(-80); // TODO: See if reducing from -80 improves loading performance
     public static final double L1Scoring = Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-52.5);
     public static final double L2AlgaeRemoval = Math.toRadians(-24);
-    public static final double L3Scoring = Math.toRadians(75);
+    public static final double L3Scoring = Math.toRadians(73);
     public static final double L3AlgaeRemoval = Math.toRadians(64.8);
     public static final double L4Scoring = Math.toRadians(66);
     public static final double climb = Math.toRadians(-55);
@@ -134,25 +141,26 @@ public final class Constants {
     public static final int CAN = 15;
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
-    public static final double gearboxReduction = 1.0 / 25.0;
+    public static final double gearboxReduction = 1.0 / 40.0;
     public static final double wristRotationOffset = Math.toRadians(-40);
-    public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset;
+    public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset - Math.toRadians(-78);
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
-    public static final double wristMax = Math.toRadians(145) + wristRotationOffset; // +105 degrees
-    public static final double wristMin = Math.toRadians(-45) + wristRotationOffset; // -95 degrees
+    public static final double wristMax = Math.toRadians(145); // +105 degrees
+    public static final double wristMin = Math.toRadians(-145); // -95 degrees
 
     public static final double chuteExitXOffsetMM = 330; // From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; // From Claw - Full Assembly CAD
 
-    public static final double transport = Math.toRadians(-60) - Math.toRadians(-80); //TODO: Change back to -80 if feeding performance is unchanged
+    /* Wrist setpoint controls */
+    public static final double transport = wristRotationOffset + Math.toRadians(-25) - Math.toRadians(-80); //TODO: Change back to -80 if feeding performance is unchanged
     public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset - Math.toRadians(-80);
     public static final double L1Scoring = startingRotationRadians - Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset - Math.toRadians(-52.5);
     public static final double L2AlgaeRemoval = Math.toRadians(-18) + wristRotationOffset - Math.toRadians(-24);
-    public static final double L3Scoring = Math.toRadians(-53) - Math.toRadians(75);
+    public static final double L3Scoring = Math.toRadians(-80) + wristRotationOffset;
     public static final double L3AlgaeRemoval = Math.toRadians(-14) + wristRotationOffset - Math.toRadians(64.8);
-    public static final double L4Scoring = Math.toRadians(81.5) - Math.toRadians(66);
+    public static final double L4Scoring = Math.toRadians(130) + wristRotationOffset - Math.toRadians(66);
     public static final double climb = startingRotationRadians - Math.toRadians(-55);
 
     public static final double scoringOffsetMeters = 1.75 * (2.54 / 100); //TODO: test if 1/4in offset is that important
@@ -160,8 +168,12 @@ public final class Constants {
 
   public static class Coral {
     public static final int CAN = 10;
-    public static final int currentLimit = 20;
+    public static final int currentLimit = 10;
     public static final double Yoffset = 0;
+
+    public static final double coralSpeed = 0.5;
+    public static final double coralScoreSpeed = 1;
+    public static final double algaeSpeed = 0.8;
   }
 
   public static class Climber {
@@ -266,3 +278,13 @@ public final class Constants {
     }
   }
 }
+
+/*
+ * Shoulder PID values: In elevator file, line 206
+ * Wrist PID values: In elevator file, line 222
+ *
+ * Auto score command is in AutoScore.java
+ * Auto load command is in AutoLoad.java
+ * Auto align command is AutoAlignPIDVoltage.java
+ * Auto align PID values start line 28
+ */

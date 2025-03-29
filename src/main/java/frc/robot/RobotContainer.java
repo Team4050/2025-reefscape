@@ -186,15 +186,15 @@ public class RobotContainer {
             () -> {
               if (m_secondaryController.povLeft().getAsBoolean()) {
                 if (clawSubsystem.algaeMode) {
-                  clawSubsystem.set(-0.3);
+                  clawSubsystem.set(-0.8);
                 } else {
-                  clawSubsystem.set(0.1);
+                  clawSubsystem.set(0.5);
                 }
               } else if (m_secondaryController.povRight().getAsBoolean()) {
                 if (clawSubsystem.algaeMode) {
-                  clawSubsystem.set(0.3);
+                  clawSubsystem.set(0.8);
                 } else {
-                  clawSubsystem.set(-0.1);
+                  clawSubsystem.set(-0.5);
                 }
               } else {
                 clawSubsystem.set(0);
