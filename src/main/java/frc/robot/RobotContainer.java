@@ -9,9 +9,7 @@ import java.util.function.BooleanSupplier;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.cscore.VideoMode;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -19,7 +17,6 @@ import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
-import edu.wpi.first.util.PixelFormat;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.PowerDistribution;
@@ -104,12 +101,13 @@ public class RobotContainer {
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    elevatorSubsystem.recalibrateArmAbsoluteEncoder();
     Optional<Alliance> alliance = DriverStation.getAlliance();
     Constants.setupDataLog();
 
-    clawCamera = CameraServer.startAutomaticCapture();
-    clawCamera.setVideoMode(new VideoMode(PixelFormat.kMJPEG, 320, 320, 10));
-    Constants.log("Claw camera description:" + clawCamera.getDescription());
+    //clawCamera = CameraServer.startAutomaticCapture();
+    //clawCamera.setVideoMode(new VideoMode(PixelFormat.kMJPEG, 320, 320, 10));
+    //Constants.log("Claw camera description:" + clawCamera.getDescription());
 
     pdh.setSwitchableChannel(true); // For radio PoE
 
@@ -127,19 +125,6 @@ public class RobotContainer {
 
     Constants.Sensors.calibrate(new Pose3d());
     Constants.log("IMU angle 1: " + Constants.Sensors.imu.getAngle());
-
-    double[] elevatorStartingXY = elevatorSubsystem.elevatorForwardKinematics();
-
-    // Constants.log(SmartDashboard.putNumberArray(IKtargetX, elevatorStartingXY));
-    SmartDashboard.putNumber(IKtargetX, elevatorStartingXY[0]);
-    SmartDashboard.putNumber(IKtargetY, elevatorStartingXY[1]);
-    SmartDashboard.putNumber(wristTarget, 0);
-    SmartDashboard.putData(
-        "Calculate offset",
-        new InstantCommand(
-            () -> {
-              elevatorSubsystem.recalibrateArmAbsoluteEncoder();
-            }));
 
     elevatorSubsystem.setDefaultCommand(
         new RunCommand(
@@ -198,15 +183,15 @@ public class RobotContainer {
             () -> {
               if (m_secondaryController.povLeft().getAsBoolean()) {
                 if (clawSubsystem.algaeMode) {
-                  clawSubsystem.set(-0.3);
+                  clawSubsystem.set(-0.8);
                 } else {
-                  clawSubsystem.set(0.1);
+                  clawSubsystem.set(0.5);
                 }
               } else if (m_secondaryController.povRight().getAsBoolean()) {
                 if (clawSubsystem.algaeMode) {
-                  clawSubsystem.set(0.3);
+                  clawSubsystem.set(0.8);
                 } else {
-                  clawSubsystem.set(-0.1);
+                  clawSubsystem.set(-0.5);
                 }
               } else {
                 clawSubsystem.set(0);
@@ -264,6 +249,10 @@ public class RobotContainer {
   int pipeline = 0;
 
   private void configureBindings() {
+    BooleanSupplier isAlgaeMode =
+        () -> {
+          return clawSubsystem.algaeMode;
+        };
 
     /********************************************************** Primary **************************************************************************/
 
@@ -273,11 +262,15 @@ public class RobotContainer {
     m_driverController
         .leftTrigger()
         .toggleOnTrue(
-            new AlignToReefPIDVoltage(drivetrainSubsystem, false, clawSubsystem.algaeMode));
+          new ConditionalCommand(
+            new AlignToReefPIDVoltage(drivetrainSubsystem, false, true),
+            new AlignToReefPIDVoltage(drivetrainSubsystem, false, false), isAlgaeMode));
     m_driverController
         .rightTrigger()
         .toggleOnTrue(
-            new AlignToReefPIDVoltage(drivetrainSubsystem, true, clawSubsystem.algaeMode));
+          new ConditionalCommand(
+            new AlignToReefPIDVoltage(drivetrainSubsystem, true, true),
+            new AlignToReefPIDVoltage(drivetrainSubsystem, true, false), isAlgaeMode));
     drivetrainSubsystem.autoTrigger.onFalse(new RumbleController(m_driverController, 0.5));
     m_driverController
         .b()
@@ -364,7 +357,7 @@ public class RobotContainer {
     // m_driverController.povUp().onTrue(new InstantCommand(() -> {
     // climberSubsystem.set(Constants.Climber.climbedPositionRotations); }, climberSubsystem));
 
-    m_driverController
+    /*m_driverController
         .povDown()
         .whileTrue(
             new RunCommand(
@@ -379,7 +372,7 @@ public class RobotContainer {
                 () -> {
                   climberSubsystem.setAdditive(0.3);
                 },
-                climberSubsystem));
+                climberSubsystem));*/
 
     /********************************************************** Secondary **************************************************************************/
 
@@ -399,45 +392,23 @@ public class RobotContainer {
 
     if (elevatorTuningMode) {
       m_secondaryController
-          .b()
-          .onTrue(
-              new InstantCommand(
-                  () -> {
-                   elevatorSubsystem.setShoulder(Constants.Shoulder.L4Scoring);
-                  },
-                  elevatorSubsystem));
-      m_secondaryController
-          .a()
-          .onTrue(
-              new InstantCommand(
-                  () -> {
-                    elevatorSubsystem.reconfigure();
-                  },
-                  elevatorSubsystem));
-      m_secondaryController
-          .x()
-          .onTrue(
-              new InstantCommand(
-                  () -> {
-                    elevatorSubsystem.setShoulder(Constants.Shoulder.transport);
-                  }));
-    } else {
-      m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));
+          .y()
+          .onTrue(new InstantCommand(
+            () -> {
+              elevatorSubsystem.generateSetpoints();
+            }));
+    }
+      //m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));
       m_secondaryController.b().onTrue(MoveScoringMechanismTo.L2(elevatorSubsystem, clawSubsystem));
       m_secondaryController.a().onTrue(MoveScoringMechanismTo.L3(elevatorSubsystem, clawSubsystem));
       m_secondaryController.x().onTrue(MoveScoringMechanismTo.L4(elevatorSubsystem, clawSubsystem));
-    }
 
-    BooleanSupplier isAlgaeMode =
-        () -> {
-          return clawSubsystem.algaeMode;
-        };
     m_secondaryController
         .leftTrigger()
         .onTrue(
             new ConditionalCommand(
                 MoveScoringMechanismTo.AlgaeTransport(elevatorSubsystem, clawSubsystem),
-                MoveScoringMechanismTo.Transport(elevatorSubsystem, clawSubsystem),
+                MoveScoringMechanismTo.Transport(elevatorSubsystem),
                 isAlgaeMode));
     m_secondaryController
         .rightTrigger()
@@ -479,8 +450,8 @@ public class RobotContainer {
                 },
                 elevatorSubsystem));
 
-    m_secondaryController.start().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
-    m_secondaryController.back().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
+    //m_secondaryController.start().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
+    //m_secondaryController.back().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
   }
 
   private void configureDashboard() {
@@ -494,11 +465,28 @@ public class RobotContainer {
     // PubSubOption.periodic(0.01));
     // gyroPlotting.setDefault(0);
 
+    //************************** Data **************************//
+
     imuDataPublisher =
         netTables
             .getDoubleArrayTopic("IMU Data | Yaw & Yaw Velocity")
             .publish(PubSubOption.sendAll(true), PubSubOption.periodic(0.01));
     imuDataPublisher.setDefault(def);
+
+    double[] elevatorStartingXY = elevatorSubsystem.elevatorForwardKinematics();
+
+    // Constants.log(SmartDashboard.putNumberArray(IKtargetX, elevatorStartingXY));
+    SmartDashboard.putNumber(IKtargetX, elevatorStartingXY[0]);
+    SmartDashboard.putNumber(IKtargetY, elevatorStartingXY[1]);
+    SmartDashboard.putNumber(wristTarget, 0);
+    SmartDashboard.putData(
+        "Calculate offset",
+        new InstantCommand(
+            () -> {
+              elevatorSubsystem.recalibrateArmAbsoluteEncoder();
+            }));
+
+    //************************** Commands **************************//
 
     SmartDashboard.putData(
         "play",
@@ -518,6 +506,18 @@ public class RobotContainer {
             () -> {
               drivetrainSubsystem.stop();
             }));
+    SmartDashboard.putData(
+      "Run elevator SysID routines",
+      elevatorSubsystem.getElevatorRoutines()
+    );
+    SmartDashboard.putData(
+      "Run elevator SysID routines",
+      elevatorSubsystem.getShoulderRoutines()
+    );
+    SmartDashboard.putData(
+      "Run elevator SysID routines",
+      elevatorSubsystem.getWristRoutines()
+    );
   }
 
   /**

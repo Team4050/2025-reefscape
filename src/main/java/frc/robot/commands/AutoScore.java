@@ -1,8 +1,12 @@
 package frc.robot.commands;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.Constants;
 import frc.robot.subsystems.Claw;
 import frc.robot.subsystems.Elevator;
@@ -33,7 +37,7 @@ public class AutoScore extends Command {
     super.initialize();
     if (algaeMode) {
       if (claw.hasCoral()) {
-        Constants.driverLog("Attempted to score algae with coral loaded!");
+        Constants.log("Attempted to score algae with coral loaded!");
         cancel = true;
         return;
       }
@@ -42,17 +46,17 @@ public class AutoScore extends Command {
 
   @Override
   public void execute() {
-    if (cancel) return;
-    if ((elevator.atElevatorReference()
-            && elevator.atShoulderReference()
-            && elevator.atWristReference())
-        || true) {
-      if (elevator.isScoringL4) {
-        claw.set(-0.1);
+    if (cancel) {
+      Constants.log("Command cancelled");
+      return;
+    }
+    if (true) {
+      if (elevator.isScoringL4 || elevator.isScoringL3) {
+        claw.set(-Constants.Coral.coralScoreSpeed);
       } else if (algaeMode) {
-        claw.set(-0.5);
+        claw.set(-Constants.Coral.algaeSpeed);
       } else {
-        claw.set(0.1);
+        claw.set(Constants.Coral.coralScoreSpeed);
       }
       if (!timer.isRunning() && !claw.hasCoral()) {
         Constants.log(
@@ -86,5 +90,12 @@ public class AutoScore extends Command {
     }
     cancel = false;
     super.end(interrupted);
+  }
+
+  @Override
+  public Set<Subsystem> getRequirements() {
+    HashSet<Subsystem> reqs = new HashSet<>();
+    reqs.add(claw);
+    return reqs;
   }
 }

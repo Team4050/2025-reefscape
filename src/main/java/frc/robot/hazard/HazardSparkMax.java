@@ -1,5 +1,8 @@
 package frc.robot.hazard;
 
+import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Volts;
+
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.spark.SparkAbsoluteEncoder;
 import com.revrobotics.spark.SparkBase.ControlType;
@@ -15,6 +18,8 @@ import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StringPublisher;
+import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants;
 
@@ -62,6 +67,7 @@ public class HazardSparkMax {
     controller = new SparkMax(CAN_ID, MotorType.kBrushless);
     controller.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     integratedEncoder = controller.getEncoder();
+    Constants.log(CAN_ID + " is a follower? " + controller.isFollower());
     if (useExternalEncoder) {
       externalEncoder = controller.getAbsoluteEncoder();
       Constants.log(CAN_ID + " Absolute encoder starting at " + externalEncoder.getPosition());
@@ -167,6 +173,14 @@ public class HazardSparkMax {
     return controller.getOutputCurrent() > currentLimit / 10;
   }
 
+  public Voltage getVoltage() {
+    return Voltage.ofBaseUnits(controller.getAppliedOutput() * controller.getBusVoltage(), Volts); //TODO: verify if this is an accurate representation of voltage passing through the motor
+  }
+
+  public Current getCurrent() {
+    return Current.ofBaseUnits(controller.getOutputCurrent(), Amps);
+  }
+
   /***
    * Returns the position of the encoder in rotations
    * @return
@@ -204,11 +218,15 @@ public class HazardSparkMax {
    * @return
    */
   public double getAbsPosition() {
-    return externalEncoder.getPosition();
+    return externalEncoder.getPosition() / 360.0;
   }
 
   public double getAbsPositionRadians() {
     double deg = externalEncoder.getPosition();
+    if (deg < 0 || deg > 360) {
+      Constants.log(CAN_ID + ": aBS detected, degrees = " + deg);
+      return setpoint;
+    }
     if (deg > 180) {
       deg -= 360;
     }

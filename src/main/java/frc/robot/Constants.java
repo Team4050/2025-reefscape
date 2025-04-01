@@ -15,6 +15,7 @@ import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.util.datalog.DataLog;
+import edu.wpi.first.util.datalog.DataLogEntry;
 import edu.wpi.first.util.datalog.DoubleArrayLogEntry;
 import edu.wpi.first.util.datalog.StringLogEntry;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
@@ -85,82 +86,114 @@ public final class Constants {
     public static final double elevatorFFVoltage = 0.4128;
     public static final double startingExtension = 0;
     public static final double hardStopExt = 0.5;
-    public static final double minExtension = 0.02;
-    public static final double maxExtension = 4.4;
-    public static final double maxHeightExtensionMM = maxExtension * gearboxRotationsToHeightMM;
+    public static final double minExtensionRotations = 0.02;
+    public static final double maxExtensionRotations = 4.4;
+    public static final double maxHeightExtensionMM = maxExtensionRotations * gearboxRotationsToHeightMM;
     public static final double baseHeightMM =
         812.800 + Drivetrain.chassisTopPlateHeightMM; // From Elevator - Full Assembly CAD
 
-    public static final double transport = 1.2;
+    /* Elevator PID values */
+    public static final double p = 1;
+    public static final double i = 0.001;
+    public static final double d = 0.1;
+
+    /* Elevator setpoint controls */
+    /*
+     *  How these numbers work
+     * Since the wrist is controlled as an arm, gavity compensation is necessary. The problem
+     * is, since the wrist is an unusual shape, its center of mass is offset. On the shoulder,
+     * if you drew a line from the axis to the center off mass, it would roughly follow the line
+     * of the arm. With the wrist, there is no line to conveniently follow, so I had to estimate
+     * it. That's what wristRotationOffset is. If the design of the claw ever changes, that
+     * variable changes, and the encoders are set to measure the angle of that.
+     *
+     * How I recommand changing the values:
+     * Start with turning on the elevator tuning mode (boolean on RobotContainer line 52) and deploying
+     * Move to the setpoint you want to adjust
+     * Make manual adjustments with the joysticks until at desired position
+     * Press the Y button to print out the setpoints to the RioLog and dashboard
+     * Plug those values in below. For wrist and shoulder, you'll need to convert the printed number
+     * to radians, by wrapping the value in Math.toRadians(value).
+     * Redeploy and test!
+     *
+     * If you still have questions or the Y button isn't working ask me on slack
+     */
+    public static final double transport = 0.9;
     public static final double L1Scoring = 1;
-    public static final double L2Scoring = 3.62; // 3.8
-    public static final double L2AlgaeRemoval = 2.0;
-    public static final double L3Scoring = 2.3;
-    public static final double L3AlgaeRemoval = 1.145;
-    public static final double L4Scoring = 3.82;
+    public static final double L2Scoring = 3.8; // 3.8
+    public static final double L2AlgaeRemoval = 1.4;
+    public static final double L3Scoring = 3.2;
+    public static final double L3AlgaeRemoval = 4.37;//1.145;
+    public static final double L4Scoring = 3.9;
     public static final double climb = 2;
   }
 
   public static class Shoulder {
-    public static final int leadCAN = 8;
-    public static final int followerCAN = -1;
-    public static final int currentLimit = 30;
+    public static final int leadCAN = 9;
+    public static final int followerCAN = 8;
+    public static final int currentLimit = 60;
     public static final DCMotor motor = DCMotor.getNEO(1);
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 49.0; // 7:1 * 3:1 gearbox
-    public static double encoderOffset = (254.0/360.0); // Increasing offset will push rotational zero downwards
+    public static double encoderOffset = 0.3872078365749783; // Increasing offset will push rotational zero downwards
     public static final double startingRotationRadians =
         Math.toRadians(-78); // -0.3 measured from horizontal
     public static final double shoulderMax = Math.toRadians(90);
     public static final double shoulderHardStopMax = Math.toRadians(160);
-    public static final double shoulderMin = Math.toRadians(-78); // -0.24 * 2 * Math.PI
+    public static final double shoulderMin = Math.toRadians(-82); // -0.24 * 2 * Math.PI
     public static final double shoulderHardStopMin = Math.toRadians(-90);
 
     public static final double shoulderArmLengthMM = 302;
     public static final double shoulderMotorTorqueNM = 0.45;
 
+    /* Shoulder setpoint controls */
     public static final double transport = Math.toRadians(-80); // TODO: See if reducing from -80 improves loading performance
     public static final double L1Scoring = Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-52.5);
     public static final double L2AlgaeRemoval = Math.toRadians(-24);
-    public static final double L3Scoring = Math.toRadians(75);
-    public static final double L3AlgaeRemoval = Math.toRadians(64.8);
+    public static final double L3Scoring = Math.toRadians(-46); //Math.toRadians(73);
+    public static final double L3AlgaeRemoval = L2AlgaeRemoval;//Math.toRadians(64.8);
     public static final double L4Scoring = Math.toRadians(66);
     public static final double climb = Math.toRadians(-55);
   }
 
   public static class Wrist {
-    public static final int CAN = 9;
+    public static final int CAN = 15;
     public static final int currentLimit = 30;
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
-    public static final double gearboxReduction = 1.0 / 25.0;
-    public static final double wristRotationOffset = Math.toRadians(-40);
-    public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset;
+    public static final double gearboxReduction = 1.0 / 40.0;
+    public static final double wristRotationOffset = Math.toRadians(-50);
+    public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset - Math.toRadians(-78); //Starting rotation relative to shoulder
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
-    public static final double wristMax = Math.toRadians(145) + wristRotationOffset; // +105 degrees
-    public static final double wristMin = Math.toRadians(-45) + wristRotationOffset; // -95 degrees
+    public static final double wristMax = Math.toRadians(165) + wristRotationOffset; // +105 degrees
+    public static final double wristMin = Math.toRadians(-115) + wristRotationOffset; // -95 degrees
 
     public static final double chuteExitXOffsetMM = 330; // From Claw - Full Assembly CAD
     public static final double chuteExitYOffsetMM = -222; // From Claw - Full Assembly CAD
 
-    public static final double transport = Math.toRadians(-60); //TODO: Change back to -80 if feeding performance is unchanged
-    public static final double algaeTransport = Math.toRadians(40) + wristRotationOffset;
-    public static final double L1Scoring = startingRotationRadians;
-    public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset;
-    public static final double L2AlgaeRemoval = Math.toRadians(-18) + wristRotationOffset;
-    public static final double L3Scoring = Math.toRadians(-53);
-    public static final double L3AlgaeRemoval = Math.toRadians(-14) + wristRotationOffset;
-    public static final double L4Scoring = Math.toRadians(81.5);
-    public static final double climb = startingRotationRadians;
+    /* Wrist setpoint controls */
+    public static final double transport = wristRotationOffset + Math.toRadians(-30) - Math.toRadians(-80);
+    public static final double algaeTransport = wristRotationOffset + Math.toRadians(26) - Math.toRadians(-80);
+    public static final double L1Scoring = startingRotationRadians - Math.toRadians(-66.5);
+    public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset - Math.toRadians(-52.5);
+    public static final double L2AlgaeRemoval = Math.toRadians(-20) + wristRotationOffset - Math.toRadians(-24);
+    public static final double L3Scoring = wristMax;
+    public static final double L3AlgaeRemoval = L2AlgaeRemoval;//Math.toRadians(-10) + wristRotationOffset - Math.toRadians(64.8);
+    public static final double L4Scoring = Math.toRadians(130) + wristRotationOffset - Math.toRadians(66);
+    public static final double climb = startingRotationRadians - Math.toRadians(-55);
 
     public static final double scoringOffsetMeters = 1.75 * (2.54 / 100); //TODO: test if 1/4in offset is that important
   }
 
   public static class Coral {
     public static final int CAN = 10;
-    public static final int currentLimit = 20;
+    public static final int currentLimit = 10;
     public static final double Yoffset = 0;
+
+    public static final double coralSpeed = 0.5;
+    public static final double coralScoreSpeed = 1;
+    public static final double algaeSpeed = 0.8;
   }
 
   public static class Climber {
@@ -176,7 +209,7 @@ public final class Constants {
   }
 
   public static DataLog matchLog;
-  public static DoubleArrayLogEntry estimatedPositionLogEntry;
+  public static DataLogEntry elevatorSysIDEntry;
   public static DoubleArrayLogEntry limelightDataLogEntry;
   public static StringLogEntry eventsEntry;
 
@@ -184,9 +217,10 @@ public final class Constants {
     matchLog = DataLogManager.getLog();
     Constants.log("Setting up data log " + DataLogManager.getLogDir());
     DataLogManager.logNetworkTables(true);
-    estimatedPositionLogEntry = new DoubleArrayLogEntry(matchLog, "EstPosition");
-    limelightDataLogEntry = new DoubleArrayLogEntry(matchLog, "Limelight");
-    eventsEntry = new StringLogEntry(matchLog, "Events");
+    //elevatorSysIDEntry = new DataLogEntry();
+    //estimatedPositionLogEntry = new DoubleArrayLogEntry(matchLog, "EstPosition");
+    //limelightDataLogEntry = new DoubleArrayLogEntry(matchLog, "Limelight");
+    //eventsEntry = new StringLogEntry(matchLog, "Events");
   }
 
   public static void flushLog() {
@@ -264,3 +298,13 @@ public final class Constants {
     }
   }
 }
+
+/*
+ * Shoulder PID values: In elevator file, line 206
+ * Wrist PID values: In elevator file, line 222
+ *
+ * Auto score command is in AutoScore.java
+ * Auto load command is in AutoLoad.java
+ * Auto align command is AutoAlignPIDVoltage.java
+ * Auto align PID values start line 28
+ */

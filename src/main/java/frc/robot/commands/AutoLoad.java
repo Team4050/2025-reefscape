@@ -48,14 +48,14 @@ public class AutoLoad extends Command {
   public void execute() {
     if (cancel) return;
     if (!algaeMode) {
-      claw.set(0.1);
+      claw.set(Constants.Coral.coralSpeed);
       if (!sensed && claw.hasCoral()) {
         Constants.log("Timer started");
         timer.restart();
         sensed = true;
       }
     } else {
-      claw.set(0.3);
+      claw.set(Constants.Coral.algaeSpeed);
     }
   }
 
@@ -63,7 +63,7 @@ public class AutoLoad extends Command {
   public boolean isFinished() {
     // Constants.log(timer.get());
     return cancel
-        || (!algaeMode && sensed && timer.hasElapsed(0.28))
+        || (!algaeMode && sensed && timer.hasElapsed(0.25))
         || (algaeMode && timer.hasElapsed(2));
   }
 

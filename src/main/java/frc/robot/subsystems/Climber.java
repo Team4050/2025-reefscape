@@ -1,6 +1,5 @@
 package frc.robot.subsystems;
 
-import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.MAXMotionConfig.MAXMotionPositionMode;
@@ -66,6 +65,7 @@ public class Climber extends SubsystemBase {
       funnelFolded = true;
     }
 
+    /*
     var dif = targetPosition - motor.getPosition();
     if (Math.abs(dif) > 0.01) {
       if (targetPosition < motor.getPosition()) {
@@ -78,7 +78,9 @@ public class Climber extends SubsystemBase {
       }
     } else {
       motor.set(0);
-    }
+    }*/
+
+    motor.set(0);
 
     motor.publishToNetworkTables();
     // TODO Auto-generated method stub
