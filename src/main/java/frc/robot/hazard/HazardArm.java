@@ -63,6 +63,8 @@ public class HazardArm {
       double Kp,
       double Ki,
       double Kd,
+      double iMax,
+      double iZone,
       double maxV,
       double maxA,
       String name,
@@ -74,7 +76,7 @@ public class HazardArm {
     velocityCurve = new TrapezoidProfile(new Constraints(maxV, maxA));
     feedforward = new ArmFeedforward(Ks, Kg, Kv);
     feedback = new PIDController(Kp, Ki, Kd, 0.02);
-    feedback.setIntegratorRange(-2, 2);
+    feedback.setIntegratorRange(-iMax, iMax);
     feedback.setTolerance(tolerance);
     feedback.setIZone(Math.toRadians(5));
 
@@ -143,7 +145,8 @@ public class HazardArm {
     String name,
     boolean tuneUsingDashboard,
     boolean profiled) {
-    this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, maxV, maxA, name, tuneUsingDashboard);
+    this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, 2,
+    Math.toRadians(5), maxV, maxA, name, tuneUsingDashboard);
     this.profiledControl = profiled;
   }
 
@@ -157,13 +160,16 @@ public class HazardArm {
     double Kp,
     double Ki,
     double Kd,
+    double iMax,
+    double iZone,
     double maxV,
     double maxA,
     String name,
     boolean tuneUsingDashboard,
     boolean profiled,
     double maxControlEffort) {
-    this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, maxV, maxA, name, tuneUsingDashboard);
+    this(motor, tolerance, useAbsoluteEncoder, Ks, Kg, Kv, Kp, Ki, Kd, iMax,
+    iZone, maxV, maxA, name, tuneUsingDashboard);
     this.profiledControl = profiled;
     this.maxEffort = maxControlEffort;
   }

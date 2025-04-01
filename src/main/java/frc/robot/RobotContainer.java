@@ -9,9 +9,7 @@ import java.util.function.BooleanSupplier;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
-import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.cscore.UsbCamera;
-import edu.wpi.first.cscore.VideoMode;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -19,7 +17,6 @@ import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.PubSubOption;
-import edu.wpi.first.util.PixelFormat;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.PowerDistribution;
@@ -108,9 +105,9 @@ public class RobotContainer {
     Optional<Alliance> alliance = DriverStation.getAlliance();
     Constants.setupDataLog();
 
-    clawCamera = CameraServer.startAutomaticCapture();
-    clawCamera.setVideoMode(new VideoMode(PixelFormat.kMJPEG, 320, 320, 10));
-    Constants.log("Claw camera description:" + clawCamera.getDescription());
+    //clawCamera = CameraServer.startAutomaticCapture();
+    //clawCamera.setVideoMode(new VideoMode(PixelFormat.kMJPEG, 320, 320, 10));
+    //Constants.log("Claw camera description:" + clawCamera.getDescription());
 
     pdh.setSwitchableChannel(true); // For radio PoE
 
@@ -252,6 +249,10 @@ public class RobotContainer {
   int pipeline = 0;
 
   private void configureBindings() {
+    BooleanSupplier isAlgaeMode =
+        () -> {
+          return clawSubsystem.algaeMode;
+        };
 
     /********************************************************** Primary **************************************************************************/
 
@@ -261,11 +262,15 @@ public class RobotContainer {
     m_driverController
         .leftTrigger()
         .toggleOnTrue(
-            new AlignToReefPIDVoltage(drivetrainSubsystem, false, clawSubsystem.algaeMode));
+          new ConditionalCommand(
+            new AlignToReefPIDVoltage(drivetrainSubsystem, false, true),
+            new AlignToReefPIDVoltage(drivetrainSubsystem, false, false), isAlgaeMode));
     m_driverController
         .rightTrigger()
         .toggleOnTrue(
-            new AlignToReefPIDVoltage(drivetrainSubsystem, true, clawSubsystem.algaeMode));
+          new ConditionalCommand(
+            new AlignToReefPIDVoltage(drivetrainSubsystem, true, true),
+            new AlignToReefPIDVoltage(drivetrainSubsystem, true, false), isAlgaeMode));
     drivetrainSubsystem.autoTrigger.onFalse(new RumbleController(m_driverController, 0.5));
     m_driverController
         .b()
@@ -352,7 +357,7 @@ public class RobotContainer {
     // m_driverController.povUp().onTrue(new InstantCommand(() -> {
     // climberSubsystem.set(Constants.Climber.climbedPositionRotations); }, climberSubsystem));
 
-    m_driverController
+    /*m_driverController
         .povDown()
         .whileTrue(
             new RunCommand(
@@ -367,7 +372,7 @@ public class RobotContainer {
                 () -> {
                   climberSubsystem.setAdditive(0.3);
                 },
-                climberSubsystem));
+                climberSubsystem));*/
 
     /********************************************************** Secondary **************************************************************************/
 
@@ -414,16 +419,12 @@ public class RobotContainer {
       m_secondaryController.x().onTrue(MoveScoringMechanismTo.L4(elevatorSubsystem, clawSubsystem));
     }
 
-    BooleanSupplier isAlgaeMode =
-        () -> {
-          return clawSubsystem.algaeMode;
-        };
     m_secondaryController
         .leftTrigger()
         .onTrue(
             new ConditionalCommand(
                 MoveScoringMechanismTo.AlgaeTransport(elevatorSubsystem, clawSubsystem),
-                MoveScoringMechanismTo.Transport(elevatorSubsystem, clawSubsystem),
+                MoveScoringMechanismTo.Transport(elevatorSubsystem),
                 isAlgaeMode));
     m_secondaryController
         .rightTrigger()
@@ -465,8 +466,8 @@ public class RobotContainer {
                 },
                 elevatorSubsystem));
 
-    m_secondaryController.start().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
-    m_secondaryController.back().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
+    //m_secondaryController.start().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
+    //m_secondaryController.back().onTrue(MoveScoringMechanismTo.Climbing(elevatorSubsystem, clawSubsystem));
   }
 
   private void configureDashboard() {

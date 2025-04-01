@@ -39,17 +39,18 @@ public class ChooseAutonomous {
             new AlignToReefPIDVoltage(drivetrain, false, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
-            MoveScoringMechanismTo.Transport(elevator, claw)));
+            MoveScoringMechanismTo.Transport(elevator)));
     autoChooser.addOption(
         "Align red from left driver side",
         Commands.sequence(
           new ResetPoseEstimateTo(drivetrain, new Pose2d(10, 2, Rotation2d.kZero)),
             MoveScoringMechanismTo.L4(elevator, claw),
             new MoveTime(drivetrain, 0.2, 0, 0, 1.5),
-            new MoveTime(drivetrain, 0, 0, 0.2, 1.8),
+            new MoveTime(drivetrain, 0, 0, 0.2, 1.4),
             new AlignToReefPIDVoltage(drivetrain, false, false),
             new AutoScore(elevator, claw),
-            new MoveTime(drivetrain, -0.2, 0, 0, 0.5)));
+            new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
+            MoveScoringMechanismTo.Transport(elevator)));
     autoChooser.addOption(
         "Align red from right driver side",
         Commands.sequence(
@@ -60,7 +61,7 @@ public class ChooseAutonomous {
             new AlignToReefPIDVoltage(drivetrain, false, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
-            MoveScoringMechanismTo.Transport(elevator, claw)));
+            MoveScoringMechanismTo.Transport(elevator)));
             autoChooser.addOption(
         "Align center blue",
         Commands.sequence(
@@ -70,7 +71,7 @@ public class ChooseAutonomous {
             new AlignToReefPIDVoltage(drivetrain, false, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
-            MoveScoringMechanismTo.Transport(elevator, claw)));
+            MoveScoringMechanismTo.Transport(elevator)));
     autoChooser.addOption(
         "Align blue from left driver side",
         Commands.sequence(
@@ -80,7 +81,8 @@ public class ChooseAutonomous {
             new MoveTime(drivetrain, 0, 0, 0.2, 1.8),
             new AlignToReefPIDVoltage(drivetrain, false, false),
             new AutoScore(elevator, claw),
-            new MoveTime(drivetrain, -0.2, 0, 0, 0.5)));
+            new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
+            MoveScoringMechanismTo.Transport(elevator)));
     autoChooser.addOption(
         "Align blue from right driver side",
         Commands.sequence(
@@ -91,7 +93,7 @@ public class ChooseAutonomous {
             new AlignToReefPIDVoltage(drivetrain, false, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
-            MoveScoringMechanismTo.Transport(elevator, claw)));
+            MoveScoringMechanismTo.Transport(elevator)));
     SmartDashboard.putData(autoChooser);
   }
 

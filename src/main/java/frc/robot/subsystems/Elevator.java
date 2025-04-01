@@ -58,8 +58,10 @@ public class Elevator extends SubsystemBase {
   private SysIdRoutine shoulderRoutine = new SysIdRoutine(new Config(Voltage.ofBaseUnits(1, Volt).per(Second), Voltage.ofBaseUnits(0.1, Volts), Time.ofBaseUnits(10, Seconds), this::recordShoulderState), shoulderSim);
   private SysIdRoutine wristRoutine = new SysIdRoutine(new Config(Voltage.ofBaseUnits(1, Volt).per(Second), Voltage.ofBaseUnits(0.1, Volts), Time.ofBaseUnits(10, Seconds), this::recordWristState), wristSim);
 
+  public boolean algaeMode = false;
   public boolean safeMode = false;
   public boolean isScoringL4 = false;
+  public boolean isScoringL3 = false;
   public boolean isLoading = false;
   public int position = 0;
 
@@ -118,9 +120,9 @@ public class Elevator extends SubsystemBase {
     leadConfig.inverted(true);
     leadConfig.closedLoop.outputRange(-1, 1);
     /* Elevator PID control */
-    leadConfig.closedLoop.pid(Constants.Elevator.p, Constants.Elevator.i, Constants.Elevator.d);
+    leadConfig.closedLoop.pidf(Constants.Elevator.p, Constants.Elevator.i, Constants.Elevator.d, 0.005);
     leadConfig.closedLoop.iMaxAccum(10);
-    leadConfig.closedLoop.iZone(0.3);
+    leadConfig.closedLoop.iZone(0.1);
     leadConfig.closedLoop.maxMotion.allowedClosedLoopError(0.03);
     leadConfig.closedLoop.maxMotion.positionMode(MAXMotionPositionMode.kMAXMotionTrapezoidal);
     leadConfig.closedLoop.maxMotion.maxAcceleration(500, ClosedLoopSlot.kSlot0);
@@ -212,26 +214,30 @@ public class Elevator extends SubsystemBase {
             0.55,
             0.3,
             1.6, // Shoulder PID values
-            0.08,
+            0.15,
             0,
+            2,
+            Math.toRadians(10),
             10,//Math.toRadians(90), //90deg/s
             2.8, //Math.toRadians(270), //Reach max speed in 1/3 seconds TODO: try these values
             "Shoulder",
             tuningMode,
-            true);
+            true, 12);
     wrist =
         new HazardArm( // Adjust Kstatic for small movements
             wristMotor,
             0,
             false,
-            0.1, // Wrist feedforard values
-            0.19,
+            0.15, // Wrist feedforard values
+            0.35,
             0.00,
-            2.5, // Wrist PID values
-            0.12,
-            0.15,
+            3, // Wrist PID values
             2,
-            2, "Wrist", tuningMode);
+            0.05,
+            1,
+            Math.toRadians(35),
+            10,
+            5, "Wrist", tuningMode, true, 6);
 
     shoulder.setpoint(shoulderSetpoint);
     wrist.setpoint(wristSetpoint);
@@ -450,6 +456,18 @@ public class Elevator extends SubsystemBase {
     leadMotor.setControl(elevatorSetpoint, ControlType.kMAXMotionPositionControl);
   }
 
+  public void setScoringLevel(int level) {
+    isScoringL4 = false;
+    isScoringL3 = false;
+    if (level == 3) {
+      isScoringL3 = true;
+      isScoringL4 = false;
+    } else if (level == 4) {
+      isScoringL3 = false;
+      isScoringL4 = true;
+    }
+  }
+
   public void setL4Mode(boolean value) {
     isScoringL4 = value;
   }
@@ -614,6 +632,10 @@ public class Elevator extends SubsystemBase {
   }
 
   //************************************************ Config & state stuff ************************************************//
+
+  public void setAlgaeMode(boolean value) {
+    this.algaeMode = value;
+  }
 
   public void resetEncoders() {
     Constants.log("Resetting encoders...");
