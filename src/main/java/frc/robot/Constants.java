@@ -98,6 +98,26 @@ public final class Constants {
     public static final double d = 0.1;
 
     /* Elevator setpoint controls */
+    /*
+     *  How these numbers work
+     * Since the wrist is controlled as an arm, gavity compensation is necessary. The problem
+     * is, since the wrist is an unusual shape, its center of mass is offset. On the shoulder,
+     * if you drew a line from the axis to the center off mass, it would roughly follow the line
+     * of the arm. With the wrist, there is no line to conveniently follow, so I had to estimate
+     * it. That's what wristRotationOffset is. If the design of the claw ever changes, that
+     * variable changes, and the encoders are set to measure the angle of that.
+     *
+     * How I recommand changing the values:
+     * Start with turning on the elevator tuning mode (boolean on RobotContainer line 52) and deploying
+     * Move to the setpoint you want to adjust
+     * Make manual adjustments with the joysticks until at desired position
+     * Press the Y button to print out the setpoints to the RioLog and dashboard
+     * Plug those values in below. For wrist and shoulder, you'll need to convert the printed number
+     * to radians, by wrapping the value in Math.toRadians(value).
+     * Redeploy and test!
+     *
+     * If you still have questions or the Y button isn't working ask me on slack
+     */
     public static final double transport = 0.9;
     public static final double L1Scoring = 1;
     public static final double L2Scoring = 3.8; // 3.8
@@ -143,7 +163,7 @@ public final class Constants {
     public static final double encoderCountsPerRevolution = 4096; // CTRE Mag counts per rev
     public static final double gearboxReduction = 1.0 / 40.0;
     public static final double wristRotationOffset = Math.toRadians(-50);
-    public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset - Math.toRadians(-78);
+    public static final double startingRotationRadians = Math.toRadians(-31) + wristRotationOffset - Math.toRadians(-78); //Starting rotation relative to shoulder
     public static final double wristMaxShoulderOffsetRadians = Math.toRadians(180);
     public static final double wristMinShoulderOffsetRadians = Math.toRadians(-180);
     public static final double wristMax = Math.toRadians(165) + wristRotationOffset; // +105 degrees
@@ -153,12 +173,12 @@ public final class Constants {
     public static final double chuteExitYOffsetMM = -222; // From Claw - Full Assembly CAD
 
     /* Wrist setpoint controls */
-    public static final double transport = wristRotationOffset + Math.toRadians(-30) - Math.toRadians(-80); //TODO: Change back to -80 if feeding performance is unchanged
-    public static final double algaeTransport = Math.toRadians(26) + wristRotationOffset - Math.toRadians(-80);
+    public static final double transport = wristRotationOffset + Math.toRadians(-30) - Math.toRadians(-80);
+    public static final double algaeTransport = wristRotationOffset + Math.toRadians(26) - Math.toRadians(-80);
     public static final double L1Scoring = startingRotationRadians - Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-19) + wristRotationOffset - Math.toRadians(-52.5);
     public static final double L2AlgaeRemoval = Math.toRadians(-20) + wristRotationOffset - Math.toRadians(-24);
-    public static final double L3Scoring = wristMax;//Math.toRadians(-80) + wristRotationOffset;
+    public static final double L3Scoring = wristMax;
     public static final double L3AlgaeRemoval = L2AlgaeRemoval;//Math.toRadians(-10) + wristRotationOffset - Math.toRadians(64.8);
     public static final double L4Scoring = Math.toRadians(130) + wristRotationOffset - Math.toRadians(66);
     public static final double climb = startingRotationRadians - Math.toRadians(-55);

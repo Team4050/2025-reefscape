@@ -260,6 +260,7 @@ public class Elevator extends SubsystemBase {
     SmartDashboard.putNumber("Shoulder setpoint", shoulderSetpoint);
     SmartDashboard.putNumber("Wrist setpoint", wristSetpoint);
     SmartDashboard.putNumber("Wrist sum angle", 0);
+    SmartDashboard.putString("Generated setpoints:", "");
   }
 
   public void init() {
@@ -672,6 +673,11 @@ public class Elevator extends SubsystemBase {
     Constants.log("Old encoder offset: " + offset);
     offset += diff / 360;
     Constants.log("New encoder offset: " + offset);
+  }
+
+  public void generateSetpoints() {
+    SmartDashboard.putString("Generated setpoints:", "Elevator:" + elevatorSetpoint + ", Shoulder:" + Math.toDegrees(shoulderSetpoint) + ", Wrist: " + Math.toDegrees(wristSetpoint));
+    Constants.log("Setpoints: Elevator:" + elevatorSetpoint + ", Shoulder:" + Math.toDegrees(shoulderSetpoint) + ", Wrist: " + Math.toDegrees(wristSetpoint));
   }
 
   private int loop = 0;

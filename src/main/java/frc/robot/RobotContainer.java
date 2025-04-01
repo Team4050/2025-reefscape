@@ -392,32 +392,16 @@ public class RobotContainer {
 
     if (elevatorTuningMode) {
       m_secondaryController
-          .b()
+          .y()
           .onTrue(new InstantCommand(
             () -> {
-              elevatorSubsystem.setShoulder(Constants.Shoulder.transport);
+              elevatorSubsystem.generateSetpoints();
             }));
-      m_secondaryController
-          .a()
-          .onTrue(
-              new InstantCommand(
-                  () -> {
-                    elevatorSubsystem.reconfigure();
-                  },
-                  elevatorSubsystem));
-      m_secondaryController
-          .x()
-          .onTrue(
-              new InstantCommand(
-                  () -> {
-                    elevatorSubsystem.setShoulder(Constants.Shoulder.L4Scoring);
-                  }));
-    } else {
-      m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));
+    }
+      //m_secondaryController.y().onTrue(MoveScoringMechanismTo.L1(elevatorSubsystem, clawSubsystem));
       m_secondaryController.b().onTrue(MoveScoringMechanismTo.L2(elevatorSubsystem, clawSubsystem));
       m_secondaryController.a().onTrue(MoveScoringMechanismTo.L3(elevatorSubsystem, clawSubsystem));
       m_secondaryController.x().onTrue(MoveScoringMechanismTo.L4(elevatorSubsystem, clawSubsystem));
-    }
 
     m_secondaryController
         .leftTrigger()

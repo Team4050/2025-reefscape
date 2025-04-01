@@ -782,7 +782,7 @@ public class Drivetrain extends SubsystemBase {
     FL.setControl(controlRequests[0]);
     FR.setControl(controlRequests[1]);
     RL.setControl(controlRequests[2]);
-    RR.setControl(controlRequests[2]);
+    RR.setControl(controlRequests[3]); // :)
   }
 
   /***
