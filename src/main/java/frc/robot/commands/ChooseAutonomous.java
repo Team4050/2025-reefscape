@@ -46,7 +46,7 @@ public class ChooseAutonomous {
           new ResetPoseEstimateTo(drivetrain, new Pose2d(10, 2, Rotation2d.kZero)),
             MoveScoringMechanismTo.L4(elevator, claw),
             new MoveTime(drivetrain, 0.2, 0, 0, 1.5),
-            new MoveTime(drivetrain, 0, 0, 0.2, 1.4),
+            new MoveTime(drivetrain, 0, 0, 0.2, 1.8),
             new AlignToReefPIDVoltage(drivetrain, false, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
