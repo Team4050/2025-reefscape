@@ -52,6 +52,8 @@ public class AlignToReefPIDVoltage extends Command {
   private Pose2d target; // = new Pose2d(14.58, 4.05, Rotation2d.k180deg)
   private boolean right = false;
   private boolean algae = false;
+  private boolean forcePreference = false;
+  private int tagPreference = 0;
 
   private boolean noTag = false;
   private boolean cancel = false;
@@ -77,10 +79,12 @@ public class AlignToReefPIDVoltage extends Command {
           .getDoubleArrayTopic("Target pose")
           .publish();
 
-  public AlignToReefPIDVoltage(Drivetrain drivetrain, boolean right, boolean algaeMode) {
+  public AlignToReefPIDVoltage(Drivetrain drivetrain, boolean right, boolean algaeMode, int tagPreference, boolean forcePreference) {
     this.drivetrain = drivetrain;
     this.right = right;
     this.algae = algaeMode;
+    this.tagPreference = tagPreference;
+    this.forcePreference = forcePreference;
     xController.setTolerance(tolerance);
     xController.setIZone(iZone);
     xController.setIntegratorRange(-maxIntegral, maxIntegral);
@@ -110,6 +114,10 @@ public class AlignToReefPIDVoltage extends Command {
     SmartDashboard.putNumber("Autoalign Z Kd", KdZ);
   }
 
+  public AlignToReefPIDVoltage(Drivetrain drivetrain, boolean right, boolean algaeMode) {
+    this(drivetrain, right, algaeMode, 0, false);
+  }
+
   @Override
   public void initialize() {
     noTag = false;
@@ -121,7 +129,19 @@ public class AlignToReefPIDVoltage extends Command {
       noTag = true;
       return;
     }
+
+    if (tagPreference != 0) {
+      double timeSincePreference = drivetrain.getTimeSinceTagSeen(tagPreference);
+      if ((timeSincePreference > 3 || timeSincePreference < 0) && forcePreference) {
+        noTag = true;
+        return;
+      }
+    }
+
     Pose2d tagPose = tag.get().toPose2d();
+    if (tagPreference != 0 && drivetrain.getTimeSinceTagSeen(tagPreference) < 1) {
+      tagPose = drivetrain.getTagPose(tagPreference).toPose2d();
+    }
 
     Translation2d offset;
     if (algae) {
