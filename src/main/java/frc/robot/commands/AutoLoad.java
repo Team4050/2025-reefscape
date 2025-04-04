@@ -64,7 +64,7 @@ public class AutoLoad extends Command {
     // Constants.log(timer.get());
     return cancel
         || (!algaeMode && sensed && timer.hasElapsed(0.25))
-        || (algaeMode && timer.hasElapsed(2));
+        || (algaeMode && timer.hasElapsed(4)); // 2 sec org
   }
 
   @Override
