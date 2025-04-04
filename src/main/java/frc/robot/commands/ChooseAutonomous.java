@@ -46,8 +46,8 @@ public class ChooseAutonomous {
           new ResetPoseEstimateTo(drivetrain, new Pose2d(10, 2, Rotation2d.kZero)),
             MoveScoringMechanismTo.L4(elevator, claw),
             new MoveTime(drivetrain, 0.2, 0, 0, 1.5),
-            new MoveTime(drivetrain, 0, 0, 0.2, 1.4),
-            new AlignToReefPIDVoltage(drivetrain, false, false),
+            new MoveTime(drivetrain, 0, 0, 0.2, 1.8),
+            new AlignToReefPIDVoltage(drivetrain, false, false, 6, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
             MoveScoringMechanismTo.Transport(elevator)));
@@ -58,7 +58,7 @@ public class ChooseAutonomous {
             MoveScoringMechanismTo.L4(elevator, claw),
             new MoveTime(drivetrain, 0.2, 0, 0, 1.5),
             new MoveTime(drivetrain, 0, 0, -0.2, 1.8),
-            new AlignToReefPIDVoltage(drivetrain, false, false),
+            new AlignToReefPIDVoltage(drivetrain, false, false, 8, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
             MoveScoringMechanismTo.Transport(elevator)));
@@ -79,7 +79,7 @@ public class ChooseAutonomous {
             MoveScoringMechanismTo.L4(elevator, claw),
             new MoveTime(drivetrain, 0.2, 0, 0, 1.5),
             new MoveTime(drivetrain, 0, 0, 0.2, 1.8),
-            new AlignToReefPIDVoltage(drivetrain, false, false),
+            new AlignToReefPIDVoltage(drivetrain, false, false, 19, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
             MoveScoringMechanismTo.Transport(elevator)));
@@ -90,7 +90,7 @@ public class ChooseAutonomous {
             MoveScoringMechanismTo.L4(elevator, claw),
             new MoveTime(drivetrain, 0.2, 0, 0, 1.5),
             new MoveTime(drivetrain, 0, 0, -0.2, 1.8),
-            new AlignToReefPIDVoltage(drivetrain, false, false),
+            new AlignToReefPIDVoltage(drivetrain, false, false, 17, false),
             new AutoScore(elevator, claw),
             new MoveTime(drivetrain, -0.2, 0, 0, 0.5),
             MoveScoringMechanismTo.Transport(elevator)));

@@ -56,6 +56,7 @@ import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -92,6 +93,7 @@ public class Drivetrain extends SubsystemBase {
   public boolean invalidPose = false;
   private int lastAprilTagSeen = 0;
   private Timer timeSinceTagSeen = new Timer();
+  private double[] tagSightingTimestaps = new double[22];
 
   // ******************************************************** Math & Control
   // ******************************************************** //
@@ -614,6 +616,16 @@ public class Drivetrain extends SubsystemBase {
     return timeSinceTagSeen.get();
   }
 
+  public double getTimeSinceTagSeen(int tag) {
+    if (tag < 1 || tag > 22) return -1;
+    return (RobotController.getTime() / 1000000) - tagSightingTimestaps[tag];
+  }
+
+  public Pose3d getTagPose(int tag) {
+    if (tag < 1 || tag > 22) return null;
+    return aprilTags.getTagPose(tag).get();
+  }
+
   public Vector<N4> getY() {
     // Vector<N4> simulatedMotorVelocities = new Vector<N4>(B.times(stateSim));
     // Constants.log("Sim motor velocities:" + simulatedMotorVelocities);
@@ -879,9 +891,11 @@ public class Drivetrain extends SubsystemBase {
         // Constants.log("Saw tag " + estimate.get().targetsUsed.get(0).getFiducialId());
         String message = "";
         for (int i = 0; i < estimate.get().targetsUsed.size(); i++) {
-          message += ", " + estimate.get().targetsUsed.get(i).fiducialId;
+          int tagId = estimate.get().targetsUsed.get(i).fiducialId;
+          message += ", " + tagId;
           double distanceToTag =
               estimate.get().targetsUsed.get(i).bestCameraToTarget.getTranslation().getNorm();
+          tagSightingTimestaps[tagId] = RobotController.getTime() / 1000000.0;
           if (distanceToTag < closestMeters) {
             closestMeters = distanceToTag;
             timeSinceTagSeen.reset();
