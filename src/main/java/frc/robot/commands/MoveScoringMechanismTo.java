@@ -52,8 +52,8 @@ public class MoveScoringMechanismTo {
         () -> {
           elevator.isLoading = true;
           elevator.setScoringLevel(0);
-          elevator.set(Constants.Elevator.transport);
-          elevator.setShoulder(Constants.Shoulder.transport);
+          elevator.set(Constants.Elevator.algaeTransport);
+          elevator.setShoulder(Constants.Shoulder.algaeTransport);
           elevator.setWrist(Constants.Wrist.algaeTransport);
         },
         elevator);

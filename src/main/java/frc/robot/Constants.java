@@ -119,6 +119,7 @@ public final class Constants {
      * If you still have questions or the Y button isn't working ask me on slack
      */
     public static final double transport = 0.9;
+    public static final double algaeTransport = 0.4; // 0.9 pre
     public static final double L1Scoring = 1;
     public static final double L2Scoring = 3.8; // 3.8
     public static final double L2AlgaeRemoval = 1.4;
@@ -150,6 +151,7 @@ public final class Constants {
     /* Shoulder setpoint controls */
     public static final double transport =
         Math.toRadians(-80); // TODO: See if reducing from -80 improves loading performance
+    public static final double algaeTransport = Math.toRadians(-60);
     public static final double L1Scoring = Math.toRadians(-66.5);
     public static final double L2Scoring = Math.toRadians(-52);
     public static final double L2AlgaeRemoval = Math.toRadians(-24);
@@ -181,7 +183,7 @@ public final class Constants {
     public static final double transport =
         wristRotationOffset + Math.toRadians(-30) - Math.toRadians(-80);
     public static final double algaeTransport =
-        wristRotationOffset + Math.toRadians(26) - Math.toRadians(-80);
+        wristRotationOffset + Math.toRadians(24) - Math.toRadians(-80); // 26 pre
     public static final double algaeScore =
         wristRotationOffset + Math.toRadians(-25) - Math.toRadians(-80);
     public static final double L1Scoring = startingRotationRadians - Math.toRadians(-66.5);
