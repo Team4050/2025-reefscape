@@ -36,12 +36,14 @@ public class MoveScoringMechanismTo {
 
   @Deprecated
   public static Command Climbing(Elevator elevator, Claw claw) {
-    return new InstantCommand(() -> {
-      elevator.setScoringLevel(0);
-      elevator.set(Constants.Elevator.climb);
-      elevator.setShoulder(Constants.Shoulder.climb);
-      elevator.setWrist(Constants.Wrist.climb);
-    }, elevator);
+    return new InstantCommand(
+        () -> {
+          elevator.setScoringLevel(0);
+          elevator.set(Constants.Elevator.climb);
+          elevator.setShoulder(Constants.Shoulder.climb);
+          elevator.setWrist(Constants.Wrist.climb);
+        },
+        elevator);
   }
 
   public static Command AlgaeTransport(Elevator elevator, Claw claw) {
@@ -65,7 +67,7 @@ public class MoveScoringMechanismTo {
           elevator.setScoringLevel(0);
           elevator.set(Constants.Elevator.transport);
           elevator.setShoulder(Constants.Shoulder.transport);
-          elevator.setWrist(Constants.Wrist.transport);
+          elevator.setWrist(Constants.Wrist.algaeScore);
         },
         elevator);
   }

@@ -181,7 +181,9 @@ public final class Constants {
     public static final double transport =
         wristRotationOffset + Math.toRadians(-30) - Math.toRadians(-80);
     public static final double algaeTransport =
-        wristRotationOffset + Math.toRadians(27) - Math.toRadians(-80);
+        wristRotationOffset + Math.toRadians(26) - Math.toRadians(-80);
+    public static final double algaeScore =
+        wristRotationOffset + Math.toRadians(-25) - Math.toRadians(-80);
     public static final double L1Scoring = startingRotationRadians - Math.toRadians(-66.5);
     public static final double L2Scoring =
         Math.toRadians(-19) + wristRotationOffset - Math.toRadians(-52.5);
