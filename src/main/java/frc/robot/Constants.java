@@ -207,7 +207,7 @@ public final class Constants {
     public static final int currentLimit = 10;
     public static final double Yoffset = 0;
 
-    public static final double coralSpeed = 0.5;
+    public static final double coralSpeed = 0.5; // 0.5
     public static final double coralScoreSpeed = 1;
     public static final double algaeSpeed = 1;
   }
